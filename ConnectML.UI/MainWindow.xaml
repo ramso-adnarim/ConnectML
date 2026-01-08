@@ -482,7 +482,7 @@
                         </Grid>
                     </Border>
 
-                    <ScrollViewer Grid.Row="1" Background="{StaticResource TerminalBg}">
+                    <ScrollViewer Grid.Row="1" Background="{StaticResource TerminalBg}" VerticalScrollBarVisibility="Auto">
                         <StackPanel x:Name="PnlLogs" Margin="16" TextElement.FontFamily="Consolas, Courier New, Monospace" TextElement.FontSize="12">
                             <!-- Logs here -->
                         </StackPanel>
