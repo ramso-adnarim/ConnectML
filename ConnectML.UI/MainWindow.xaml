@@ -8,7 +8,8 @@
         Title="MeasurLink PLC Connector" Height="768" Width="1024"
         Background="{DynamicResource BackgroundDark}"
         Foreground="{DynamicResource TextPrimary}"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        MouseDown="Window_MouseDown">
 
     <Window.Resources>
         <!-- COLORS -->
@@ -262,7 +263,7 @@
                         </Style>
                     </StackPanel.Resources>
 
-                    <Button Width="Auto" Height="36" Padding="16,0" Background="{StaticResource StopRedBg}" BorderBrush="{StaticResource StopRedBorder}" BorderThickness="1" Margin="0">
+                    <Button Width="Auto" Height="36" Padding="16,0" Background="{StaticResource StopRedBg}" BorderBrush="{StaticResource StopRedBorder}" BorderThickness="1" Margin="0" Click="StopService_Click">
                         <StackPanel Orientation="Horizontal">
                             <Viewbox Width="16" Height="16" Margin="0,0,8,0">
                                 <Path Fill="{StaticResource StopRed}" Data="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M16,16H8V8h8V16z"/>
