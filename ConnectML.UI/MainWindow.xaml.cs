@@ -228,8 +228,12 @@ namespace ConnectML.UI
         {
             try
             {
-                // Delay for file write completion
-                await Task.Delay(500);
+                // Wait for file to be ready (exclusive access and not empty)
+                if (!await WaitForFileReady(filePath))
+                {
+                    Log.Warning($"Arquivo ignorado (não pronto ou bloqueado): {Path.GetFileName(filePath)}");
+                    return;
+                }
 
                 Log.Information($"Processando arquivo: {Path.GetFileName(filePath)}");
 
@@ -281,6 +285,38 @@ namespace ConnectML.UI
                     Log.Error($"Erro ao mover arquivo para erro: {moveEx.Message}");
                 }
             }
+        }
+
+        private async Task<bool> WaitForFileReady(string filePath, int timeoutMs = 10000)
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < timeoutMs)
+            {
+                try
+                {
+                    if (File.Exists(filePath))
+                    {
+                        var info = new FileInfo(filePath);
+                        if (info.Length > 0)
+                        {
+                            using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                catch (IOException)
+                {
+                    // File is locked
+                }
+                catch (Exception)
+                {
+                    // Ignore other errors
+                }
+                await Task.Delay(500);
+            }
+            return false;
         }
 
         private void BtnClearLogs_Click(object sender, RoutedEventArgs e)
