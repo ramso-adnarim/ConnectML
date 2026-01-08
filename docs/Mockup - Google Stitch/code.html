@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MeasurLink PLC Connector Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#136dec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101822",
+                        "surface-dark": "#1d2835",
+                        "border-dark": "#2d3b4e",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for the log terminal */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111822;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #2d3b4e;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #3e5169;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display antialiased overflow-hidden flex flex-col h-screen">
+<!-- Top Navigation Bar -->
+<header class="flex-none flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-border-dark px-6 py-3 bg-white dark:bg-surface-dark z-10">
+<div class="flex items-center gap-4">
+<div class="size-8 rounded bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">hub</span>
+</div>
+<div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-tight">MeasurLink PLC Connector</h2>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+</span>
+<span class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Service Running</span>
+</div>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center justify-center overflow-hidden rounded-lg h-9 px-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 text-sm font-bold transition-colors">
+<span class="material-symbols-outlined mr-2 text-[18px]">stop_circle</span>
+<span>Stop Service</span>
+</button>
+<button class="flex items-center justify-center overflow-hidden rounded-lg h-9 w-9 bg-slate-100 dark:bg-border-dark text-slate-600 dark:text-slate-300 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+</button>
+<button class="flex items-center justify-center overflow-hidden rounded-lg h-9 w-9 bg-slate-100 dark:bg-border-dark text-slate-600 dark:text-slate-300 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">help</span>
+</button>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 flex overflow-hidden">
+<!-- Left Panel: Configuration -->
+<div class="flex-1 overflow-y-auto custom-scrollbar p-6">
+<div class="max-w-4xl mx-auto space-y-6">
+<!-- Section: Source Configuration -->
+<section class="bg-white dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-border-dark overflow-hidden shadow-sm">
+<div class="px-6 py-4 border-b border-slate-200 dark:border-border-dark flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">folder_open</span>
+<h3 class="font-bold text-lg">Source Configuration</h3>
+</div>
+<span class="text-xs font-medium px-2 py-1 rounded bg-slate-100 dark:bg-background-dark text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-border-dark">Input</span>
+</div>
+<div class="p-6 space-y-6">
+<!-- File Watcher Input -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-medium text-slate-700 dark:text-slate-300">Watch Folder Path (QIF Files)</label>
+<div class="flex gap-0">
+<input class="flex-1 min-w-0 rounded-l-lg border-slate-200 dark:border-border-dark bg-slate-50 dark:bg-background-dark text-sm px-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary text-slate-900 dark:text-white placeholder-slate-400" type="text" value="C:\QualityData\Incoming\Line_04_Auto"/>
+<button class="px-4 bg-slate-100 dark:bg-border-dark border-y border-r border-slate-200 dark:border-border-dark rounded-r-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined text-[20px]">more_horiz</span>
+</button>
+</div>
+</div>
+<!-- Last Processed Item -->
+<div class="bg-slate-50 dark:bg-background-dark rounded-lg border border-slate-200 dark:border-border-dark p-4 flex items-center gap-4">
+<div class="size-10 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-green-500">check_circle</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-xs text-slate-500 dark:text-slate-400 mb-0.5 uppercase tracking-wide font-semibold">Last Processed File</p>
+<p class="text-sm font-medium truncate text-slate-900 dark:text-white">batch_2023_10_27_seq042.qif</p>
+</div>
+<div class="text-right shrink-0">
+<p class="text-xs text-slate-500 dark:text-slate-400">10:42:05 AM</p>
+<span class="inline-flex items-center rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-500 ring-1 ring-inset ring-green-500/20 mt-1">Success</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Data Flow Arrow -->
+<div class="flex justify-center -my-3 relative z-10">
+<div class="bg-slate-200 dark:bg-border-dark p-1.5 rounded-full text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined block">arrow_downward</span>
+</div>
+</div>
+<!-- Section: Business Logic -->
+<section class="bg-white dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-border-dark overflow-hidden shadow-sm">
+<div class="px-6 py-4 border-b border-slate-200 dark:border-border-dark flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-amber-500">functions</span>
+<h3 class="font-bold text-lg">Business Logic</h3>
+</div>
+<span class="text-xs font-medium px-2 py-1 rounded bg-slate-100 dark:bg-background-dark text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-border-dark">Process</span>
+</div>
+<div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Write Mode -->
+<div>
+<label class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 block">Write Mode</label>
+<div class="grid grid-cols-2 gap-2">
+<label class="cursor-pointer">
+<input checked="" class="peer sr-only" name="write_mode" type="radio"/>
+<div class="rounded-lg border border-slate-200 dark:border-border-dark bg-slate-50 dark:bg-background-dark p-3 hover:bg-slate-100 dark:hover:bg-slate-800 peer-checked:border-primary peer-checked:ring-1 peer-checked:ring-primary peer-checked:bg-primary/5 transition-all">
+<div class="flex items-center justify-between mb-1">
+<span class="text-sm font-semibold text-slate-900 dark:text-white">Boolean (Bit)</span>
+<span class="material-symbols-outlined text-primary opacity-0 peer-checked:opacity-100 text-[18px]">check_circle</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400">Pass/Fail Signal</p>
+</div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="write_mode" type="radio"/>
+<div class="rounded-lg border border-slate-200 dark:border-border-dark bg-slate-50 dark:bg-background-dark p-3 hover:bg-slate-100 dark:hover:bg-slate-800 peer-checked:border-primary peer-checked:ring-1 peer-checked:ring-primary peer-checked:bg-primary/5 transition-all">
+<div class="flex items-center justify-between mb-1">
+<span class="text-sm font-semibold text-slate-900 dark:text-white">Integer</span>
+<span class="material-symbols-outlined text-primary opacity-0 peer-checked:opacity-100 text-[18px]">check_circle</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400">Failure Counter</p>
+</div>
+</label>
+</div>
+</div>
+<!-- Conditional Logic -->
+<div>
+<label class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 block">Boolean Logic: Send 'False' if</label>
+<div class="bg-slate-50 dark:bg-background-dark rounded-lg p-3 border border-slate-200 dark:border-border-dark">
+<div class="flex items-center gap-4">
+<label class="flex items-center gap-2 cursor-pointer">
+<input checked="" class="text-primary bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 focus:ring-primary" name="logic_cond" type="radio"/>
+<span class="text-sm text-slate-700 dark:text-slate-300">Any Failure</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer">
+<input class="text-primary bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 focus:ring-primary" name="logic_cond" type="radio"/>
+<span class="text-sm text-slate-700 dark:text-slate-300">All Failures</span>
+</label>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Will trigger PLC rejection if any feature in the QIF is out of tolerance.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Data Flow Arrow -->
+<div class="flex justify-center -my-3 relative z-10">
+<div class="bg-slate-200 dark:bg-border-dark p-1.5 rounded-full text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined block">arrow_downward</span>
+</div>
+</div>
+<!-- Section: Output Configuration -->
+<section class="bg-white dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-border-dark overflow-hidden shadow-sm">
+<div class="px-6 py-4 border-b border-slate-200 dark:border-border-dark flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-purple-500">settings_ethernet</span>
+<h3 class="font-bold text-lg">PLC Output Configuration</h3>
+</div>
+<span class="text-xs font-medium px-2 py-1 rounded bg-slate-100 dark:bg-background-dark text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-border-dark">Output</span>
+</div>
+<div class="p-6 space-y-6">
+<!-- Protocol Selection -->
+<div class="w-full max-w-md">
+<label class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">Communication Protocol</label>
+<div class="relative">
+<select class="w-full appearance-none rounded-lg border-slate-200 dark:border-border-dark bg-slate-50 dark:bg-background-dark text-sm px-4 py-2.5 focus:ring-1 focus:ring-primary focus:border-primary text-slate-900 dark:text-white pr-10">
+<option>Siemens S7 (Profinet)</option>
+<option>OPC UA</option>
+<option>MQTT</option>
+<option>Modbus TCP</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Dynamic Fields for Siemens S7 -->
+<div class="border-t border-slate-200 dark:border-border-dark pt-5">
+<h4 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">Connection Details</h4>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="col-span-2">
+<label class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">IP Address</label>
+<input class="w-full rounded-lg border-slate-200 dark:border-border-dark bg-slate-50 dark:bg-background-dark text-sm px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary text-slate-900 dark:text-white" placeholder="192.168.0.1" type="text"/>
+</div>
+<div>
+<label class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Rack</label>
+<input class="w-full rounded-lg border-slate-200 dark:border-border-dark bg-slate-50 dark:bg-background-dark text-sm px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary text-slate-900 dark:text-white" type="number" value="0"/>
+</div>
+<div>
+<label class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Slot</label>
+<input class="w-full rounded-lg border-slate-200 dark:border-border-dark bg-slate-50 dark:bg-background-dark text-sm px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary text-slate-900 dark:text-white" type="number" value="1"/>
+</div>
+<div class="col-span-2">
+<label class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">DB Number</label>
+<input class="w-full rounded-lg border-slate-200 dark:border-border-dark bg-slate-50 dark:bg-background-dark text-sm px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary text-slate-900 dark:text-white" type="number" value="10"/>
+</div>
+<div class="col-span-2">
+<label class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Byte Offset</label>
+<input class="w-full rounded-lg border-slate-200 dark:border-border-dark bg-slate-50 dark:bg-background-dark text-sm px-3 py-2 focus:ring-1 focus:ring-primary focus:border-primary text-slate-900 dark:text-white" type="number" value="0"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Card Action Footer -->
+<div class="px-6 py-3 bg-slate-50 dark:bg-background-dark border-t border-slate-200 dark:border-border-dark flex justify-end gap-3">
+<button class="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white px-3 py-1.5 font-medium transition-colors">Test Connection</button>
+<button class="bg-primary hover:bg-primary/90 text-white text-sm font-medium px-4 py-1.5 rounded shadow-sm transition-colors">Save Changes</button>
+</div>
+</section>
+<div class="h-6"><!-- Spacer --></div>
+</div>
+</div>
+<!-- Right Panel / Bottom Sheet (Desktop: Side Panel) -->
+<aside class="w-[380px] flex-none border-l border-slate-200 dark:border-border-dark bg-slate-50 dark:bg-background-dark flex flex-col h-full shadow-xl z-20">
+<div class="px-4 py-3 border-b border-slate-200 dark:border-border-dark flex items-center justify-between bg-white dark:bg-surface-dark">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400">terminal</span>
+<h3 class="font-bold text-sm uppercase tracking-wide text-slate-700 dark:text-slate-200">Live Logs</h3>
+</div>
+<button class="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white font-medium px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-border-dark transition-colors">Clear</button>
+</div>
+<div class="flex-1 p-4 overflow-y-auto custom-scrollbar bg-slate-900 dark:bg-[#0d1117] font-mono text-xs leading-relaxed">
+<!-- Log Entry -->
+<div class="mb-3">
+<span class="text-slate-500">[10:42:01.050]</span>
+<span class="text-blue-400 font-bold">INFO</span>
+<span class="text-slate-300">Service started successfully.</span>
+</div>
+<!-- Log Entry -->
+<div class="mb-3">
+<span class="text-slate-500">[10:42:01.120]</span>
+<span class="text-blue-400 font-bold">INFO</span>
+<span class="text-slate-300">Connected to S7 PLC at 192.168.0.1 (Rack 0, Slot 1).</span>
+</div>
+<!-- Log Entry -->
+<div class="mb-3">
+<span class="text-slate-500">[10:42:05.200]</span>
+<span class="text-yellow-400 font-bold">WATCH</span>
+<span class="text-slate-300">New file detected: </span>
+<span class="text-white bg-slate-800 px-1 rounded">batch_2023_10_27_seq042.qif</span>
+</div>
+<!-- Log Entry -->
+<div class="mb-3">
+<span class="text-slate-500">[10:42:05.350]</span>
+<span class="text-purple-400 font-bold">PARSE</span>
+<span class="text-slate-300">Processing QIF... Found 142 features. 0 Failures.</span>
+</div>
+<!-- Log Entry -->
+<div class="mb-3 border-l-2 border-green-500 pl-2 ml-1">
+<span class="text-slate-500">[10:42:05.410]</span>
+<span class="text-green-400 font-bold">WRITE</span>
+<span class="text-slate-300">PLC Write (DB10.DBX0.0) -&gt; <span class="text-green-400 font-bold">TRUE</span> (PASS)</span>
+</div>
+<!-- Log Entry -->
+<div class="mb-3 opacity-50">
+<span class="text-slate-500">[10:41:15.000]</span>
+<span class="text-slate-400 font-bold">KEEP-ALIVE</span>
+<span class="text-slate-400">Heartbeat sent.</span>
+</div>
+<!-- Log Entry -->
+<div class="mb-3 opacity-50">
+<span class="text-slate-500">[10:40:15.000]</span>
+<span class="text-slate-400 font-bold">KEEP-ALIVE</span>
+<span class="text-slate-400">Heartbeat sent.</span>
+</div>
+</div>
+<!-- Footer Status of Log -->
+<div class="px-3 py-2 bg-slate-100 dark:bg-surface-dark border-t border-slate-200 dark:border-border-dark text-[10px] text-slate-500 dark:text-slate-400 flex justify-between items-center">
+<span>Version 2.4.1</span>
+<span class="flex items-center gap-1.5"><div class="size-1.5 rounded-full bg-green-500"></div> Online</span>
+</div>
+</aside>
+</main>
+</body></html>
