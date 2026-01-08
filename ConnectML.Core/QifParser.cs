@@ -15,19 +15,40 @@ namespace ConnectML.Core
                 // Carrega o documento XML
                 var doc = XDocument.Load(filePath);
 
-                // Encontra todos os elementos CharacteristicStatusEnum independentemente do namespace
-                var statusElements = doc.Descendants()
+                // Encontra todos os elementos MeasurementResults independentemente do namespace
+                var measurementResultsElements = doc.Descendants()
+                    .Where(x => x.Name.LocalName == "MeasurementResults")
+                    .ToList();
+
+                if (!measurementResultsElements.Any())
+                {
+                    Log.Warning($"[QIF PARSER] Nenhum elemento MeasurementResults encontrado em {Path.GetFileName(filePath)}");
+                    return (false, 0);
+                }
+
+                // Seleciona o MeasurementResults com o maior ID numérico
+                var latestMeasurement = measurementResultsElements
+                    .OrderByDescending(x =>
+                    {
+                        // Tenta parsear o atributo "id" como long
+                        if (long.TryParse(x.Attribute("id")?.Value, out long id))
+                            return id;
+                        return -1; // Se falhar ou não tiver ID, joga pro fim (menor prioridade)
+                    })
+                    .First();
+
+                var latestId = latestMeasurement.Attribute("id")?.Value;
+                Log.Information($"[QIF PARSER] Processando a medição mais recente (ID: {latestId}) de {Path.GetFileName(filePath)}");
+
+                // Encontra os elementos CharacteristicStatusEnum APENAS dentro da medição mais recente
+                var statusElements = latestMeasurement.Descendants()
                     .Where(x => x.Name.LocalName == "CharacteristicStatusEnum")
                     .ToList();
 
                 // Verifica se encontrou medições
                 if (!statusElements.Any())
                 {
-                    Log.Warning($"[QIF PARSER] Nenhuma medição encontrada em {Path.GetFileName(filePath)}");
-                    // Se não tem medições, consideramos falha ou passamos 0 falhas?
-                    // Vamos considerar que se não tem status, algo está errado, mas retornamos 0 falhas e IsOk=false?
-                    // Ou melhor, retornamos falha na validação.
-                    // Para simplificar, assumimos que se não tem medições, não é aprovado.
+                    Log.Warning($"[QIF PARSER] Nenhuma característica encontrada na medição ID {latestId}");
                     return (false, 0);
                 }
 
@@ -43,11 +64,11 @@ namespace ConnectML.Core
 
                 bool isOk = failCount == 0;
 
-                // Opcional: Verificar InspectionStatusEnum global para logging
-                var inspectionStatus = doc.Descendants()
+                // Verificar InspectionStatusEnum global para logging (da medição atual)
+                var inspectionStatus = latestMeasurement.Descendants()
                     .FirstOrDefault(x => x.Name.LocalName == "InspectionStatusEnum")?.Value;
 
-                Log.Information($"[QIF PARSER] Arquivo processado: {Path.GetFileName(filePath)}. Status Global: {inspectionStatus ?? "N/A"}. Falhas: {failCount}");
+                Log.Information($"[QIF PARSER] Resultado ID {latestId}: {inspectionStatus ?? "N/A"}. Falhas: {failCount}");
 
                 return (isOk, failCount);
             }
