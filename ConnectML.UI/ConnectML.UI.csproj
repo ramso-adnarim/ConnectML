@@ -9,12 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Serilog" Version="3.1.1" />
-    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+    <PackageReference Include="Serilog" Version="4.3.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ConnectML.Core\ConnectML.Core.csproj" />
+    <ProjectReference Include="..\ConnectML.Infrastructure\ConnectML.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

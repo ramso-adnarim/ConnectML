@@ -12,19 +12,24 @@ using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 
+using System.Text.Json;
+using ConnectML.UI.Models;
+
 namespace ConnectML.UI
 {
     public partial class MainWindow : Window
     {
         private bool _isRunning = false;
         private FileSystemWatcher? _watcher;
-        private IPlcDriver _plcDriver;
+        private IPlcDriver? _plcDriver;
+        private const string ConfigFile = "appsettings.json";
 
         public MainWindow()
         {
             InitializeComponent();
             SetupLogging();
-            _plcDriver = new MockPlcDriver();
+            // Driver will be initialized on StartService
+            LoadSettings();
         }
 
         private void SetupLogging()
@@ -116,6 +121,11 @@ namespace ConnectML.UI
                 return;
             }
 
+            // Save Settings immediately
+            SaveSettings();
+
+            if (!Directory.Exists(path))
+
             if (!Directory.Exists(path))
             {
                 try
@@ -142,6 +152,10 @@ namespace ConnectML.UI
                      MessageBox.Show("Preencha os endereços de DB.", "Erro", MessageBoxButton.OK, MessageBoxImage.Warning);
                      return;
                 }
+
+                // Instantiate Real Driver with Adapter
+                var logger = new ConnectML.UI.Utils.SerilogLoggerAdapter<ConnectML.Infrastructure.PlcDrivers.SiemensS7Driver>();
+                _plcDriver = new ConnectML.Infrastructure.PlcDrivers.SiemensS7Driver(logger);
 
                 await _plcDriver.ConnectAsync(ip, rack, slot);
             }
@@ -191,7 +205,10 @@ namespace ConnectML.UI
                 _watcher = null;
             }
 
-            await _plcDriver.DisconnectAsync();
+            if (_plcDriver != null)
+            {
+                await _plcDriver.DisconnectAsync();
+            }
 
             // Unlock UI
             PnlConfiguration.IsEnabled = true;
@@ -323,6 +340,68 @@ namespace ConnectML.UI
         {
             PnlLogs.Children.Clear();
         }
+
+        #region Configuration Persistence
+        private void LoadSettings()
+        {
+            try
+            {
+                if (File.Exists(ConfigFile))
+                {
+                    string json = File.ReadAllText(ConfigFile);
+                    var config = JsonSerializer.Deserialize<AppConfig>(json);
+
+                    if (config != null)
+                    {
+                        TxtSourcePath.Text = config.SourcePath;
+                        if (config.IsBooleanMode) RbBoolean.IsChecked = true;
+                        else RbNumeric.IsChecked = true;
+                        
+                        // Protocol (Only 1 now, but future proof)
+                        // CmbProtocol.SelectedItem ... 
+
+                        TxtIp.Text = config.IpAddress;
+                        TxtRack.Text = config.Rack;
+                        TxtSlot.Text = config.Slot;
+                        TxtDbBool.Text = config.DbAddressBool;
+                        TxtDbInt.Text = config.DbAddressInt;
+                        
+                        Log.Information("Configurações carregadas com sucesso.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Erro ao carregar configurações: {ex.Message}");
+            }
+        }
+
+        private void SaveSettings()
+        {
+            try
+            {
+                var config = new AppConfig
+                {
+                    SourcePath = TxtSourcePath.Text,
+                    IsBooleanMode = RbBoolean.IsChecked == true,
+                    Protocol = CmbProtocol.Text,
+                    IpAddress = TxtIp.Text,
+                    Rack = TxtRack.Text,
+                    Slot = TxtSlot.Text,
+                    DbAddressBool = TxtDbBool.Text,
+                    DbAddressInt = TxtDbInt.Text
+                };
+
+                string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(ConfigFile, json);
+                Log.Information("Configurações salvas.");
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Erro ao salvar configurações: {ex.Message}");
+            }
+        }
+        #endregion
 
         // Sink Class
         public class UiSink : ILogEventSink
