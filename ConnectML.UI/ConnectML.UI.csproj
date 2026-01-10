@@ -14,6 +14,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="Assets\logo.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ConnectML.Core\ConnectML.Core.csproj" />
     <ProjectReference Include="..\ConnectML.Infrastructure\ConnectML.Infrastructure.csproj" />
   </ItemGroup>

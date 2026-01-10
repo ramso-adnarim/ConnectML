@@ -11,6 +11,8 @@ using ConnectML.Core.Interfaces;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
+using System.Windows.Media.Animation;
+using Microsoft.Win32;
 
 using System.Text.Json;
 using ConnectML.UI.Models;
@@ -30,6 +32,34 @@ namespace ConnectML.UI
             SetupLogging();
             // Driver will be initialized on StartService
             LoadSettings();
+            
+            // Initial Layout Check
+            SizeChanged += Window_SizeChanged;
+        }
+
+        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+             // 1. Auto-Collapse Logic (Smart)
+             // Check if we have enough space for Main Panel (Min 600) + Logs Panel (Current Width)
+             // We use a bit of margin safety (e.g., 30px)
+             double minMainWidth = 630; // 600 + margins
+             double availableForLogs = e.NewSize.Width - minMainWidth;
+             
+             // If the current Logs width doesn't fit anymore, collapse it.
+             // We only trigger this if it's NOT already collapsed.
+             if (!_isLogsCollapsed && ColLogs.ActualWidth > availableForLogs)
+             {
+                 SetLogsState(true);
+             }
+
+             // 2. Prevent Overflow (Virtual Resizing Issue)
+             // We limit the MaxWidth so user can't drag it over the Main Panel space
+             // MaxWidth = ActualWindowWidth - MinWidthOfConfigPanel(600) - Margins
+             double maxLogsWidth = e.NewSize.Width - 630;
+             
+             if (maxLogsWidth < 320) maxLogsWidth = 320; // Ensure it respects min width or at least doesn't break constraint logic negatively
+             
+             ColLogs.MaxWidth = maxLogsWidth;
         }
 
         private void SetupLogging()
@@ -183,6 +213,10 @@ namespace ConnectML.UI
             TxtFooterStatus.Text = "Monitorando...";
             StatusDot.Fill = (Brush)FindResource("SuccessGreen");
 
+            // Animation
+            var sb = (Storyboard)FindResource("BlinkAnimation");
+            sb.Begin(StatusIndicator);
+
             // Watcher
             _watcher = new FileSystemWatcher(path);
             _watcher.Filter = "*.*";
@@ -227,6 +261,12 @@ namespace ConnectML.UI
             StatusIndicator.Fill = (Brush)FindResource("TextSecondary");
             TxtFooterStatus.Text = "Offline";
             StatusDot.Fill = (Brush)FindResource("TextSecondary");
+
+            // Stop Animation
+            var sb = (Storyboard)FindResource("BlinkAnimation");
+            sb.Stop(StatusIndicator);
+            StatusIndicator.Opacity = 1;
+            StatusIndicator.RenderTransform = new ScaleTransform(1, 1);
 
             Log.Information("Serviço Parado.");
         }
@@ -339,6 +379,78 @@ namespace ConnectML.UI
         private void BtnClearLogs_Click(object sender, RoutedEventArgs e)
         {
             PnlLogs.Children.Clear();
+        }
+
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
+
+        private void BtnBrowseFolder_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFolderDialog();
+            dialog.Title = "Selecione a pasta de monitoramento";
+            dialog.Multiselect = false;
+            
+            if (Directory.Exists(TxtSourcePath.Text))
+            {
+                 dialog.DefaultDirectory = TxtSourcePath.Text;
+            }
+
+            if (dialog.ShowDialog() == true)
+            {
+                TxtSourcePath.Text = dialog.FolderName;
+            }
+        }
+
+        private bool _isLogsCollapsed = false;
+        private GridLength? _lastLogsWidth;
+
+        private void BtnToggleLogs_Click(object sender, RoutedEventArgs e)
+        {
+            SetLogsState(!_isLogsCollapsed);
+        }
+
+        private void SetLogsState(bool collapse)
+        {
+             if (!collapse)
+             {
+                 // Expand
+                 PnlLogsCollapsed.Visibility = Visibility.Collapsed;
+                 PnlLogsExpanded.Visibility = Visibility.Visible;
+                 LogsSplitter.Visibility = Visibility.Visible;
+                 LogsSplitter.IsEnabled = true;
+
+                 ColLogs.MinWidth = 320; // Restore MinWidth constraint
+                 
+                 var targetWidth = _lastLogsWidth ?? new GridLength(380);
+                 ColLogs.Width = targetWidth;
+                 if (ColLogs.Width.Value < 320) ColLogs.Width = new GridLength(380);
+
+                 // Auto-Resize Window if too small
+                 // Minimum needed = MinMain(630) + Logs(380) approx 1010
+                 double requiredWidth = 630 + ColLogs.Width.Value;
+                 if (this.ActualWidth < requiredWidth)
+                 {
+                     this.Width = requiredWidth + 20; // Add some breathing room
+                 }
+                 
+                 _isLogsCollapsed = false;
+             }
+             else
+             {
+                 // Collapse
+                 if (!_isLogsCollapsed) _lastLogsWidth = ColLogs.Width;
+                 
+                 ColLogs.MinWidth = 0; // Remove constraint so it can shrink to button size
+                 ColLogs.Width = GridLength.Auto;
+                 PnlLogsExpanded.Visibility = Visibility.Collapsed;
+                 PnlLogsCollapsed.Visibility = Visibility.Visible;
+                 LogsSplitter.IsEnabled = false;
+                 LogsSplitter.Visibility = Visibility.Collapsed;
+
+                 _isLogsCollapsed = true;
+             }
         }
 
         #region Configuration Persistence
