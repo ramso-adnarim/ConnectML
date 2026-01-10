@@ -13,6 +13,10 @@ namespace ConnectML.Infrastructure.PlcDrivers
     {
         private Plc? _plc;
         private readonly ILogger<SiemensS7Driver> _logger;
+        // Keep track of connection params for reconnection
+        private string? _lastIp;
+        private int _lastRack;
+        private int _lastSlot;
 
         public string ProtocolName => "Siemens S7 (Profinet/ISO-on-TCP)";
         public bool IsConnected => _plc != null && _plc.IsConnected;
@@ -30,6 +34,10 @@ namespace ConnectML.Infrastructure.PlcDrivers
                 var cpuType = CpuType.S71500; // Compatível com S7-1500/1200
 
                 _logger.LogInformation($"[S7 REAL] Tentando conectar ao CLP em {ip} (Rack: {rack}, Slot: {slot})...");
+
+                _lastIp = ip;
+                _lastRack = rack;
+                _lastSlot = slot;
 
                 // Inicializa a conexão
                 _plc = new Plc(cpuType, ip, (short)rack, (short)slot);
@@ -79,39 +87,87 @@ namespace ConnectML.Infrastructure.PlcDrivers
 
         public async Task WriteBoolAsync(string dbAddress, bool value)
         {
-            if (!IsConnected || _plc == null) throw new InvalidOperationException("CLP não conectado.");
-            string finalAddress = dbAddress;
-
-            try
+            await ExecuteWithRetryAsync(async () =>
             {
-                finalAddress = NormalizeAddress(dbAddress, true);
-                await _plc.WriteAsync(finalAddress, value);
-                _logger.LogInformation($"[S7 REAL] Write Bit {finalAddress}: {value}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"[S7 REAL] Erro ao escrever Bit em {dbAddress} (NA = {finalAddress}).");
-                throw;
-            }
+                var finalAddress = NormalizeAddress(dbAddress, true);
+                if (_plc != null)
+                {
+                    await _plc.WriteAsync(finalAddress, value);
+                    _logger.LogInformation($"[S7 REAL] Write Bit {finalAddress}: {value}");
+                }
+            }, "WriteBool");
         }
 
         public async Task WriteIntAsync(string dbAddress, int value)
         {
-            if (!IsConnected || _plc == null) throw new InvalidOperationException("CLP não conectado.");
-            string finalAddress = dbAddress;
+            await ExecuteWithRetryAsync(async () =>
+            {
+                var finalAddress = NormalizeAddress(dbAddress, false);
+                if (_plc != null)
+                {
+                    // Converte para short (Int16/WORD)
+                    await _plc.WriteAsync(finalAddress, (short)value);
+                    _logger.LogInformation($"[S7 REAL] Write Int {finalAddress}: {value}");
+                }
+            }, "WriteInt");
+        }
+
+        private async Task ExecuteWithRetryAsync(Func<Task> action, string operationName)
+        {
+            // 1. Pre-Check
+            if (!IsConnected)
+            {
+                _logger.LogWarning($"[S7 REAL] {operationName}: Detectado desconectado antes da operação. Tentando reconectar...");
+                await AttemptReconnectAsync();
+            }
 
             try
             {
-                finalAddress = NormalizeAddress(dbAddress, false);
-                // Converte para short (Int16/WORD)
-                await _plc.WriteAsync(finalAddress, (short)value);
-                _logger.LogInformation($"[S7 REAL] Write Int {finalAddress}: {value}");
+                // Attempt 1
+                await action();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"[S7 REAL] Erro ao escrever Int em {dbAddress} (NA = {finalAddress}).");
-                throw;
+                _logger.LogWarning(ex, $"[S7 REAL] {operationName}: Falha na primeira tentativa. Tentando reconectar e reenviar...");
+                
+                try
+                {
+                    // Force Reconnect
+                    await AttemptReconnectAsync();
+                    
+                    // Attempt 2 (Retry)
+                    await action();
+                    _logger.LogInformation($"[S7 REAL] {operationName}: Sucesso na segunda tentativa.");
+                }
+                catch (Exception retryEx)
+                {
+                    _logger.LogError(retryEx, $"[S7 REAL] {operationName}: Falha definitiva após retry.");
+                    throw; // Throw original or new exception? Usually throwing the last one is better for context.
+                }
             }
+        }
+
+        private async Task AttemptReconnectAsync()
+        {
+             if (_plc == null && _lastIp != null)
+             {
+                 // Re-create instance if missing (unlikely if constructor called, but safe)
+                 var cpuType = CpuType.S71500;
+                 _plc = new Plc(cpuType, _lastIp, (short)_lastRack, (short)_lastSlot);
+             }
+
+             if (_plc != null)
+             {
+                 try
+                 {
+                     await _plc.OpenAsync();
+                 }
+                 catch (Exception ex)
+                 {
+                     _logger.LogError(ex, "[S7 REAL] Falha ao tentar reconectar.");
+                     // Don't throw here, let the caller fail the action
+                 }
+             }
         }
 
         /// <summary>
