@@ -80,16 +80,17 @@ namespace ConnectML.Infrastructure.PlcDrivers
         public async Task WriteBoolAsync(string dbAddress, bool value)
         {
             if (!IsConnected || _plc == null) throw new InvalidOperationException("CLP não conectado.");
+            string finalAddress = dbAddress;
 
             try
             {
-                string finalAddress = NormalizeAddress(dbAddress, true);
+                finalAddress = NormalizeAddress(dbAddress, true);
                 await _plc.WriteAsync(finalAddress, value);
                 _logger.LogInformation($"[S7 REAL] Write Bit {finalAddress}: {value}");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"[S7 REAL] Erro ao escrever Bit em {dbAddress}.");
+                _logger.LogError(ex, $"[S7 REAL] Erro ao escrever Bit em {dbAddress} (NA = {finalAddress}).");
                 throw;
             }
         }
@@ -97,17 +98,18 @@ namespace ConnectML.Infrastructure.PlcDrivers
         public async Task WriteIntAsync(string dbAddress, int value)
         {
             if (!IsConnected || _plc == null) throw new InvalidOperationException("CLP não conectado.");
+            string finalAddress = dbAddress;
 
             try
             {
-                string finalAddress = NormalizeAddress(dbAddress, false);
+                finalAddress = NormalizeAddress(dbAddress, false);
                 // Converte para short (Int16/WORD)
                 await _plc.WriteAsync(finalAddress, (short)value);
                 _logger.LogInformation($"[S7 REAL] Write Int {finalAddress}: {value}");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"[S7 REAL] Erro ao escrever Int em {dbAddress}.");
+                _logger.LogError(ex, $"[S7 REAL] Erro ao escrever Int em {dbAddress} (NA = {finalAddress}).");
                 throw;
             }
         }
