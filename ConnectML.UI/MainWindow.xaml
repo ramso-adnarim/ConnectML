@@ -5,11 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ConnectML.UI"
         mc:Ignorable="d"
-        Title="ConnectML" Height="716" Width="980"
+        Title="ConnectML" Height="700" Width="980"
         Background="{DynamicResource BackgroundDark}"
         Foreground="{DynamicResource TextPrimary}"
         WindowStartupLocation="CenterScreen"
         MinWidth="480"
+        MinHeight="685"
         MouseDown="Window_MouseDown" WindowStyle="None">
 
     <Window.Resources>
@@ -386,7 +387,7 @@
 
             <!-- LEFT PANEL: CONFIGURATION -->
             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Background="{StaticResource BackgroundDark}">
-                <StackPanel Margin="24" x:Name="PnlConfiguration" Height="578" MaxWidth="564">
+                <StackPanel Margin="10,10,10,10" x:Name="PnlConfiguration" Height="578" MaxWidth="564">
                     <StackPanel MaxWidth="896" HorizontalAlignment="Center">
 
                         <!-- CARD 1: SOURCE -->
