@@ -271,7 +271,7 @@
         </Grid.RowDefinitions>
 
         <!-- HEADER -->
-        <Border Grid.Row="0" Background="{StaticResource SurfaceDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1" Padding="24,12">
+        <Border Grid.Row="0" Background="{StaticResource SurfaceDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1" Padding="18,5">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -280,8 +280,8 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Left: Icon & Title -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,20,0">
-                    <Border Width="36" Height="36" CornerRadius="4" Background="Transparent" Margin="0,0,16,0">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,0,0">
+                    <Border Width="45" Height="45" CornerRadius="4" Background="Transparent" Margin="0,0,16,0">
                         <Image Source="/Assets/logo.png" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Border>
 
