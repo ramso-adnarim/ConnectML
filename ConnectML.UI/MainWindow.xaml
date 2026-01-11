@@ -9,7 +9,7 @@
         Background="{DynamicResource BackgroundDark}"
         Foreground="{DynamicResource TextPrimary}"
         WindowStartupLocation="CenterScreen"
-        MinWidth="420"
+        MinWidth="480"
         MouseDown="Window_MouseDown" WindowStyle="None">
 
     <Window.Resources>
