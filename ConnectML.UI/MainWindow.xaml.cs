@@ -155,45 +155,68 @@ namespace ConnectML.UI
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             // Responsive Logic Strategy:
-            // 1. Prioritize Left Panel (Config).
-            // 2. Shrink Logs Panel if needed.
-            // 3. Collapse Logs Panel if too small.
-            // 4. Auto-Expand if space returns (and was auto-hidden).
-
+            // 1. We must guarantee at least MinConfigWidth (500) for the left panel.
+            // 2. The remaining space is "Available for Logs".
+            // 3. We cap the Logs Panel MaxWidth to this available space to prevent pushing left panel < 500.
+            
             double windowWidth = e.NewSize.Width;
-            double availableForLogs = windowWidth - MinConfigWidth; // Approx 560 reserved for left
+            double minLeftWidth = 500; 
+            
+            // Total available width for columns is window width - splitter width (approx 4) - margins
+            // Simplified:
+            double maxLogsWidth = windowWidth - minLeftWidth - 20; // 20 safety margin
+            
+            if (maxLogsWidth < 0) maxLogsWidth = 0;
 
-            // Determine Target Width for Logs
-            double targetLogsWidth = availableForLogs > _userPreferredLogsWidth ? _userPreferredLogsWidth : availableForLogs;
+            // Enforce MaxWidth on Logs Column to prevent it from growing too large via Splitter
+            ColLogs.MaxWidth = maxLogsWidth;
 
+            // Now handle Auto-Collapse / Auto-Show logic
+            // If the calculated MaxWidth forces the Logs panel to be smaller than its MinWidth, we must collapse it.
+            
             if (_isLogsCollapsed)
             {
-                // Logic for Auto-Show
-                // Only auto-show if it was hidden by space, not by user choice
+                // Auto-Show Logic
+                // If it was hidden by space, we check if we have enough space now to restore it.
                 if (_autoHiddenBySpace)
                 {
-                    // Check if we have enough space now
-                    if (availableForLogs > MinLogsWidth)
-                    {
-                        // Restore
-                        _autoHiddenBySpace = false;
-                        SetLogsState(false);
-                    }
+                    // To restore, we need at least MinLogsWidth
+                     if (maxLogsWidth > MinLogsWidth)
+                     {
+                         _autoHiddenBySpace = false;
+                         SetLogsState(false);
+                     }
                 }
             }
             else
             {
-                // Logic for Shrink or Auto-Hide
-                if (targetLogsWidth < MinLogsWidth)
+                // Auto-Hide Logic
+                // If the constraint (MaxWidth) forces the actual width below MinLogsWidth, collapse.
+                // Current ActualWidth might not have updated yet, so we check the constraint we just calculated.
+                
+                if (maxLogsWidth < MinLogsWidth)
                 {
-                    // Not enough space -> Collapse
                     _autoHiddenBySpace = true;
                     SetLogsState(true);
                 }
                 else
                 {
-                    // Apply dynamic width
-                    ColLogs.Width = new GridLength(targetLogsWidth);
+                    // Ensure the width respects the User Preference, bounded by MaxWidth
+                    // If user preferred 600, but we only have 400 space (maxLogsWidth), Grid ensures MaxWidth applies.
+                    
+                    // However, we want the Left Panel to GROW if there is extra space.
+                    // If we force ColLogs.Width = _userPreferredLogsWidth (e.g. 380), and Window is huge (1920), 
+                    // Left Panel (Width="*") gets 1920 - 380 = 1540. This is desired.
+                    
+                    // But if window shrinks, Left Panel shrinks until 500.
+                    // At that point, resizing window smaller should shrink ColLogs.
+                    // Doing ColLogs.MaxWidth = ... achieves exactly this.
+                    
+                    // We just need to make sure ColLogs.Width is not set to a "fixed" value that fights the MaxWidth.
+                    // If we set Width="380", and MaxWidth="300", effectively it is 300.
+                    
+                    // Only explicit update needed if we are restoring form an auto-sized state?
+                    // No, XAML binding/properties handle the rest.
                 }
             }
         }
