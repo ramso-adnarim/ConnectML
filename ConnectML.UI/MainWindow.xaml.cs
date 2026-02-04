@@ -41,8 +41,9 @@ namespace ConnectML.UI
         private bool _isLogsCollapsed = false;
         private bool _autoHiddenBySpace = false;
         private double _userPreferredLogsWidth = 380; // Default width
-        private const double MinConfigWidth = 560; // Minimum comfortable width for Config Panel
-        private const double MinLogsWidth = 200;   // Minimum width before auto-collapse
+        private const double MinConfigWidth = 500; 
+        private const double IdealConfigWidth = 564;
+        private const double MinLogsWidth = 420;
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         extern static bool DestroyIcon(IntPtr handle);
@@ -154,70 +155,80 @@ namespace ConnectML.UI
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            // Responsive Logic Strategy:
-            // 1. We must guarantee at least MinConfigWidth (500) for the left panel.
-            // 2. The remaining space is "Available for Logs".
-            // 3. We cap the Logs Panel MaxWidth to this available space to prevent pushing left panel < 500.
-            
+            // Responsive Logic Strategy V3:
+            // 1. Prioritize growing the Right Panel (Logs) when window is large.
+            // 2. Prevent Overlap: Keep minimal widths.
+            // 3. Shrink priority: Shrink Logs to Min (420) -> Shrink Config to Min (500) -> Collapse Logs.
+
             double windowWidth = e.NewSize.Width;
-            double minLeftWidth = 500; 
+            double margins = 20;
             
-            // Total available width for columns is window width - splitter width (approx 4) - margins
-            // Simplified:
-            double maxLogsWidth = windowWidth - minLeftWidth - 20; // 20 safety margin
+            // Calculate how much space we give to logs if we keep Config at "Ideal" (564)
+            double targetLogsWidth = windowWidth - IdealConfigWidth - margins;
             
-            if (maxLogsWidth < 0) maxLogsWidth = 0;
+            // If that results in less than MinLogsWidth, we need to steal space from Config or Collapse
+            if (targetLogsWidth < MinLogsWidth)
+            {
+                 // Check if we can just shrink Config down to MinConfigWidth (500)
+                 double spaceWithMinConfig = windowWidth - MinConfigWidth - margins;
+                 
+                 if (spaceWithMinConfig >= MinLogsWidth)
+                 {
+                     // Scenario: Window is tight, but fits both at Minimums.
+                     // We set Logs to fill the rest, forcing Config to shrink towards 500.
+                     // Because Left is "*", setting Right to Fixed Pixel forces Left to shrink.
+                     targetLogsWidth = spaceWithMinConfig; 
+                     
+                     // Actually, if we set targetLogsWidth = spaceWithMinConfig, 
+                     // Left Panel gets exactly MinConfigWidth.
+                     // It is better to set Logs to MinLogsWidth and let Left Panel take whatever is left (between 500 and 564)?
+                     // No, user wants Right Panel to avoid overlap.
+                     // Safest is to set Right Panel to exactly MinLogsWidth here?
+                     // If we set right to MinLogs, Left gets the variable space (500-564).
+                     targetLogsWidth = MinLogsWidth;
+                 }
+                 else
+                 {
+                     // Scenario: Window is too small for both.
+                     // Time to collapse.
+                     if (!_isLogsCollapsed)
+                     {
+                         _autoHiddenBySpace = true;
+                         SetLogsState(true);
+                     }
+                     return; // Done
+                 }
+            }
 
-            // Enforce MaxWidth on Logs Column to prevent it from growing too large via Splitter
-            ColLogs.MaxWidth = maxLogsWidth;
-
-            // Now handle Auto-Collapse / Auto-Show logic
-            // If the calculated MaxWidth forces the Logs panel to be smaller than its MinWidth, we must collapse it.
+            // Apply constraints
+            // We set ColLogs Width to pixel value to ensure it takes the space we want (User Request 2).
+            // But we must check Auto-Show.
             
             if (_isLogsCollapsed)
             {
-                // Auto-Show Logic
-                // If it was hidden by space, we check if we have enough space now to restore it.
                 if (_autoHiddenBySpace)
                 {
-                    // To restore, we need at least MinLogsWidth
-                     if (maxLogsWidth > MinLogsWidth)
-                     {
-                         _autoHiddenBySpace = false;
-                         SetLogsState(false);
-                     }
+                    // Can we restore?
+                    // We need at least MinConfig + MinLogs
+                    if ((windowWidth - margins) > (MinConfigWidth + MinLogsWidth))
+                    {
+                        _autoHiddenBySpace = false;
+                        SetLogsState(false);
+                    }
                 }
             }
             else
             {
-                // Auto-Hide Logic
-                // If the constraint (MaxWidth) forces the actual width below MinLogsWidth, collapse.
-                // Current ActualWidth might not have updated yet, so we check the constraint we just calculated.
+                // Ensure we don't break MaxWidth constraint logic from previous step, 
+                // but actually we want to FORCE the width now to make it grow?
+                // Setting .Width overrides MaxWidth if Width < MaxWidth.
                 
-                if (maxLogsWidth < MinLogsWidth)
-                {
-                    _autoHiddenBySpace = true;
-                    SetLogsState(true);
-                }
-                else
-                {
-                    // Ensure the width respects the User Preference, bounded by MaxWidth
-                    // If user preferred 600, but we only have 400 space (maxLogsWidth), Grid ensures MaxWidth applies.
-                    
-                    // However, we want the Left Panel to GROW if there is extra space.
-                    // If we force ColLogs.Width = _userPreferredLogsWidth (e.g. 380), and Window is huge (1920), 
-                    // Left Panel (Width="*") gets 1920 - 380 = 1540. This is desired.
-                    
-                    // But if window shrinks, Left Panel shrinks until 500.
-                    // At that point, resizing window smaller should shrink ColLogs.
-                    // Doing ColLogs.MaxWidth = ... achieves exactly this.
-                    
-                    // We just need to make sure ColLogs.Width is not set to a "fixed" value that fights the MaxWidth.
-                    // If we set Width="380", and MaxWidth="300", effectively it is 300.
-                    
-                    // Only explicit update needed if we are restoring form an auto-sized state?
-                    // No, XAML binding/properties handle the rest.
-                }
+                // Let's set the width explicitly to the calculated target.
+                // If target > user preference, we still give it target (because "painel direito deve acompanhar e usar o espaço").
+                ColLogs.Width = new GridLength(targetLogsWidth);
+                
+                // Also ensure MaxWidth doesn't block us (set it to infinity or large, or simply constraint to window)
+                ColLogs.MaxWidth = windowWidth - MinConfigWidth - margins;
             }
         }
         
