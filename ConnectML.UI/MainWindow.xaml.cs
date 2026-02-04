@@ -58,7 +58,7 @@ namespace ConnectML.UI
             SizeChanged += Window_SizeChanged;
             
             // Capture splitter resizing to update user preference
-            ColLogs.SizeChanged += (s, e) =>
+            PnlLogsContainer.SizeChanged += (s, e) =>
             {
                // Only update preference if we are NOT in an auto-adjustment scenario
                if (!_isLogsCollapsed && !_autoHiddenBySpace && this.ActualWidth > (MinConfigWidth + MinLogsWidth))
