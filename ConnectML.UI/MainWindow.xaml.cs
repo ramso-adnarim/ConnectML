@@ -5,17 +5,21 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using ConnectML.Core;
 using ConnectML.Core.Interfaces;
+using ConnectML.UI.Models;
+using Microsoft.Win32;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
-using System.Windows.Media.Animation;
-using Microsoft.Win32;
 
+// Aliases to avoid ambiguity
+using WinForms = System.Windows.Forms;
+using Drawing = System.Drawing;
+using System.Runtime.InteropServices;
 using System.Text.Json;
-using ConnectML.UI.Models;
 
 namespace ConnectML.UI
 {
@@ -26,41 +30,190 @@ namespace ConnectML.UI
         private IPlcDriver? _plcDriver;
         private const string ConfigFile = "appsettings.json";
 
+        // System Tray
+        private WinForms.NotifyIcon? _notifyIcon;
+        private Drawing.Icon? _defaultIcon;
+        private Drawing.Icon? _activeIcon; // Icon with Green Dot
+        private DispatcherTimer? _trayAnimationTimer;
+        private bool _trayToggle = false;
+
+        // Responsive Layout Memory
+        private bool _isLogsCollapsed = false;
+        private bool _autoHiddenBySpace = false;
+        private double _userPreferredLogsWidth = 380; // Default width
+        private const double MinConfigWidth = 560; // Minimum comfortable width for Config Panel
+        private const double MinLogsWidth = 200;   // Minimum width before auto-collapse
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        extern static bool DestroyIcon(IntPtr handle);
+
         public MainWindow()
         {
             InitializeComponent();
             SetupLogging();
-            // Driver will be initialized on StartService
+            InitializeTrayIcon();
             LoadSettings();
-            
+
             // Initial Layout Check
             SizeChanged += Window_SizeChanged;
+            
+            // Capture splitter resizing to update user preference
+            ColLogs.SizeChanged += (s, e) =>
+            {
+               // Only update preference if we are NOT in an auto-adjustment scenario
+               if (!_isLogsCollapsed && !_autoHiddenBySpace && this.ActualWidth > (MinConfigWidth + MinLogsWidth))
+               {
+                   if (ColLogs.ActualWidth > MinLogsWidth)
+                   {
+                       _userPreferredLogsWidth = ColLogs.ActualWidth;
+                   }
+               }
+            };
+        }
+
+        private void InitializeTrayIcon()
+        {
+            try
+            {
+                // Find and load the .ico resource
+                var iconUri = new Uri("pack://application:,,,/ConnectML.UI;component/ConnectML-logo-ico.ico");
+                using (var stream = Application.GetResourceStream(iconUri)?.Stream)
+                {
+                    if (stream != null)
+                    {
+                        _defaultIcon = new Drawing.Icon(stream);
+                    }
+                }
+
+                // Fallback if resource not found
+                if (_defaultIcon == null)
+                    _defaultIcon = Drawing.SystemIcons.Application;
+
+                // Generate the Active Icon (Cache it)
+                GenerateActiveIcon();
+
+                _notifyIcon = new WinForms.NotifyIcon
+                {
+                    Icon = _defaultIcon,
+                    Visible = true,
+                    Text = "ConnectML - Monitoramento"
+                };
+
+                _notifyIcon.DoubleClick += (s, e) => RestoreWindow();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Falha ao inicializar System Tray.");
+            }
+        }
+
+        private void GenerateActiveIcon()
+        {
+            if (_defaultIcon == null) return;
+
+            try
+            {
+                // Create a bitmap from the icon
+                using (var bitmap = _defaultIcon.ToBitmap())
+                using (var g = Drawing.Graphics.FromImage(bitmap))
+                {
+                    // Draw a green circle (indicator) at bottom-right
+                    var brush = new Drawing.SolidBrush(Drawing.Color.LimeGreen);
+                    var pen = new Drawing.Pen(Drawing.Color.White, 2); // White border for contrast
+                    
+                    int size = bitmap.Width / 3;
+                    int x = bitmap.Width - size - 1;
+                    int y = bitmap.Height - size - 1;
+
+                    g.SmoothingMode = Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                    g.FillEllipse(brush, x, y, size, size);
+                    g.DrawEllipse(pen, x, y, size, size);
+
+                    // Create Icon from HIcon
+                    IntPtr hIcon = bitmap.GetHicon();
+                    _activeIcon = Drawing.Icon.FromHandle(hIcon);
+                    
+                    // We can cleanup the wrapper later, but we must decide responsibility for DestroyIcon.
+                    // Since _activeIcon wraps it, we will keep it for the app lifetime and let OS cleanup or do it on Dispose.
+                    // Ideally we should keep track of hIcon to destroy it when app closes.
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Erro ao gerar ícone dinâmico.");
+                _activeIcon = _defaultIcon;
+            }
+        }
+
+        private void RestoreWindow()
+        {
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
         }
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-             // 1. Auto-Collapse Logic (Smart)
-             // Check if we have enough space for Main Panel (Min 600) + Logs Panel (Current Width)
-             // We use a bit of margin safety (e.g., 30px)
-             double minMainWidth = 630; // 600 + margins
-             double availableForLogs = e.NewSize.Width - minMainWidth;
-             
-             // If the current Logs width doesn't fit anymore, collapse it.
-             // We only trigger this if it's NOT already collapsed.
-             if (!_isLogsCollapsed && ColLogs.ActualWidth > availableForLogs)
-             {
-                 SetLogsState(true);
-             }
+            // Responsive Logic Strategy:
+            // 1. Prioritize Left Panel (Config).
+            // 2. Shrink Logs Panel if needed.
+            // 3. Collapse Logs Panel if too small.
+            // 4. Auto-Expand if space returns (and was auto-hidden).
 
-             // 2. Prevent Overflow (Virtual Resizing Issue)
-             // We limit the MaxWidth so user can't drag it over the Main Panel space
-             // MaxWidth = ActualWindowWidth - MinWidthOfConfigPanel(600) - Margins
-             double maxLogsWidth = e.NewSize.Width - 630;
-             
-             if (maxLogsWidth < 320) maxLogsWidth = 320; // Ensure it respects min width or at least doesn't break constraint logic negatively
-             
-             ColLogs.MaxWidth = maxLogsWidth;
+            double windowWidth = e.NewSize.Width;
+            double availableForLogs = windowWidth - MinConfigWidth; // Approx 560 reserved for left
+
+            // Determine Target Width for Logs
+            double targetLogsWidth = availableForLogs > _userPreferredLogsWidth ? _userPreferredLogsWidth : availableForLogs;
+
+            if (_isLogsCollapsed)
+            {
+                // Logic for Auto-Show
+                // Only auto-show if it was hidden by space, not by user choice
+                if (_autoHiddenBySpace)
+                {
+                    // Check if we have enough space now
+                    if (availableForLogs > MinLogsWidth)
+                    {
+                        // Restore
+                        _autoHiddenBySpace = false;
+                        SetLogsState(false);
+                    }
+                }
+            }
+            else
+            {
+                // Logic for Shrink or Auto-Hide
+                if (targetLogsWidth < MinLogsWidth)
+                {
+                    // Not enough space -> Collapse
+                    _autoHiddenBySpace = true;
+                    SetLogsState(true);
+                }
+                else
+                {
+                    // Apply dynamic width
+                    ColLogs.Width = new GridLength(targetLogsWidth);
+                }
+            }
         }
+        
+        private void BtnMinimize_Click(object sender, RoutedEventArgs e)
+        {
+            // Hide to Tray
+            Hide();
+            // Show a balloon tip first time?
+            // _notifyIcon?.ShowBalloonTip(3000, "ConnectML", "Aplicação rodando em segundo plano.", WinForms.ToolTipIcon.Info);
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            _notifyIcon?.Dispose();
+            _trayAnimationTimer?.Stop();
+            base.OnClosed(e);
+        }
+
+        // --- Existing Methods Preserved Below (SetupLogging, etc) ---
 
         private void SetupLogging()
         {
@@ -75,7 +228,6 @@ namespace ConnectML.UI
 
         private void AddUiLog(LogEvent logEvent)
         {
-            // Update UI on the dispatcher thread
             Dispatcher.BeginInvoke(() =>
             {
                 var textBlock = new TextBlock
@@ -84,13 +236,11 @@ namespace ConnectML.UI
                     Margin = new Thickness(0, 0, 0, 4)
                 };
 
-                // Time
                 textBlock.Inlines.Add(new System.Windows.Documents.Run($"[{logEvent.Timestamp:HH:mm:ss}] ")
                 {
                     Foreground = (Brush)FindResource("TextDarker")
                 });
 
-                // Level
                 Brush levelColor;
                 if (logEvent.Level == LogEventLevel.Error || logEvent.Level == LogEventLevel.Fatal)
                     levelColor = (Brush)FindResource("StopRed");
@@ -105,7 +255,6 @@ namespace ConnectML.UI
                     FontWeight = FontWeights.Bold
                 });
 
-                // Message
                 textBlock.Inlines.Add(new System.Windows.Documents.Run($" {logEvent.RenderMessage()} ")
                 {
                     Foreground = (Brush)FindResource("TextSecondary")
@@ -113,7 +262,6 @@ namespace ConnectML.UI
 
                 PnlLogs.Children.Add(textBlock);
 
-                // Auto scroll
                 if (PnlLogs.Parent is ScrollViewer sw)
                 {
                     sw.ScrollToBottom();
@@ -124,26 +272,19 @@ namespace ConnectML.UI
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)
         {
             if (e.ChangedButton == MouseButton.Left)
-            {
                 this.DragMove();
-            }
         }
 
         private async void BtnStartStop_Click(object sender, RoutedEventArgs e)
         {
             if (_isRunning)
-            {
                 await StopService();
-            }
             else
-            {
                 await StartService();
-            }
         }
 
         private async Task StartService()
         {
-            // Validation
             string path = TxtSourcePath.Text;
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -151,10 +292,7 @@ namespace ConnectML.UI
                 return;
             }
 
-            // Save Settings immediately
             SaveSettings();
-
-            if (!Directory.Exists(path))
 
             if (!Directory.Exists(path))
             {
@@ -170,7 +308,6 @@ namespace ConnectML.UI
                 }
             }
 
-            // Connect PLC
             try
             {
                 string ip = TxtIp.Text;
@@ -183,7 +320,6 @@ namespace ConnectML.UI
                      return;
                 }
 
-                // Instantiate Real Driver with Adapter
                 var logger = new ConnectML.UI.Utils.SerilogLoggerAdapter<ConnectML.Infrastructure.PlcDrivers.SiemensS7Driver>();
                 _plcDriver = new ConnectML.Infrastructure.PlcDrivers.SiemensS7Driver(logger);
 
@@ -195,10 +331,8 @@ namespace ConnectML.UI
                  return;
             }
 
-            // Lock UI
             PnlConfiguration.IsEnabled = false;
 
-            // Update Button Visuals for Stop
             TxtStartStop.Text = "Parar";
             IconStartStop.Data = Geometry.Parse("M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M16,16H8V8h8V16z");
             BtnStartStop.Background = (Brush)FindResource("StopRedBg");
@@ -206,18 +340,15 @@ namespace ConnectML.UI
             TxtStartStop.Foreground = (Brush)FindResource("StopRed");
             IconStartStop.Fill = (Brush)FindResource("StopRed");
 
-            // Status
             TxtStatus.Text = "EM EXECUÇÃO";
             TxtStatus.Foreground = (Brush)FindResource("SuccessGreen");
             StatusIndicator.Fill = (Brush)FindResource("SuccessGreen");
             TxtFooterStatus.Text = "Monitorando...";
             StatusDot.Fill = (Brush)FindResource("SuccessGreen");
 
-            // Animation
             var sb = (Storyboard)FindResource("BlinkAnimation");
             sb.Begin(StatusIndicator);
 
-            // Watcher
             _watcher = new FileSystemWatcher(path);
             _watcher.Filter = "*.*";
             _watcher.NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite;
@@ -226,6 +357,9 @@ namespace ConnectML.UI
 
             _isRunning = true;
             Log.Information("Serviço Iniciado. Monitorando: " + path);
+
+            // Start Tray Animation
+            StartTrayAnimation();
         }
 
         private async Task StopService()
@@ -244,10 +378,8 @@ namespace ConnectML.UI
                 await _plcDriver.DisconnectAsync();
             }
 
-            // Unlock UI
             PnlConfiguration.IsEnabled = true;
 
-            // Update Button Visuals for Start
             TxtStartStop.Text = "Iniciar";
             IconStartStop.Data = Geometry.Parse("M8,5.14V19.14L19,12.14L8,5.14Z");
             BtnStartStop.Background = (Brush)FindResource("StartGreenBg");
@@ -255,20 +387,49 @@ namespace ConnectML.UI
             TxtStartStop.Foreground = (Brush)FindResource("StartGreen");
             IconStartStop.Fill = (Brush)FindResource("StartGreen");
 
-            // Status
             TxtStatus.Text = "PARADO";
             TxtStatus.Foreground = (Brush)FindResource("TextSecondary");
             StatusIndicator.Fill = (Brush)FindResource("TextSecondary");
             TxtFooterStatus.Text = "Offline";
             StatusDot.Fill = (Brush)FindResource("TextSecondary");
 
-            // Stop Animation
             var sb = (Storyboard)FindResource("BlinkAnimation");
             sb.Stop(StatusIndicator);
             StatusIndicator.Opacity = 1;
             StatusIndicator.RenderTransform = new ScaleTransform(1, 1);
 
             Log.Information("Serviço Parado.");
+
+            StopTrayAnimation();
+        }
+
+        private void StartTrayAnimation()
+        {
+            if (_notifyIcon == null) return;
+            
+            _trayAnimationTimer = new DispatcherTimer();
+            _trayAnimationTimer.Interval = TimeSpan.FromMilliseconds(700);
+            _trayAnimationTimer.Tick += (s, e) =>
+            {
+                if (_notifyIcon == null) return;
+                
+                _trayToggle = !_trayToggle;
+                _notifyIcon.Icon = _trayToggle ? _activeIcon : _defaultIcon;
+            };
+            _trayAnimationTimer.Start();
+        }
+
+        private void StopTrayAnimation()
+        {
+            if (_trayAnimationTimer != null)
+            {
+                _trayAnimationTimer.Stop();
+                _trayAnimationTimer = null;
+            }
+            if (_notifyIcon != null && _defaultIcon != null)
+            {
+                _notifyIcon.Icon = _defaultIcon;
+            }
         }
 
         private void OnFileCreated(object sender, FileSystemEventArgs e)
@@ -276,8 +437,6 @@ namespace ConnectML.UI
              var ext = Path.GetExtension(e.FullPath).ToUpper();
              if (ext != ".QIF" && ext != ".XML") return;
 
-             // Process in UI thread or background, using Dispatcher to switch context if needed or just task run
-             // Using Dispatcher to ensure we don't block watcher thread and can update UI easily later
              Dispatcher.InvokeAsync(async () => await ProcessFile(e.FullPath));
         }
 
@@ -285,47 +444,30 @@ namespace ConnectML.UI
         {
             try
             {
-                // Wait for file to be ready (exclusive access and not empty)
                 if (!await WaitForFileReady(filePath))
                 {
-                    Log.Warning($"Arquivo ignorado (não pronto ou bloqueado): {Path.GetFileName(filePath)}");
+                    Log.Warning($"Arquivo ignorado: {Path.GetFileName(filePath)}");
                     return;
                 }
 
-                Log.Information($"Processando arquivo: {Path.GetFileName(filePath)}");
-
-                // Parse
+                Log.Information($"Processando: {Path.GetFileName(filePath)}");
                 var result = QifParser.Parse(filePath);
 
-                // Write to PLC
                 if (RbBoolean.IsChecked == true)
-                {
-                    string db = TxtDbBool.Text;
-                    await _plcDriver.WriteBoolAsync(db, result.IsOk);
-                }
+                    await _plcDriver.WriteBoolAsync(TxtDbBool.Text, result.IsOk);
                 else
-                {
-                    string db = TxtDbInt.Text;
-                    await _plcDriver.WriteIntAsync(db, result.FailCount);
-                }
+                    await _plcDriver.WriteIntAsync(TxtDbInt.Text, result.FailCount);
 
-                // Delete file
                 try
                 {
                     File.Delete(filePath);
-                    Log.Information("Arquivo processado e removido.");
+                    Log.Information("Processado e removido.");
                 }
-                catch (Exception ex)
-                {
-                    Log.Error($"Erro ao deletar arquivo: {ex.Message}");
-                }
-
+                catch (Exception ex) { Log.Error($"Erro ao deletar: {ex.Message}"); }
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Falha no processamento.");
-
-                // Move to error
                 try
                 {
                     string dir = Path.GetDirectoryName(filePath)!;
@@ -335,12 +477,9 @@ namespace ConnectML.UI
                     string dest = Path.Combine(errorDir, Path.GetFileName(filePath));
                     if (File.Exists(dest)) File.Delete(dest);
                     File.Move(filePath, dest);
-                    Log.Information($"Arquivo movido para Error: {Path.GetFileName(filePath)}");
+                    Log.Information("Movido para Error.");
                 }
-                catch (Exception moveEx)
-                {
-                    Log.Error($"Erro ao mover arquivo para erro: {moveEx.Message}");
-                }
+                catch (Exception moveEx) { Log.Error($"Erro ao mover: {moveEx.Message}"); }
             }
         }
 
@@ -356,21 +495,13 @@ namespace ConnectML.UI
                         var info = new FileInfo(filePath);
                         if (info.Length > 0)
                         {
-                            using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
-                            {
+                            using (File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
                                 return true;
-                            }
                         }
                     }
                 }
-                catch (IOException)
-                {
-                    // File is locked
-                }
-                catch (Exception)
-                {
-                    // Ignore other errors
-                }
+                catch (IOException) { }
+                catch (Exception) { }
                 await Task.Delay(500);
             }
             return false;
@@ -389,26 +520,35 @@ namespace ConnectML.UI
         private void BtnBrowseFolder_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new OpenFolderDialog();
-            dialog.Title = "Selecione a pasta de monitoramento";
-            dialog.Multiselect = false;
-            
-            if (Directory.Exists(TxtSourcePath.Text))
-            {
-                 dialog.DefaultDirectory = TxtSourcePath.Text;
-            }
+            dialog.Title = "Selecione a pasta";
+            if (Directory.Exists(TxtSourcePath.Text)) dialog.DefaultDirectory = TxtSourcePath.Text;
 
-            if (dialog.ShowDialog() == true)
-            {
-                TxtSourcePath.Text = dialog.FolderName;
-            }
+            if (dialog.ShowDialog() == true) TxtSourcePath.Text = dialog.FolderName;
         }
-
-        private bool _isLogsCollapsed = false;
-        private GridLength? _lastLogsWidth;
 
         private void BtnToggleLogs_Click(object sender, RoutedEventArgs e)
         {
-            SetLogsState(!_isLogsCollapsed);
+            bool shouldCollapse = !_isLogsCollapsed;
+            
+            // If user manually toggles, we reset auto-hidden flags
+            _autoHiddenBySpace = false;
+            
+            if (shouldCollapse)
+            {
+                 // User manually collapsing
+                 SetLogsState(true);
+            }
+            else
+            {
+                 // User manually expanding
+                 SetLogsState(false);
+                 
+                 // Restore width logic needs to be careful not to squash if window is small
+                 // But user asked for it, so we try our best.
+                 // Maybe resize window if needed?
+                 
+                 // We rely on SetLogsState to restore _userPreferredLogsWidth
+            }
         }
 
         private void SetLogsState(bool collapse)
@@ -421,29 +561,23 @@ namespace ConnectML.UI
                  LogsSplitter.Visibility = Visibility.Visible;
                  LogsSplitter.IsEnabled = true;
 
-                 ColLogs.MinWidth = 320; // Restore MinWidth constraint
+                 ColLogs.MinWidth = MinLogsWidth;
                  
-                 var targetWidth = _lastLogsWidth ?? new GridLength(380);
-                 ColLogs.Width = targetWidth;
-                 if (ColLogs.Width.Value < 320) ColLogs.Width = new GridLength(380);
+                 // Use saved preference
+                 double widthToRestore = _userPreferredLogsWidth < MinLogsWidth ? 380 : _userPreferredLogsWidth;
+                 ColLogs.Width = new GridLength(widthToRestore);
 
-                 // Auto-Resize Window if too small
-                 // Minimum needed = MinMain(630) + Logs(380) approx 1010
-                 double requiredWidth = 630 + ColLogs.Width.Value;
-                 if (this.ActualWidth < requiredWidth)
-                 {
-                     this.Width = requiredWidth + 20; // Add some breathing room
-                 }
+                 // Check if this makes window too small for config
+                 // But we prioritize user action here. 
                  
                  _isLogsCollapsed = false;
              }
              else
              {
                  // Collapse
-                 if (!_isLogsCollapsed) _lastLogsWidth = ColLogs.Width;
-                 
-                 ColLogs.MinWidth = 0; // Remove constraint so it can shrink to button size
+                 ColLogs.MinWidth = 0;
                  ColLogs.Width = GridLength.Auto;
+                 
                  PnlLogsExpanded.Visibility = Visibility.Collapsed;
                  PnlLogsCollapsed.Visibility = Visibility.Visible;
                  LogsSplitter.IsEnabled = false;
@@ -453,7 +587,6 @@ namespace ConnectML.UI
              }
         }
 
-        #region Configuration Persistence
         private void LoadSettings()
         {
             try
@@ -462,30 +595,20 @@ namespace ConnectML.UI
                 {
                     string json = File.ReadAllText(ConfigFile);
                     var config = JsonSerializer.Deserialize<AppConfig>(json);
-
                     if (config != null)
                     {
                         TxtSourcePath.Text = config.SourcePath;
-                        if (config.IsBooleanMode) RbBoolean.IsChecked = true;
-                        else RbNumeric.IsChecked = true;
-                        
-                        // Protocol (Only 1 now, but future proof)
-                        // CmbProtocol.SelectedItem ... 
-
+                        if (config.IsBooleanMode) RbBoolean.IsChecked = true; else RbNumeric.IsChecked = true;
                         TxtIp.Text = config.IpAddress;
                         TxtRack.Text = config.Rack;
                         TxtSlot.Text = config.Slot;
                         TxtDbBool.Text = config.DbAddressBool;
                         TxtDbInt.Text = config.DbAddressInt;
-                        
-                        Log.Information("Configurações carregadas com sucesso.");
+                        Log.Information("Configurações carregadas.");
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                Log.Error($"Erro ao carregar configurações: {ex.Message}");
-            }
+            catch (Exception ex) { Log.Error($"Erro configs: {ex.Message}"); }
         }
 
         private void SaveSettings()
@@ -503,19 +626,13 @@ namespace ConnectML.UI
                     DbAddressBool = TxtDbBool.Text,
                     DbAddressInt = TxtDbInt.Text
                 };
-
                 string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFile, json);
-                Log.Information("Configurações salvas.");
             }
-            catch (Exception ex)
-            {
-                Log.Error($"Erro ao salvar configurações: {ex.Message}");
-            }
+            catch (Exception ex) { Log.Error($"Erro salvar: {ex.Message}"); }
         }
-        #endregion
 
-        // Sink Class
+        // Sink
         public class UiSink : ILogEventSink
         {
             private readonly Action<LogEvent> _action;

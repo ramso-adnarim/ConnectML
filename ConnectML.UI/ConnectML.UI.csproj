@@ -5,6 +5,7 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>ConnectML.UI</RootNamespace>
     <ApplicationIcon>ConnectML-logo-ico.ico</ApplicationIcon>
   </PropertyGroup>
