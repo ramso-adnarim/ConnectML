@@ -576,13 +576,21 @@ namespace ConnectML.UI
                  LogsSplitter.IsEnabled = true;
 
                  ColLogs.MinWidth = MinLogsWidth;
+
+                 // Ensure we have room to expand or at least don't stay clamped to 0 or tiny
+                 double windowWidth = this.ActualWidth;
+                 double margins = 20;
+                 // If window isn't loaded yet, default to large
+                 double maxAvailable = windowWidth > 0 ? (windowWidth - MinConfigWidth - margins) : double.PositiveInfinity;
+                 
+                 // If maxAvailable is tight, allow at least MinLogsWidth because user requested expand
+                 if (maxAvailable < MinLogsWidth) maxAvailable = MinLogsWidth;
+                 
+                 ColLogs.MaxWidth = maxAvailable;
                  
                  // Use saved preference but guarantee minimum
                  double widthToRestore = _userPreferredLogsWidth < MinLogsWidth ? MinLogsWidth : _userPreferredLogsWidth;
                  ColLogs.Width = new GridLength(widthToRestore);
-
-                 // Check if this makes window too small for config
-                 // But we prioritize user action here. 
                  
                  _isLogsCollapsed = false;
              }
