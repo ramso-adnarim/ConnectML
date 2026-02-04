@@ -379,9 +379,9 @@
         <!-- MAIN LAYOUT -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="500"/>
+                <ColumnDefinition Width="*" MinWidth="450"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="380" x:Name="ColLogs" MinWidth="420"/>
+                <ColumnDefinition Width="380" x:Name="ColLogs" MinWidth="390"/>
             </Grid.ColumnDefinitions>
 
             <!-- LEFT PANEL: CONFIGURATION -->
