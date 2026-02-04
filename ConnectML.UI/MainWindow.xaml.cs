@@ -15,7 +15,7 @@ using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 
-// Aliases to avoid ambiguity
+// Aliases para evitar ambiguidade de tipos
 using WinForms = System.Windows.Forms;
 using Drawing = System.Drawing;
 using System.Runtime.InteropServices;
@@ -30,17 +30,17 @@ namespace ConnectML.UI
         private IPlcDriver? _plcDriver;
         private const string ConfigFile = "appsettings.json";
 
-        // System Tray
+        // System Tray (Ícone na bandeja do sistema)
         private WinForms.NotifyIcon? _notifyIcon;
         private Drawing.Icon? _defaultIcon;
-        private Drawing.Icon? _activeIcon; // Icon with Green Dot
+        private Drawing.Icon? _activeIcon; // Ícone com indicador verde (ativo)
         private DispatcherTimer? _trayAnimationTimer;
         private bool _trayToggle = false;
 
-        // Responsive Layout Memory
+        // Memória de Layout Responsivo
         private bool _isLogsCollapsed = false;
         private bool _autoHiddenBySpace = false;
-        private double _userPreferredLogsWidth = 380; // Default width
+        private double _userPreferredLogsWidth = 380; // Largura preferida padrão
         private const double MinConfigWidth = 500; 
         private const double IdealConfigWidth = 564;
         private const double MinLogsWidth = 420;
@@ -55,13 +55,13 @@ namespace ConnectML.UI
             InitializeTrayIcon();
             LoadSettings();
 
-            // Initial Layout Check
+            // Verificação Inicial de Layout
             SizeChanged += Window_SizeChanged;
             
-            // Capture splitter resizing to update user preference
+            // Captura o redimensionamento do divisor para salvar a preferência do usuário
             PnlLogsContainer.SizeChanged += (s, e) =>
             {
-               // Only update preference if we are NOT in an auto-adjustment scenario
+               // Atualiza preferência apenas se não estiver em um cenário de ajuste automático
                if (!_isLogsCollapsed && !_autoHiddenBySpace && this.ActualWidth > (MinConfigWidth + MinLogsWidth))
                {
                    if (ColLogs.ActualWidth > MinLogsWidth)
@@ -76,7 +76,7 @@ namespace ConnectML.UI
         {
             try
             {
-                // Find and load the .ico resource
+                // Carrega o recurso .ico
                 var iconUri = new Uri("pack://application:,,,/ConnectML.UI;component/ConnectML-logo-ico.ico");
                 using (var stream = Application.GetResourceStream(iconUri)?.Stream)
                 {
@@ -86,11 +86,11 @@ namespace ConnectML.UI
                     }
                 }
 
-                // Fallback if resource not found
+                // Fallback caso recurso não seja encontrado
                 if (_defaultIcon == null)
                     _defaultIcon = Drawing.SystemIcons.Application;
 
-                // Generate the Active Icon (Cache it)
+                // Gera o ícone "Ativo" (Cache)
                 GenerateActiveIcon();
 
                 _notifyIcon = new WinForms.NotifyIcon
@@ -114,13 +114,13 @@ namespace ConnectML.UI
 
             try
             {
-                // Create a bitmap from the icon
+                // Cria bitmap a partir do ícone
                 using (var bitmap = _defaultIcon.ToBitmap())
                 using (var g = Drawing.Graphics.FromImage(bitmap))
                 {
-                    // Draw a green circle (indicator) at bottom-right
+                    // Desenha um círculo verde (indicador) no canto inferior direito
                     var brush = new Drawing.SolidBrush(Drawing.Color.LimeGreen);
-                    var pen = new Drawing.Pen(Drawing.Color.White, 2); // White border for contrast
+                    var pen = new Drawing.Pen(Drawing.Color.White, 2); // Borda branca para contraste
                     
                     int size = bitmap.Width / 3;
                     int x = bitmap.Width - size - 1;
@@ -130,13 +130,11 @@ namespace ConnectML.UI
                     g.FillEllipse(brush, x, y, size, size);
                     g.DrawEllipse(pen, x, y, size, size);
 
-                    // Create Icon from HIcon
+                    // Cria Ícone a partir do Handle
                     IntPtr hIcon = bitmap.GetHicon();
                     _activeIcon = Drawing.Icon.FromHandle(hIcon);
                     
-                    // We can cleanup the wrapper later, but we must decide responsibility for DestroyIcon.
-                    // Since _activeIcon wraps it, we will keep it for the app lifetime and let OS cleanup or do it on Dispose.
-                    // Ideally we should keep track of hIcon to destroy it when app closes.
+                    // A limpeza do handle será gerenciada pelo sistema ou no encerramento idealmente
                 }
             }
             catch (Exception ex)
@@ -155,49 +153,49 @@ namespace ConnectML.UI
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            // Responsive Logic Strategy V3.1:
-            // 1. Prioritize growing the Right Panel (Logs) when window is large.
-            // 2. Prevent Overlap: Keep minimal widths (450 Left, 390 Right).
-            // 3. Shrink priority: Shrink Logs to Min -> Shrink Config to Min -> Collapse Logs.
+            // Estratégia de Lógica Responsiva V3.1:
+            // 1. Priorizar o crescimento do Painel Direito (Logs) quando a janela for grande.
+            // 2. Prevenir Sobreposição: Manter larguras mínimas (450 Esquerda, 390 Direita).
+            // 3. Prioridade de Encolhimento: Logs até Mínimo -> Config até Mínimo -> Recolher Logs.
 
             double windowWidth = e.NewSize.Width;
             double margins = 20;
             
-            // Calculate how much space we give to logs if we keep Config at "Ideal" (564)
+            // Calcula espaço para logs mantendo Configuração no "Ideal" (564)
             double targetLogsWidth = windowWidth - IdealConfigWidth - margins;
             
-            // If that results in less than MinLogsWidth, we need to steal space from Config or Collapse
+            // Se resultar em menos que o mínimo permitido para Logs, precisamos roubar espaço da Config ou Recolher
             if (targetLogsWidth < MinLogsWidth)
             {
-                 // Check if we can just shrink Config down to MinConfigWidth (450)
+                 // Verifica se podemos apenas encolher a Configuração até seu mínimo (450)
                  double spaceWithMinConfig = windowWidth - MinConfigWidth - margins;
                  
                  if (spaceWithMinConfig >= MinLogsWidth)
                  {
-                     // Scenario: Window fits both at Minimums.
-                     // Set Right Panel to MinLogsWidth explicitly to prevent overlap.
-                     // Left Panel will take the rest (variable between 450 and 564).
+                     // Cenário: Janela cabe ambos nos mínimos.
+                     // Define Painel Direito para Mínimo explicitamente para prevenir sobreposição.
+                     // Painel Esquerdo tomará o resto (variável entre 450 e 564).
                      targetLogsWidth = MinLogsWidth;
                  }
                  else
                  {
-                     // Scenario: Window is too small for both.
-                     // Time to collapse.
+                     // Cenário: Janela muito pequena para ambos.
+                     // Hora de recolher (Collapse).
                      if (!_isLogsCollapsed)
                      {
                          _autoHiddenBySpace = true;
                          SetLogsState(true);
                      }
-                     return; // Done
+                     return; // Concluído
                  }
             }
 
-            // Apply constraints
+            // Aplicar restrições
             if (_isLogsCollapsed)
             {
                 if (_autoHiddenBySpace)
                 {
-                    // Can we restore?
+                    // Podemos restaurar?
                     if ((windowWidth - margins) > (MinConfigWidth + MinLogsWidth))
                     {
                         _autoHiddenBySpace = false;
@@ -214,9 +212,9 @@ namespace ConnectML.UI
         
         private void BtnMinimize_Click(object sender, RoutedEventArgs e)
         {
-            // Hide to Tray
+            // Ocultar para a Bandeja (Tray)
             Hide();
-            // Show a balloon tip first time?
+            // Exibir uma dica de balão na primeira vez?
             // _notifyIcon?.ShowBalloonTip(3000, "ConnectML", "Aplicação rodando em segundo plano.", WinForms.ToolTipIcon.Info);
         }
 
@@ -227,7 +225,7 @@ namespace ConnectML.UI
             base.OnClosed(e);
         }
 
-        // --- Existing Methods Preserved Below (SetupLogging, etc) ---
+        // --- Métodos Existentes Preservados Abaixo (SetupLogging, etc) ---
 
         private void SetupLogging()
         {
@@ -372,7 +370,7 @@ namespace ConnectML.UI
             _isRunning = true;
             Log.Information("Serviço Iniciado. Monitorando: " + path);
 
-            // Start Tray Animation
+            // Inicia a animação do ícone na bandeja
             StartTrayAnimation();
         }
 
@@ -544,24 +542,24 @@ namespace ConnectML.UI
         {
             bool shouldCollapse = !_isLogsCollapsed;
             
-            // If user manually toggles, we reset auto-hidden flags
+            // Se usuário alterna manualmente, resetamos flags de auto-ocultação
             _autoHiddenBySpace = false;
             
             if (shouldCollapse)
             {
-                 // User manually collapsing
+                 // Usuário recolhendo manualmente
                  SetLogsState(true);
             }
             else
             {
-                 // User manually expanding
+                 // Usuário expandindo manualmente
                  SetLogsState(false);
                  
-                 // Restore width logic needs to be careful not to squash if window is small
-                 // But user asked for it, so we try our best.
-                 // Maybe resize window if needed?
+                 // A lógica de restauração da largura precisa ser cuidadosa para não achatar se a janela for pequena.
+                 // Mas o usuário pediu, então tentamos o nosso melhor.
+                 // Talvez redimensionar a janela se necessário?
                  
-                 // We rely on SetLogsState to restore _userPreferredLogsWidth
+                 // Confiamos em SetLogsState para restaurar _userPreferredLogsWidth
             }
         }
 
@@ -569,8 +567,8 @@ namespace ConnectML.UI
         {
              if (!collapse)
              {
-                 // Expand
-                 _isLogsCollapsed = false; // Mark as expanded immediately so SizeChanged handles it correctly
+                 // Expandir
+                 _isLogsCollapsed = false; // Marca como expandido imediatamente para SizeChanged tratar corretamente
                  
                  PnlLogsCollapsed.Visibility = Visibility.Collapsed;
                  PnlLogsExpanded.Visibility = Visibility.Visible;
@@ -579,26 +577,26 @@ namespace ConnectML.UI
 
                  ColLogs.MinWidth = MinLogsWidth;
 
-                 // Calculate width to restore
+                 // Calcula largura a restaurar
                  double widthToRestore = _userPreferredLogsWidth < MinLogsWidth ? MinLogsWidth : _userPreferredLogsWidth;
                  
-                 // Check if current window width can accommodate this
+                 // Verifica se largura atual da janela comporta isso
                  double currentWidth = this.ActualWidth;
                  double margins = 20;
                  double requiredWidth = MinConfigWidth + widthToRestore + margins;
                  
                  if (currentWidth < requiredWidth)
                  {
-                     // Resize Application Window
+                     // Redimensiona Janela da Aplicação
                      this.Width = requiredWidth;
                      
-                     // Temporarily uncap MaxWidth so setting Width works without clamping
-                     // The SizeChanged event will fire due to width change and re-clamp it correctly
+                     // Remove temporariamente limite MaxWidth para permitir ajuste
+                     // O evento SizeChanged disparará e ajustará limites novamente
                      ColLogs.MaxWidth = double.PositiveInfinity;
                  }
                  else
                  {
-                     // Ensure MaxWidth permits the restore
+                     // Garante que MaxWidth permita a restauração
                      ColLogs.MaxWidth = currentWidth - MinConfigWidth - margins;
                  }
 
@@ -606,7 +604,7 @@ namespace ConnectML.UI
              }
              else
              {
-                 // Collapse
+                 // Recolher
                  _isLogsCollapsed = true;
                  
                  ColLogs.MinWidth = 0;
