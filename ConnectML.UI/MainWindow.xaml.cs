@@ -570,6 +570,8 @@ namespace ConnectML.UI
              if (!collapse)
              {
                  // Expand
+                 _isLogsCollapsed = false; // Mark as expanded immediately so SizeChanged handles it correctly
+                 
                  PnlLogsCollapsed.Visibility = Visibility.Collapsed;
                  PnlLogsExpanded.Visibility = Visibility.Visible;
                  LogsSplitter.Visibility = Visibility.Visible;
@@ -577,26 +579,36 @@ namespace ConnectML.UI
 
                  ColLogs.MinWidth = MinLogsWidth;
 
-                 // Ensure we have room to expand or at least don't stay clamped to 0 or tiny
-                 double windowWidth = this.ActualWidth;
-                 double margins = 20;
-                 // If window isn't loaded yet, default to large
-                 double maxAvailable = windowWidth > 0 ? (windowWidth - MinConfigWidth - margins) : double.PositiveInfinity;
-                 
-                 // If maxAvailable is tight, allow at least MinLogsWidth because user requested expand
-                 if (maxAvailable < MinLogsWidth) maxAvailable = MinLogsWidth;
-                 
-                 ColLogs.MaxWidth = maxAvailable;
-                 
-                 // Use saved preference but guarantee minimum
+                 // Calculate width to restore
                  double widthToRestore = _userPreferredLogsWidth < MinLogsWidth ? MinLogsWidth : _userPreferredLogsWidth;
-                 ColLogs.Width = new GridLength(widthToRestore);
                  
-                 _isLogsCollapsed = false;
+                 // Check if current window width can accommodate this
+                 double currentWidth = this.ActualWidth;
+                 double margins = 20;
+                 double requiredWidth = MinConfigWidth + widthToRestore + margins;
+                 
+                 if (currentWidth < requiredWidth)
+                 {
+                     // Resize Application Window
+                     this.Width = requiredWidth;
+                     
+                     // Temporarily uncap MaxWidth so setting Width works without clamping
+                     // The SizeChanged event will fire due to width change and re-clamp it correctly
+                     ColLogs.MaxWidth = double.PositiveInfinity;
+                 }
+                 else
+                 {
+                     // Ensure MaxWidth permits the restore
+                     ColLogs.MaxWidth = currentWidth - MinConfigWidth - margins;
+                 }
+
+                 ColLogs.Width = new GridLength(widthToRestore);
              }
              else
              {
                  // Collapse
+                 _isLogsCollapsed = true;
+                 
                  ColLogs.MinWidth = 0;
                  ColLogs.Width = GridLength.Auto;
                  
@@ -604,8 +616,6 @@ namespace ConnectML.UI
                  PnlLogsCollapsed.Visibility = Visibility.Visible;
                  LogsSplitter.IsEnabled = false;
                  LogsSplitter.Visibility = Visibility.Collapsed;
-
-                 _isLogsCollapsed = true;
              }
         }
 
