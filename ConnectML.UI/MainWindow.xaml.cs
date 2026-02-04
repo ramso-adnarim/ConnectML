@@ -5,12 +5,21 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using ConnectML.Core;
 using ConnectML.Core.Interfaces;
+using ConnectML.UI.Models;
+using Microsoft.Win32;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
+
+// Aliases para evitar ambiguidade de tipos
+using WinForms = System.Windows.Forms;
+using Drawing = System.Drawing;
+using System.Runtime.InteropServices;
+using System.Text.Json;
 
 namespace ConnectML.UI
 {
@@ -18,14 +27,205 @@ namespace ConnectML.UI
     {
         private bool _isRunning = false;
         private FileSystemWatcher? _watcher;
-        private IPlcDriver _plcDriver;
+        private IPlcDriver? _plcDriver;
+        private const string ConfigFile = "appsettings.json";
+
+        // System Tray (Ícone na bandeja do sistema)
+        private WinForms.NotifyIcon? _notifyIcon;
+        private Drawing.Icon? _defaultIcon;
+        private Drawing.Icon? _activeIcon; // Ícone com indicador verde (ativo)
+        private DispatcherTimer? _trayAnimationTimer;
+        private bool _trayToggle = false;
+
+        // Memória de Layout Responsivo
+        private bool _isLogsCollapsed = false;
+        private bool _autoHiddenBySpace = false;
+        private double _userPreferredLogsWidth = 380; // Largura preferida padrão
+        private const double MinConfigWidth = 500; 
+        private const double IdealConfigWidth = 564;
+        private const double MinLogsWidth = 420;
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        extern static bool DestroyIcon(IntPtr handle);
 
         public MainWindow()
         {
             InitializeComponent();
             SetupLogging();
-            _plcDriver = new MockPlcDriver();
+            InitializeTrayIcon();
+            LoadSettings();
+
+            // Verificação Inicial de Layout
+            SizeChanged += Window_SizeChanged;
+            
+            // Captura o redimensionamento do divisor para salvar a preferência do usuário
+            PnlLogsContainer.SizeChanged += (s, e) =>
+            {
+               // Atualiza preferência apenas se não estiver em um cenário de ajuste automático
+               if (!_isLogsCollapsed && !_autoHiddenBySpace && this.ActualWidth > (MinConfigWidth + MinLogsWidth))
+               {
+                   if (ColLogs.ActualWidth > MinLogsWidth)
+                   {
+                       _userPreferredLogsWidth = ColLogs.ActualWidth;
+                   }
+               }
+            };
         }
+
+        private void InitializeTrayIcon()
+        {
+            try
+            {
+                // Carrega o recurso .ico
+                var iconUri = new Uri("pack://application:,,,/ConnectML.UI;component/ConnectML-logo-ico.ico");
+                using (var stream = Application.GetResourceStream(iconUri)?.Stream)
+                {
+                    if (stream != null)
+                    {
+                        _defaultIcon = new Drawing.Icon(stream);
+                    }
+                }
+
+                // Fallback caso recurso não seja encontrado
+                if (_defaultIcon == null)
+                    _defaultIcon = Drawing.SystemIcons.Application;
+
+                // Gera o ícone "Ativo" (Cache)
+                GenerateActiveIcon();
+
+                _notifyIcon = new WinForms.NotifyIcon
+                {
+                    Icon = _defaultIcon,
+                    Visible = true,
+                    Text = "ConnectML - Monitoramento"
+                };
+
+                _notifyIcon.DoubleClick += (s, e) => RestoreWindow();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Falha ao inicializar System Tray.");
+            }
+        }
+
+        private void GenerateActiveIcon()
+        {
+            if (_defaultIcon == null) return;
+
+            try
+            {
+                // Cria bitmap a partir do ícone
+                using (var bitmap = _defaultIcon.ToBitmap())
+                using (var g = Drawing.Graphics.FromImage(bitmap))
+                {
+                    // Desenha um círculo verde (indicador) no canto inferior direito
+                    var brush = new Drawing.SolidBrush(Drawing.Color.LimeGreen);
+                    var pen = new Drawing.Pen(Drawing.Color.White, 2); // Borda branca para contraste
+                    
+                    int size = bitmap.Width / 3;
+                    int x = bitmap.Width - size - 1;
+                    int y = bitmap.Height - size - 1;
+
+                    g.SmoothingMode = Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                    g.FillEllipse(brush, x, y, size, size);
+                    g.DrawEllipse(pen, x, y, size, size);
+
+                    // Cria Ícone a partir do Handle
+                    IntPtr hIcon = bitmap.GetHicon();
+                    _activeIcon = Drawing.Icon.FromHandle(hIcon);
+                    
+                    // A limpeza do handle será gerenciada pelo sistema ou no encerramento idealmente
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Erro ao gerar ícone dinâmico.");
+                _activeIcon = _defaultIcon;
+            }
+        }
+
+        private void RestoreWindow()
+        {
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+        }
+
+        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            // Estratégia de Lógica Responsiva V3.1:
+            // 1. Priorizar o crescimento do Painel Direito (Logs) quando a janela for grande.
+            // 2. Prevenir Sobreposição: Manter larguras mínimas (450 Esquerda, 390 Direita).
+            // 3. Prioridade de Encolhimento: Logs até Mínimo -> Config até Mínimo -> Recolher Logs.
+
+            double windowWidth = e.NewSize.Width;
+            double margins = 20;
+            
+            // Calcula espaço para logs mantendo Configuração no "Ideal" (564)
+            double targetLogsWidth = windowWidth - IdealConfigWidth - margins;
+            
+            // Se resultar em menos que o mínimo permitido para Logs, precisamos roubar espaço da Config ou Recolher
+            if (targetLogsWidth < MinLogsWidth)
+            {
+                 // Verifica se podemos apenas encolher a Configuração até seu mínimo (450)
+                 double spaceWithMinConfig = windowWidth - MinConfigWidth - margins;
+                 
+                 if (spaceWithMinConfig >= MinLogsWidth)
+                 {
+                     // Cenário: Janela cabe ambos nos mínimos.
+                     // Define Painel Direito para Mínimo explicitamente para prevenir sobreposição.
+                     // Painel Esquerdo tomará o resto (variável entre 450 e 564).
+                     targetLogsWidth = MinLogsWidth;
+                 }
+                 else
+                 {
+                     // Cenário: Janela muito pequena para ambos.
+                     // Hora de recolher (Collapse).
+                     if (!_isLogsCollapsed)
+                     {
+                         _autoHiddenBySpace = true;
+                         SetLogsState(true);
+                     }
+                     return; // Concluído
+                 }
+            }
+
+            // Aplicar restrições
+            if (_isLogsCollapsed)
+            {
+                if (_autoHiddenBySpace)
+                {
+                    // Podemos restaurar?
+                    if ((windowWidth - margins) > (MinConfigWidth + MinLogsWidth))
+                    {
+                        _autoHiddenBySpace = false;
+                        SetLogsState(false);
+                    }
+                }
+            }
+            else
+            {
+                ColLogs.Width = new GridLength(targetLogsWidth);
+                ColLogs.MaxWidth = windowWidth - MinConfigWidth - margins;
+            }
+        }
+        
+        private void BtnMinimize_Click(object sender, RoutedEventArgs e)
+        {
+            // Ocultar para a Bandeja (Tray)
+            Hide();
+            // Exibir uma dica de balão na primeira vez?
+            // _notifyIcon?.ShowBalloonTip(3000, "ConnectML", "Aplicação rodando em segundo plano.", WinForms.ToolTipIcon.Info);
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            _notifyIcon?.Dispose();
+            _trayAnimationTimer?.Stop();
+            base.OnClosed(e);
+        }
+
+        // --- Métodos Existentes Preservados Abaixo (SetupLogging, etc) ---
 
         private void SetupLogging()
         {
@@ -40,7 +240,6 @@ namespace ConnectML.UI
 
         private void AddUiLog(LogEvent logEvent)
         {
-            // Update UI on the dispatcher thread
             Dispatcher.BeginInvoke(() =>
             {
                 var textBlock = new TextBlock
@@ -49,13 +248,11 @@ namespace ConnectML.UI
                     Margin = new Thickness(0, 0, 0, 4)
                 };
 
-                // Time
                 textBlock.Inlines.Add(new System.Windows.Documents.Run($"[{logEvent.Timestamp:HH:mm:ss}] ")
                 {
                     Foreground = (Brush)FindResource("TextDarker")
                 });
 
-                // Level
                 Brush levelColor;
                 if (logEvent.Level == LogEventLevel.Error || logEvent.Level == LogEventLevel.Fatal)
                     levelColor = (Brush)FindResource("StopRed");
@@ -70,7 +267,6 @@ namespace ConnectML.UI
                     FontWeight = FontWeights.Bold
                 });
 
-                // Message
                 textBlock.Inlines.Add(new System.Windows.Documents.Run($" {logEvent.RenderMessage()} ")
                 {
                     Foreground = (Brush)FindResource("TextSecondary")
@@ -78,7 +274,6 @@ namespace ConnectML.UI
 
                 PnlLogs.Children.Add(textBlock);
 
-                // Auto scroll
                 if (PnlLogs.Parent is ScrollViewer sw)
                 {
                     sw.ScrollToBottom();
@@ -89,32 +284,27 @@ namespace ConnectML.UI
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)
         {
             if (e.ChangedButton == MouseButton.Left)
-            {
                 this.DragMove();
-            }
         }
 
         private async void BtnStartStop_Click(object sender, RoutedEventArgs e)
         {
             if (_isRunning)
-            {
                 await StopService();
-            }
             else
-            {
                 await StartService();
-            }
         }
 
         private async Task StartService()
         {
-            // Validation
             string path = TxtSourcePath.Text;
             if (string.IsNullOrWhiteSpace(path))
             {
                 MessageBox.Show("Por favor, informe o caminho da pasta.", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
+
+            SaveSettings();
 
             if (!Directory.Exists(path))
             {
@@ -130,7 +320,6 @@ namespace ConnectML.UI
                 }
             }
 
-            // Connect PLC
             try
             {
                 string ip = TxtIp.Text;
@@ -143,6 +332,9 @@ namespace ConnectML.UI
                      return;
                 }
 
+                var logger = new ConnectML.UI.Utils.SerilogLoggerAdapter<ConnectML.Infrastructure.PlcDrivers.SiemensS7Driver>();
+                _plcDriver = new ConnectML.Infrastructure.PlcDrivers.SiemensS7Driver(logger);
+
                 await _plcDriver.ConnectAsync(ip, rack, slot);
             }
             catch (Exception ex)
@@ -151,10 +343,8 @@ namespace ConnectML.UI
                  return;
             }
 
-            // Lock UI
             PnlConfiguration.IsEnabled = false;
 
-            // Update Button Visuals for Stop
             TxtStartStop.Text = "Parar";
             IconStartStop.Data = Geometry.Parse("M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M16,16H8V8h8V16z");
             BtnStartStop.Background = (Brush)FindResource("StopRedBg");
@@ -162,14 +352,15 @@ namespace ConnectML.UI
             TxtStartStop.Foreground = (Brush)FindResource("StopRed");
             IconStartStop.Fill = (Brush)FindResource("StopRed");
 
-            // Status
             TxtStatus.Text = "EM EXECUÇÃO";
             TxtStatus.Foreground = (Brush)FindResource("SuccessGreen");
             StatusIndicator.Fill = (Brush)FindResource("SuccessGreen");
             TxtFooterStatus.Text = "Monitorando...";
             StatusDot.Fill = (Brush)FindResource("SuccessGreen");
 
-            // Watcher
+            var sb = (Storyboard)FindResource("BlinkAnimation");
+            sb.Begin(StatusIndicator);
+
             _watcher = new FileSystemWatcher(path);
             _watcher.Filter = "*.*";
             _watcher.NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite;
@@ -178,6 +369,9 @@ namespace ConnectML.UI
 
             _isRunning = true;
             Log.Information("Serviço Iniciado. Monitorando: " + path);
+
+            // Inicia a animação do ícone na bandeja
+            StartTrayAnimation();
         }
 
         private async Task StopService()
@@ -191,12 +385,13 @@ namespace ConnectML.UI
                 _watcher = null;
             }
 
-            await _plcDriver.DisconnectAsync();
+            if (_plcDriver != null)
+            {
+                await _plcDriver.DisconnectAsync();
+            }
 
-            // Unlock UI
             PnlConfiguration.IsEnabled = true;
 
-            // Update Button Visuals for Start
             TxtStartStop.Text = "Iniciar";
             IconStartStop.Data = Geometry.Parse("M8,5.14V19.14L19,12.14L8,5.14Z");
             BtnStartStop.Background = (Brush)FindResource("StartGreenBg");
@@ -204,14 +399,49 @@ namespace ConnectML.UI
             TxtStartStop.Foreground = (Brush)FindResource("StartGreen");
             IconStartStop.Fill = (Brush)FindResource("StartGreen");
 
-            // Status
             TxtStatus.Text = "PARADO";
             TxtStatus.Foreground = (Brush)FindResource("TextSecondary");
             StatusIndicator.Fill = (Brush)FindResource("TextSecondary");
             TxtFooterStatus.Text = "Offline";
             StatusDot.Fill = (Brush)FindResource("TextSecondary");
 
+            var sb = (Storyboard)FindResource("BlinkAnimation");
+            sb.Stop(StatusIndicator);
+            StatusIndicator.Opacity = 1;
+            StatusIndicator.RenderTransform = new ScaleTransform(1, 1);
+
             Log.Information("Serviço Parado.");
+
+            StopTrayAnimation();
+        }
+
+        private void StartTrayAnimation()
+        {
+            if (_notifyIcon == null) return;
+            
+            _trayAnimationTimer = new DispatcherTimer();
+            _trayAnimationTimer.Interval = TimeSpan.FromMilliseconds(700);
+            _trayAnimationTimer.Tick += (s, e) =>
+            {
+                if (_notifyIcon == null) return;
+                
+                _trayToggle = !_trayToggle;
+                _notifyIcon.Icon = _trayToggle ? _activeIcon : _defaultIcon;
+            };
+            _trayAnimationTimer.Start();
+        }
+
+        private void StopTrayAnimation()
+        {
+            if (_trayAnimationTimer != null)
+            {
+                _trayAnimationTimer.Stop();
+                _trayAnimationTimer = null;
+            }
+            if (_notifyIcon != null && _defaultIcon != null)
+            {
+                _notifyIcon.Icon = _defaultIcon;
+            }
         }
 
         private void OnFileCreated(object sender, FileSystemEventArgs e)
@@ -219,8 +449,6 @@ namespace ConnectML.UI
              var ext = Path.GetExtension(e.FullPath).ToUpper();
              if (ext != ".QIF" && ext != ".XML") return;
 
-             // Process in UI thread or background, using Dispatcher to switch context if needed or just task run
-             // Using Dispatcher to ensure we don't block watcher thread and can update UI easily later
              Dispatcher.InvokeAsync(async () => await ProcessFile(e.FullPath));
         }
 
@@ -228,47 +456,30 @@ namespace ConnectML.UI
         {
             try
             {
-                // Wait for file to be ready (exclusive access and not empty)
                 if (!await WaitForFileReady(filePath))
                 {
-                    Log.Warning($"Arquivo ignorado (não pronto ou bloqueado): {Path.GetFileName(filePath)}");
+                    Log.Warning($"Arquivo ignorado: {Path.GetFileName(filePath)}");
                     return;
                 }
 
-                Log.Information($"Processando arquivo: {Path.GetFileName(filePath)}");
-
-                // Parse
+                Log.Information($"Processando: {Path.GetFileName(filePath)}");
                 var result = QifParser.Parse(filePath);
 
-                // Write to PLC
                 if (RbBoolean.IsChecked == true)
-                {
-                    string db = TxtDbBool.Text;
-                    await _plcDriver.WriteBoolAsync(db, result.IsOk);
-                }
+                    await _plcDriver.WriteBoolAsync(TxtDbBool.Text, result.IsOk);
                 else
-                {
-                    string db = TxtDbInt.Text;
-                    await _plcDriver.WriteIntAsync(db, result.FailCount);
-                }
+                    await _plcDriver.WriteIntAsync(TxtDbInt.Text, result.FailCount);
 
-                // Delete file
                 try
                 {
                     File.Delete(filePath);
-                    Log.Information("Arquivo processado e removido.");
+                    Log.Information("Processado e removido.");
                 }
-                catch (Exception ex)
-                {
-                    Log.Error($"Erro ao deletar arquivo: {ex.Message}");
-                }
-
+                catch (Exception ex) { Log.Error($"Erro ao deletar: {ex.Message}"); }
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Falha no processamento.");
-
-                // Move to error
                 try
                 {
                     string dir = Path.GetDirectoryName(filePath)!;
@@ -278,12 +489,9 @@ namespace ConnectML.UI
                     string dest = Path.Combine(errorDir, Path.GetFileName(filePath));
                     if (File.Exists(dest)) File.Delete(dest);
                     File.Move(filePath, dest);
-                    Log.Information($"Arquivo movido para Error: {Path.GetFileName(filePath)}");
+                    Log.Information("Movido para Error.");
                 }
-                catch (Exception moveEx)
-                {
-                    Log.Error($"Erro ao mover arquivo para erro: {moveEx.Message}");
-                }
+                catch (Exception moveEx) { Log.Error($"Erro ao mover: {moveEx.Message}"); }
             }
         }
 
@@ -299,21 +507,13 @@ namespace ConnectML.UI
                         var info = new FileInfo(filePath);
                         if (info.Length > 0)
                         {
-                            using (var stream = File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
-                            {
+                            using (File.Open(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
                                 return true;
-                            }
                         }
                     }
                 }
-                catch (IOException)
-                {
-                    // File is locked
-                }
-                catch (Exception)
-                {
-                    // Ignore other errors
-                }
+                catch (IOException) { }
+                catch (Exception) { }
                 await Task.Delay(500);
             }
             return false;
@@ -324,7 +524,145 @@ namespace ConnectML.UI
             PnlLogs.Children.Clear();
         }
 
-        // Sink Class
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
+
+        private void BtnBrowseFolder_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFolderDialog();
+            dialog.Title = "Selecione a pasta";
+            if (Directory.Exists(TxtSourcePath.Text)) dialog.DefaultDirectory = TxtSourcePath.Text;
+
+            if (dialog.ShowDialog() == true) TxtSourcePath.Text = dialog.FolderName;
+        }
+
+        private void BtnToggleLogs_Click(object sender, RoutedEventArgs e)
+        {
+            bool shouldCollapse = !_isLogsCollapsed;
+            
+            // Se usuário alterna manualmente, resetamos flags de auto-ocultação
+            _autoHiddenBySpace = false;
+            
+            if (shouldCollapse)
+            {
+                 // Usuário recolhendo manualmente
+                 SetLogsState(true);
+            }
+            else
+            {
+                 // Usuário expandindo manualmente
+                 SetLogsState(false);
+                 
+                 // A lógica de restauração da largura precisa ser cuidadosa para não achatar se a janela for pequena.
+                 // Mas o usuário pediu, então tentamos o nosso melhor.
+                 // Talvez redimensionar a janela se necessário?
+                 
+                 // Confiamos em SetLogsState para restaurar _userPreferredLogsWidth
+            }
+        }
+
+        private void SetLogsState(bool collapse)
+        {
+             if (!collapse)
+             {
+                 // Expandir
+                 _isLogsCollapsed = false; // Marca como expandido imediatamente para SizeChanged tratar corretamente
+                 
+                 PnlLogsCollapsed.Visibility = Visibility.Collapsed;
+                 PnlLogsExpanded.Visibility = Visibility.Visible;
+                 LogsSplitter.Visibility = Visibility.Visible;
+                 LogsSplitter.IsEnabled = true;
+
+                 ColLogs.MinWidth = MinLogsWidth;
+
+                 // Calcula largura a restaurar
+                 double widthToRestore = _userPreferredLogsWidth < MinLogsWidth ? MinLogsWidth : _userPreferredLogsWidth;
+                 
+                 // Verifica se largura atual da janela comporta isso
+                 double currentWidth = this.ActualWidth;
+                 double margins = 20;
+                 double requiredWidth = MinConfigWidth + widthToRestore + margins;
+                 
+                 if (currentWidth < requiredWidth)
+                 {
+                     // Redimensiona Janela da Aplicação
+                     this.Width = requiredWidth;
+                     
+                     // Remove temporariamente limite MaxWidth para permitir ajuste
+                     // O evento SizeChanged disparará e ajustará limites novamente
+                     ColLogs.MaxWidth = double.PositiveInfinity;
+                 }
+                 else
+                 {
+                     // Garante que MaxWidth permita a restauração
+                     ColLogs.MaxWidth = currentWidth - MinConfigWidth - margins;
+                 }
+
+                 ColLogs.Width = new GridLength(widthToRestore);
+             }
+             else
+             {
+                 // Recolher
+                 _isLogsCollapsed = true;
+                 
+                 ColLogs.MinWidth = 0;
+                 ColLogs.Width = GridLength.Auto;
+                 
+                 PnlLogsExpanded.Visibility = Visibility.Collapsed;
+                 PnlLogsCollapsed.Visibility = Visibility.Visible;
+                 LogsSplitter.IsEnabled = false;
+                 LogsSplitter.Visibility = Visibility.Collapsed;
+             }
+        }
+
+        private void LoadSettings()
+        {
+            try
+            {
+                if (File.Exists(ConfigFile))
+                {
+                    string json = File.ReadAllText(ConfigFile);
+                    var config = JsonSerializer.Deserialize<AppConfig>(json);
+                    if (config != null)
+                    {
+                        TxtSourcePath.Text = config.SourcePath;
+                        if (config.IsBooleanMode) RbBoolean.IsChecked = true; else RbNumeric.IsChecked = true;
+                        TxtIp.Text = config.IpAddress;
+                        TxtRack.Text = config.Rack;
+                        TxtSlot.Text = config.Slot;
+                        TxtDbBool.Text = config.DbAddressBool;
+                        TxtDbInt.Text = config.DbAddressInt;
+                        Log.Information("Configurações carregadas.");
+                    }
+                }
+            }
+            catch (Exception ex) { Log.Error($"Erro configs: {ex.Message}"); }
+        }
+
+        private void SaveSettings()
+        {
+            try
+            {
+                var config = new AppConfig
+                {
+                    SourcePath = TxtSourcePath.Text,
+                    IsBooleanMode = RbBoolean.IsChecked == true,
+                    Protocol = CmbProtocol.Text,
+                    IpAddress = TxtIp.Text,
+                    Rack = TxtRack.Text,
+                    Slot = TxtSlot.Text,
+                    DbAddressBool = TxtDbBool.Text,
+                    DbAddressInt = TxtDbInt.Text
+                };
+                string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(ConfigFile, json);
+            }
+            catch (Exception ex) { Log.Error($"Erro salvar: {ex.Message}"); }
+        }
+
+        // Sink
         public class UiSink : ILogEventSink
         {
             private readonly Action<LogEvent> _action;

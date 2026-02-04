@@ -5,10 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ConnectML.UI"
         mc:Ignorable="d"
-        Title="ConnectML" Height="716" Width="985"
+        Title="ConnectML" Height="700" Width="980"
         Background="{DynamicResource BackgroundDark}"
         Foreground="{DynamicResource TextPrimary}"
         WindowStartupLocation="CenterScreen"
+        MinWidth="500"
+        MinHeight="685"
         MouseDown="Window_MouseDown" WindowStyle="None">
 
     <Window.Resources>
@@ -147,11 +149,18 @@
                                                 BorderThickness="{TemplateBinding BorderThickness}"
                                                 CornerRadius="8">
                                             <Grid>
-                                                <Path Data="M7,10L12,15L17,10H7Z"
-                                                      Fill="{StaticResource TextSecondary}"
-                                                      HorizontalAlignment="Right"
-                                                      VerticalAlignment="Center"
-                                                      Margin="0,0,10,0"/>
+                                                <Viewbox Width="12" Height="12" Margin="0,0,16,0" 
+                                                         HorizontalAlignment="Right"
+                                                         VerticalAlignment="Center">
+                                                    <Grid Width="8" Height="8">
+                                                        <Path Data="M7,10L12,15L17,10H7Z"
+                                                              Fill="{StaticResource TextSecondary}"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"
+                                                              Margin="0,0,0,0"
+                                                              Stretch="Uniform"/>
+                                                    </Grid>
+                                                </Viewbox>
                                             </Grid>
                                         </Border>
                                     </ControlTemplate>
@@ -193,6 +202,65 @@
             </Setter>
         </Style>
 
+        <Storyboard x:Key="BlinkAnimation" RepeatBehavior="Forever" AutoReverse="True">
+            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="1.0" To="0.3" Duration="0:0:0.8"/>
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)" From="1.0" To="1.2" Duration="0:0:0.8"/>
+            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)" From="1.0" To="1.2" Duration="0:0:0.8"/>
+        </Storyboard>
+
+        <Style x:Key="ScrollBarThumb" TargetType="{x:Type Thumb}">
+            <Setter Property="OverridesDefaultStyle" Value="true"/>
+            <Setter Property="IsTabStop" Value="false"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Border x:Name="rectangle" Background="#4b5563" CornerRadius="4" BorderThickness="0"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="true">
+                                <Setter TargetName="rectangle" Property="Background" Value="#6b7280"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="{x:Type ScrollBar}">
+            <Setter Property="Stylus.IsPressAndHoldEnabled" Value="false"/>
+            <Setter Property="Stylus.IsFlicksEnabled" Value="false"/>
+            <Setter Property="Background" Value="#2d3b4e"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ScrollBar}">
+                        <Grid x:Name="Bg" SnapsToDevicePixels="true">
+                            <Track x:Name="PART_Track" IsDirectionReversed="true" IsEnabled="{TemplateBinding IsEnabled}">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.LineUpCommand}" Opacity="0" Height="0"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="{x:Static ScrollBar.LineDownCommand}" Opacity="0" Height="0"/>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Style="{StaticResource ScrollBarThumb}"/>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="Orientation" Value="Horizontal">
+                    <Setter Property="Width" Value="Auto"/>
+                    <Setter Property="MinWidth" Value="0"/>
+                    <Setter Property="Height" Value="10"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
     </Window.Resources>
 
     <Grid>
@@ -204,7 +272,7 @@
         </Grid.RowDefinitions>
 
         <!-- HEADER -->
-        <Border Grid.Row="0" Background="{StaticResource SurfaceDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1" Padding="24,12">
+        <Border Grid.Row="0" Background="{StaticResource SurfaceDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1" Padding="18,5">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -213,18 +281,20 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Left: Icon & Title -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,20,0">
-                    <Border Width="32" Height="32" CornerRadius="4" Background="{StaticResource HubIconBg}" Margin="0,0,16,0">
-                        <Viewbox Width="20" Height="20">
-                            <Path Fill="{StaticResource PrimaryColor}" Data="M17,16l-4-4V8.82C14.16,8.4,15,7.3,15,6c0-1.66-1.34-3-3-3S9,4.34,9,6c0,1.3,0.84,2.4,2,2.82V12l-4,4H3v5h5v-3.05l4-4.2 l4,4.2V23h5v-5H17z"/>
-                        </Viewbox>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,0,0">
+                    <Border Width="45" Height="45" CornerRadius="4" Background="Transparent" Margin="0,0,16,0">
+                        <Image Source="/Assets/logo.png" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Border>
 
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="ConnectML" FontSize="18" FontWeight="Bold" Foreground="{StaticResource TextPrimary}"/>
                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                             <Grid Width="12" Height="12" Margin="0,0,6,0">
-                                <Ellipse x:Name="StatusIndicator" Width="8" Height="8" Fill="{StaticResource TextSecondary}" Opacity="1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Ellipse x:Name="StatusIndicator" Width="8" Height="8" Fill="{StaticResource TextSecondary}" Opacity="1" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                    <Ellipse.RenderTransform>
+                                        <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                    </Ellipse.RenderTransform>
+                                </Ellipse>
                             </Grid>
                             <TextBlock x:Name="TxtStatus" Text="PARADO" FontSize="11" FontWeight="Medium" Foreground="{StaticResource TextSecondary}" />
                         </StackPanel>
@@ -239,20 +309,68 @@
                         </Style>
                     </StackPanel.Resources>
 
-                    <Button x:Name="BtnStartStop" Width="Auto" Height="36" Padding="16,0" Click="BtnStartStop_Click"
+                    <Button x:Name="BtnStartStop" Width="70" Height="36" Padding="16,0" Click="BtnStartStop_Click"
                             Background="{StaticResource StartGreenBg}" BorderBrush="{StaticResource StartGreenBorder}" BorderThickness="1">
-                        <StackPanel Orientation="Horizontal">
-                            <Viewbox Width="16" Height="16" Margin="0,0,8,0">
-                                <Path x:Name="IconStartStop" Fill="{StaticResource StartGreen}" Data="M8,5.14V19.14L19,12.14L8,5.14Z"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Viewbox Width="16" Height="16" Margin="0,0,5,0" VerticalAlignment="Center">
+                                <!-- O Grid simula a área original do ícone (viewport) -->
+                                <Grid Width="14" Height="12">
+                                    <Path x:Name="IconStartStop" 
+                                      Fill="{StaticResource StartGreen}" 
+                                      Data="M8,5.14V19.14L19,12.14L8,5.14Z"
+                                      HorizontalAlignment="Center" 
+                                      VerticalAlignment="Center" 
+                                      Stretch="Uniform" Cursor=""/>
+                                </Grid>
                             </Viewbox>
-                            <TextBlock x:Name="TxtStartStop" Text="Iniciar" Foreground="{StaticResource StartGreen}" FontSize="14" FontWeight="Bold"/>
+                            <TextBlock x:Name="TxtStartStop" Text="Iniciar" Foreground="{StaticResource StartGreen}" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,0,0"/>
                         </StackPanel>
                     </Button>
 
-                    <Button Width="36" Height="36">
-                        <Viewbox Width="20" Height="20">
-                            <Path Fill="#cbd5e1" Data="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Button x:Name="BtnMinimize" Width="30" Height="30" Margin="12,0,0,0" ToolTip="Minimizar (Tray)" Click="BtnMinimize_Click" Style="{StaticResource RoundedButtonStyle}">
+                        <Viewbox Width="15" Height="15">
+                            <Grid Width="20" Height="20">
+                                <Path Fill="#cbd5e1" 
+                                      Data="M5,11H19V13H5V11Z"
+                                      HorizontalAlignment="Center" 
+                                      VerticalAlignment="Center"
+                                      Stretch="Uniform"/>
+                            </Grid>
                         </Viewbox>
+                    </Button>
+
+                    <Button x:Name="BtnClose" Width="25" Height="25" Margin="12,0,0,0" Click="BtnClose_Click" ToolTip="Fechar" Style="{StaticResource RoundedButtonStyle}" Cursor="Hand">
+                         <Button.Resources>
+                             <Style TargetType="Border">
+                                 <Setter Property="CornerRadius" Value="8"/>
+                             </Style>
+                         </Button.Resources>
+                        <Viewbox Width="12" Height="12">
+                            <Path x:Name="IconClose" 
+                                  Data="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z" 
+                                  Fill="#cbd5e1" 
+                                  HorizontalAlignment="Center" 
+                                  VerticalAlignment="Center"
+                                  Stretch="Uniform" Cursor=""/>
+                        </Viewbox>
+                        <Button.Triggers>
+                            <EventTrigger RoutedEvent="MouseEnter">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BtnClose" Storyboard.TargetProperty="(Button.Background).(SolidColorBrush.Color)" To="#1Aef4444" Duration="0:0:0.1"/>
+                                        <ColorAnimation Storyboard.TargetName="IconClose" Storyboard.TargetProperty="(Path.Fill).(SolidColorBrush.Color)" To="#ef4444" Duration="0:0:0.1"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="MouseLeave">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="BtnClose" Storyboard.TargetProperty="(Button.Background).(SolidColorBrush.Color)" To="#2d3b4e" Duration="0:0:0.1"/>
+                                        <ColorAnimation Storyboard.TargetName="IconClose" Storyboard.TargetProperty="(Path.Fill).(SolidColorBrush.Color)" To="#cbd5e1" Duration="0:0:0.1"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Button.Triggers>
                     </Button>
                 </StackPanel>
             </Grid>
@@ -261,13 +379,14 @@
         <!-- MAIN LAYOUT -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="380"/>
+                <ColumnDefinition Width="*" MinWidth="450"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="380" x:Name="ColLogs" MinWidth="390"/>
             </Grid.ColumnDefinitions>
 
             <!-- LEFT PANEL: CONFIGURATION -->
             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Background="{StaticResource BackgroundDark}">
-                <StackPanel Margin="24" x:Name="PnlConfiguration" Height="578" Width="564">
+                <StackPanel Margin="10,10,10,10" x:Name="PnlConfiguration" Height="578">
                     <StackPanel MaxWidth="896" HorizontalAlignment="Center">
 
                         <!-- CARD 1: SOURCE -->
@@ -281,7 +400,7 @@
                                             </Viewbox>
                                             <TextBlock Text="Arquivo de entrada" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                                         </StackPanel>
-                                        <Border HorizontalAlignment="Left" Style="{StaticResource BadgeStyle}" Margin="396,2,0,2">
+                                        <Border HorizontalAlignment="Right" Style="{StaticResource BadgeStyle}" Margin="0,2,0,2">
                                             <TextBlock Text="Entrada" FontSize="12" FontWeight="Medium" Foreground="{StaticResource TextSecondary}" TextAlignment="Center"/>
                                         </Border>
                                     </Grid>
@@ -294,6 +413,16 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBox x:Name="TxtSourcePath" Text="C:\Mitutoyo\ConnectML\QIF" VerticalContentAlignment="Center" Height="30"/>
+                                        <Button Grid.Column="1" Margin="8,0,0,0" Width="32" x:Name="BtnBrowseFolder" Click="BtnBrowseFolder_Click" 
+                                                Style="{StaticResource RoundedButtonStyle}" Height="30" ToolTip="Selecionar Pasta">
+                                            <Viewbox Width="16" Height="16">
+                                                <Path Fill="{StaticResource TextSecondary}" 
+                                                      Data="M20,6h-8l-2-2H4C2.9,4,2.01,4.9,2,6v12c0,1.1,0.9,2,2,2h16c1.1,0,2-0.9,2-2V8C22,6.9,21.1,6,20,6z M20,18H4V8 h16V18z" 
+                                                      HorizontalAlignment="Center" 
+                                                      VerticalAlignment="Center"
+                                                      Stretch="Uniform" Cursor=""/>
+                                            </Viewbox>
+                                        </Button>
                                     </Grid>
                                 </StackPanel>
                             </StackPanel>
@@ -384,7 +513,7 @@
                                             </Viewbox>
                                             <TextBlock Text="Integração" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                                         </StackPanel>
-                                        <Border HorizontalAlignment="Left" Style="{StaticResource BadgeStyle}" Margin="401,2,0,2">
+                                        <Border HorizontalAlignment="Right" Style="{StaticResource BadgeStyle}" Margin="0,2,0,2">
                                             <TextBlock Text="Saída" FontSize="12" FontWeight="Medium" Foreground="{StaticResource TextSecondary}"/>
                                         </Border>
                                     </Grid>
@@ -393,7 +522,11 @@
                                 <StackPanel Margin="24,12">
                                     <StackPanel Margin="0,0,0,16" MaxWidth="448" HorizontalAlignment="Left">
                                         <TextBlock Text="Protocolo de Comunicação" FontSize="14" FontWeight="Medium" Foreground="#cbd5e1" Margin="0,0,0,6"/>
-                                        <ComboBox x:Name="CmbProtocol" SelectedIndex="0" Width="448" Height="28">
+                                        <ComboBox x:Name="CmbProtocol" 
+                                                  SelectedIndex="0" 
+                                                  Width="448" 
+                                                  Height="28" 
+                                                  VerticalAlignment="Center">
                                             <ComboBoxItem Content="Siemens S7 (Profinet)"/>
                                         </ComboBox>
                                     </StackPanel>
@@ -451,44 +584,76 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- RIGHT PANEL: LOGS -->
-            <Border Grid.Column="1" Background="{StaticResource BackgroundDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="1,0,0,0">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+            <!-- SPLITTER -->
+            <GridSplitter x:Name="LogsSplitter" Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="{StaticResource BorderDark}" ResizeBehavior="PreviousAndNext"/>
 
-                    <Border Grid.Row="0" Background="{StaticResource SurfaceDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1" Padding="16,12">
-                        <Grid>
-                            <StackPanel Orientation="Horizontal">
-                                <Viewbox Width="16" Height="16" Margin="0,0,8,0">
-                                    <Path Fill="{StaticResource TextSecondary}" Data="M20,4H4C2.89,4,2,4.89,2,6v12c0,1.11,0.89,2,2,2h16c1.11,0,2-0.89,2-2V6C22,4.89,21.11,4,20,4z M20,18H4V6h16V18z M7.5,15l4.5-4.5L7.5,6L6,7.5l3,3l-3,3L7.5,15z M14,14h5v2h-5V14z"/>
+            <!-- RIGHT PANEL: LOGS CONTAINER -->
+            <Grid Grid.Column="2" x:Name="PnlLogsContainer">
+                
+                <!-- EXPANDED VIEW -->
+                <Border x:Name="PnlLogsExpanded" Background="{StaticResource BackgroundDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="1,0,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" Background="{StaticResource SurfaceDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1" Padding="16,12">
+                            <Grid>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button x:Name="BtnToggleLogs" Click="BtnToggleLogs_Click" Margin="0,0,8,0" 
+                                            Style="{StaticResource RoundedButtonStyle}" Width="24" Height="24" Background="Transparent">
+                                        <Viewbox Width="10" Height="10">
+                                            <Path Fill="{StaticResource TextSecondary}" Data="M15.41,16.59L10.83,12l4.58-4.59L14,6l-6,6l6,6L15.41,16.59z"/>
+                                        </Viewbox>
+                                    </Button>
+                                   
+                                    <Viewbox Width="16" Height="16" Margin="0,0,8,0">
+                                        <Path Fill="{StaticResource TextSecondary}" Data="M20,4H4C2.89,4,2,4.89,2,6v12c0,1.11,0.89,2,2,2h16c1.11,0,2-0.89,2-2V6C22,4.89,21.11,4,20,4z M20,18H4V6h16V18z M7.5,15l4.5-4.5L7.5,6L6,7.5l3,3l-3,3L7.5,15z M14,14h5v2h-5V14z"/>
+                                    </Viewbox>
+                                    <TextBlock Text="REGISTRO EM TEMPO REAL" FontSize="14" FontWeight="Bold" Foreground="#e2e8f0" VerticalAlignment="Center" Margin="0,-1,0,0"/>
+                                </StackPanel>
+                                <Button Content="Limpar" Click="BtnClearLogs_Click" Style="{StaticResource RoundedButtonStyle}" Background="Transparent" HorizontalAlignment="Right" FontSize="12" Height="Auto" Padding="4,0"/>
+                            </Grid>
+                        </Border>
+
+                        <ScrollViewer Grid.Row="1" Background="{StaticResource TerminalBg}" VerticalScrollBarVisibility="Auto">
+                            <StackPanel x:Name="PnlLogs" Margin="16" TextElement.FontFamily="Consolas, Courier New, Monospace" TextElement.FontSize="12">
+                                <!-- Logs here -->
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <Border Grid.Row="2" Background="{StaticResource SurfaceDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,1,0,0" Padding="12,8">
+                            <Grid>
+                                <TextBlock Text="Versão 1.0.0" FontSize="10" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <Ellipse x:Name="StatusDot" Width="6" Height="6" Fill="{StaticResource TextSecondary}" Margin="0,0,6,0"/>
+                                    <TextBlock x:Name="TxtFooterStatus" Text="Offline" FontSize="10" Foreground="{StaticResource TextSecondary}"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- COLLAPSED VIEW (SIDE TAB) -->
+                <Border x:Name="PnlLogsCollapsed" Background="{StaticResource SurfaceDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="1,0,0,0" 
+                        Visibility="Collapsed" Width="32" HorizontalAlignment="Right">
+                    <Button Click="BtnToggleLogs_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" Style="{StaticResource RoundedButtonStyle}">
+                         <Grid>
+                            <Grid.LayoutTransform>
+                                <RotateTransform Angle="-90"/>
+                            </Grid.LayoutTransform>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock Text="REGISTRO EM TEMPO REAL" FontSize="12" FontWeight="Bold" Foreground="{StaticResource TextSecondary}" Margin="0,0,8,0"/>
+                                <Viewbox Width="10" Height="10">
+                                   <Path Fill="{StaticResource TextSecondary}" Data="M10,6L8.59,7.41L13.17,12l-4.58,4.59L10,18l6-6L10,6z M6,6h2v12H6V6z"/>
                                 </Viewbox>
-                                <TextBlock Text="REGISTRO EM TEMPO REAL" FontSize="14" FontWeight="Bold" Foreground="#e2e8f0"/>
-                            </StackPanel>
-                            <Button Content="Limpar" Click="BtnClearLogs_Click" Style="{StaticResource RoundedButtonStyle}" Background="Transparent" HorizontalAlignment="Right" FontSize="12" Height="Auto" Padding="4,0"/>
-                        </Grid>
-                    </Border>
-
-                    <ScrollViewer Grid.Row="1" Background="{StaticResource TerminalBg}" VerticalScrollBarVisibility="Auto">
-                        <StackPanel x:Name="PnlLogs" Margin="16" TextElement.FontFamily="Consolas, Courier New, Monospace" TextElement.FontSize="12">
-                            <!-- Logs here -->
-                        </StackPanel>
-                    </ScrollViewer>
-
-                    <Border Grid.Row="2" Background="{StaticResource SurfaceDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,1,0,0" Padding="12,8">
-                        <Grid>
-                            <TextBlock Text="Versão 1.0.0" FontSize="10" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <Ellipse x:Name="StatusDot" Width="6" Height="6" Fill="{StaticResource TextSecondary}" Margin="0,0,6,0"/>
-                                <TextBlock x:Name="TxtFooterStatus" Text="Offline" FontSize="10" Foreground="{StaticResource TextSecondary}"/>
                             </StackPanel>
                         </Grid>
-                    </Border>
-                </Grid>
-            </Border>
+                    </Button>
+                </Border>
+            </Grid>
         </Grid>
     </Grid>
 </Window>
