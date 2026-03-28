@@ -1,5 +1,7 @@
 # Contexto do Projeto ConnectML
 
+![Tela Principal do ConnectML](./connectml_screenshot.png)
+
 ## 1. Visão Geral do Projeto (Project Overview)
 O ConnectML é um middleware industrial desenvolvido especificamente para integrar os dados de qualidade e medição gerados pelo software de qualidade (como MeasurLink), que exporta no formato QIF (Quality Information Framework). A principal dor que este sistema resolve para o customer é permitir uma comunicação rápida, confiável e automatizada destes dados com equipamentos de chão de fábrica, mais especificamente PLCs Siemens S7. Essa integração garante que a linha de produção de automação saiba de forma rápida se uma peça inspecionada passou ou falhou nas medições, possibilitando rejeições e controle exato na linha.
 
