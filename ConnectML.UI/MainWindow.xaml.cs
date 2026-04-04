@@ -275,13 +275,12 @@ namespace ConnectML.UI
         {
             Dispatcher.BeginInvoke(() =>
             {
-                var textBlock = new TextBlock
+                var p = new System.Windows.Documents.Paragraph
                 {
-                    TextWrapping = TextWrapping.Wrap,
                     Margin = new Thickness(0, 0, 0, 4)
                 };
 
-                textBlock.Inlines.Add(new System.Windows.Documents.Run($"[{logEvent.Timestamp:HH:mm:ss}] ")
+                p.Inlines.Add(new System.Windows.Documents.Run($"[{logEvent.Timestamp:HH:mm:ss}] ")
                 {
                     Foreground = (Brush)FindResource("TextDarker")
                 });
@@ -294,23 +293,19 @@ namespace ConnectML.UI
                 else
                     levelColor = (Brush)FindResource("BlueInfo");
 
-                textBlock.Inlines.Add(new System.Windows.Documents.Run($" {logEvent.Level.ToString().ToUpper().Substring(0, 4)} ")
+                p.Inlines.Add(new System.Windows.Documents.Run($" {logEvent.Level.ToString().ToUpper().Substring(0, 4)} ")
                 {
                     Foreground = levelColor,
                     FontWeight = FontWeights.Bold
                 });
 
-                textBlock.Inlines.Add(new System.Windows.Documents.Run($" {logEvent.RenderMessage()} ")
+                p.Inlines.Add(new System.Windows.Documents.Run($" {logEvent.RenderMessage()} ")
                 {
                     Foreground = (Brush)FindResource("TextSecondary")
                 });
 
-                PnlLogs.Children.Add(textBlock);
-
-                if (PnlLogs.Parent is ScrollViewer sw)
-                {
-                    sw.ScrollToBottom();
-                }
+                DocLogs.Blocks.Add(p);
+                TxtLogsRich.ScrollToEnd();
             });
         }
 
@@ -604,7 +599,20 @@ namespace ConnectML.UI
 
         private void BtnClearLogs_Click(object sender, RoutedEventArgs e)
         {
-            PnlLogs.Children.Clear();
+            DocLogs.Blocks.Clear();
+        }
+
+        private void BtnCopyLogs_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var tr = new System.Windows.Documents.TextRange(DocLogs.ContentStart, DocLogs.ContentEnd);
+                if (!string.IsNullOrWhiteSpace(tr.Text))
+                {
+                    Clipboard.SetText(tr.Text);
+                }
+            }
+            catch (Exception) { }
         }
 
         private void BtnClose_Click(object sender, RoutedEventArgs e)

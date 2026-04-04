@@ -812,15 +812,26 @@
                                     </Viewbox>
                                     <TextBlock Text="REGISTRO EM TEMPO REAL" FontSize="14" FontWeight="Bold" Foreground="#e2e8f0" VerticalAlignment="Center" Margin="0,-1,0,0"/>
                                 </StackPanel>
-                                <Button Content="Limpar" Click="BtnClearLogs_Click" Style="{StaticResource RoundedButtonStyle}" Background="Transparent" HorizontalAlignment="Right" FontSize="12" Height="Auto" Padding="4,0"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Click="BtnCopyLogs_Click" ToolTip="Copiar Registros" Style="{StaticResource RoundedButtonStyle}" Background="Transparent" Height="Auto" Padding="6,2" Margin="0,0,4,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path Fill="{StaticResource TextSecondary}" Data="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" Stretch="Uniform" Width="12" Height="12" Margin="0,0,4,0"/>
+                                            <TextBlock Text="Copiar" FontSize="12" Foreground="{StaticResource TextSecondary}"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Click="BtnClearLogs_Click" ToolTip="Limpar Registros" Style="{StaticResource RoundedButtonStyle}" Background="Transparent" Height="Auto" Padding="6,2">
+                                        <TextBlock Text="Limpar" FontSize="12" Foreground="{StaticResource TextSecondary}"/>
+                                    </Button>
+                                </StackPanel>
                             </Grid>
                         </Border>
 
-                        <ScrollViewer Grid.Row="1" Background="{StaticResource TerminalBg}" VerticalScrollBarVisibility="Auto">
-                            <StackPanel x:Name="PnlLogs" Margin="16" TextElement.FontFamily="Consolas, Courier New, Monospace" TextElement.FontSize="12">
-                                <!-- Logs here -->
-                            </StackPanel>
-                        </ScrollViewer>
+                        <RichTextBox x:Name="TxtLogsRich" Grid.Row="1" Background="{StaticResource TerminalBg}" 
+                                     BorderThickness="0" FontFamily="Consolas, Courier New, Monospace" FontSize="12"
+                                     IsReadOnly="True" IsDocumentEnabled="True"
+                                     Padding="16" VerticalScrollBarVisibility="Auto">
+                            <FlowDocument x:Name="DocLogs" LineHeight="7" PagePadding="0"/>
+                        </RichTextBox>
 
                         <Border Grid.Row="2" Background="{StaticResource SurfaceDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,1,0,0" Padding="12,8">
                             <Grid>
