@@ -523,16 +523,18 @@
                                     <StackPanel Margin="0,0,0,16" MaxWidth="448" HorizontalAlignment="Left">
                                         <TextBlock Text="Protocolo de Comunicação" FontSize="14" FontWeight="Medium" Foreground="#cbd5e1" Margin="0,0,0,6"/>
                                         <ComboBox x:Name="CmbProtocol" 
-                                                  SelectedIndex="0" 
+                                                  SelectedIndex="1" 
                                                   Width="448" 
                                                   Height="28" 
-                                                  VerticalAlignment="Center">
+                                                  VerticalAlignment="Center"
+                                                  SelectionChanged="CmbProtocol_SelectionChanged">
                                             <ComboBoxItem Content="Siemens S7 (Profinet)"/>
+                                            <ComboBoxItem Content="EGA (API REST / JSON)"/>
                                         </ComboBox>
                                     </StackPanel>
 
-                                    <!-- Fields -->
-                                    <Grid Margin="0,0,0,16">
+                                    <!-- SIEMENS S7 Fields -->
+                                    <Grid Margin="0,0,0,16" x:Name="PnlSiemensConfig" Visibility="Collapsed">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="2*"/>
                                             <ColumnDefinition Width="16"/>
@@ -557,8 +559,7 @@
                                         </StackPanel>
                                     </Grid>
 
-                                    <!-- DB Fields -->
-                                    <Grid>
+                                    <Grid x:Name="PnlSiemensDbConfig" Visibility="Collapsed">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="16"/>
@@ -575,6 +576,59 @@
                                             <TextBox x:Name="TxtDbInt" Text="DB10.2" Height="38" ToolTip="Endereço para contador"/>
                                         </StackPanel>
                                     </Grid>
+
+                                    <!-- API Config Fields -->
+                                    <Grid Margin="0,0,0,16" x:Name="PnlApiConfig">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="2*"/>
+                                            <ColumnDefinition Width="16"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Endpoint URL (Base)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
+                                            <TextBox x:Name="TxtApiUrl" Text="http://localhost/connectml/api" Height="38"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Porta" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
+                                            <TextBox x:Name="TxtApiPort" Text="5000" Height="38"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <StackPanel x:Name="PnlEgaBidiConfig">
+                                        <Border BorderBrush="{StaticResource BorderDark}" BorderThickness="0,1,0,0" Margin="0,8,0,16"/>
+
+                                        <!-- Bidirectional Settings -->
+                                        <TextBlock Text="Fluxo de Dados Bidirecional" FontSize="14" FontWeight="Medium" Foreground="#cbd5e1" Margin="0,0,0,12"/>
+                                        
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="32"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Receive -->
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="RECEBER da API (Gatilhos)" FontSize="12" FontWeight="Bold" Foreground="{StaticResource BlueInfo}" Margin="0,0,0,8"/>
+                                                <CheckBox Content="Comando Iniciar (GO)" IsChecked="True" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,4"/>
+                                                <TextBlock Text="  ↳ Inclui: Rotina, Ordem/Corrida, Tempo" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,8"/>
+                                                
+                                                <TextBlock Text="Porta Serial Virtual (MeasurLink)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,8,0,4"/>
+                                                <TextBox x:Name="TxtVirtualCom" Text="COM3" Height="28" Width="100" HorizontalAlignment="Left" Padding="10,4"/>
+                                            </StackPanel>
+
+                                            <!-- Send -->
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Text="ENVIAR para API (Resultados)" FontSize="12" FontWeight="Bold" Foreground="{StaticResource BlueInfo}" Margin="0,0,0,8"/>
+                                                <CheckBox Content="Status da Medição (OK/NOK/Cont)" IsChecked="True" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,4"/>
+                                                <CheckBox Content="Nome da Rotina" IsChecked="True" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,4"/>
+                                                <CheckBox Content="Nome da Corrida (O.P.)" IsChecked="True" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,4"/>
+                                                <CheckBox Content="Evento Estatístico Ocorrido" IsChecked="True" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,4"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
                                 </StackPanel>
                             </StackPanel>
                         </Border>

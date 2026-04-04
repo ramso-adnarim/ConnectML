@@ -662,6 +662,28 @@ namespace ConnectML.UI
             catch (Exception ex) { Log.Error($"Erro salvar: {ex.Message}"); }
         }
 
+        private void CmbProtocol_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (PnlSiemensConfig == null || PnlApiConfig == null) return;
+            
+            if (CmbProtocol.SelectedIndex == 0) // Siemens
+            {
+                PnlSiemensConfig.Visibility = Visibility.Visible;
+                PnlSiemensDbConfig.Visibility = Visibility.Visible;
+                
+                PnlApiConfig.Visibility = Visibility.Collapsed;
+                PnlEgaBidiConfig.Visibility = Visibility.Collapsed;
+            }
+            else // EGA API
+            {
+                PnlSiemensConfig.Visibility = Visibility.Collapsed;
+                PnlSiemensDbConfig.Visibility = Visibility.Collapsed;
+                
+                PnlApiConfig.Visibility = Visibility.Visible;
+                PnlEgaBidiConfig.Visibility = Visibility.Visible;
+            }
+        }
+
         // Sink
         public class UiSink : ILogEventSink
         {
