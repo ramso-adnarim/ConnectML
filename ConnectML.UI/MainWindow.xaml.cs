@@ -72,7 +72,13 @@ namespace ConnectML.UI
                 var ports = System.IO.Ports.SerialPort.GetPortNames();
                 foreach (var port in ports)
                 {
-                    CmbVirtualCom.Items.Add(port);
+                    bool portExists = CmbVirtualCom.Items.Cast<object>().Any(item => 
+                        item.ToString()?.Equals(port, StringComparison.OrdinalIgnoreCase) == true);
+                    
+                    if (!portExists)
+                    {
+                        CmbVirtualCom.Items.Add(port);
+                    }
                 }
                 if (CmbVirtualCom.Items.Count > 0 && string.IsNullOrEmpty(CmbVirtualCom.Text))
                 {
