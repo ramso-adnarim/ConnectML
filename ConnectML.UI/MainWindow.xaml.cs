@@ -629,11 +629,31 @@ namespace ConnectML.UI
                     {
                         TxtSourcePath.Text = config.SourcePath;
                         if (config.IsBooleanMode) RbBoolean.IsChecked = true; else RbNumeric.IsChecked = true;
+                        
+                        CmbProtocol.Text = config.Protocol;
+                        
+                        // Siemens
                         TxtIp.Text = config.IpAddress;
                         TxtRack.Text = config.Rack;
                         TxtSlot.Text = config.Slot;
                         TxtDbBool.Text = config.DbAddressBool;
                         TxtDbInt.Text = config.DbAddressInt;
+                        
+                        // Inbound
+                        TxtInboundPort.Text = config.InboundPort.ToString();
+                        TxtVirtualCom.Text = config.VirtualComPort;
+                        
+                        // Webhook
+                        TxtWebhookUrl.Text = config.WebhookUrl;
+                        CmbWebhookVerb.Text = config.WebhookVerb;
+                        CmbAuthType.Text = config.AuthType;
+                        TxtAuthToken.Text = config.AuthToken;
+                        TxtPayloadTemplate.Text = config.PayloadTemplate;
+                        
+                        // Headers DataGrid
+                        var headers = new System.Collections.ObjectModel.ObservableCollection<CustomHeader>(config.CustomHeaders ?? new System.Collections.Generic.List<CustomHeader>());
+                        DgCustomHeaders.ItemsSource = headers;
+
                         Log.Information("Configurações carregadas.");
                     }
                 }
@@ -645,16 +665,31 @@ namespace ConnectML.UI
         {
             try
             {
+                var headers = DgCustomHeaders.ItemsSource as System.Collections.ObjectModel.ObservableCollection<CustomHeader>;
                 var config = new AppConfig
                 {
                     SourcePath = TxtSourcePath.Text,
                     IsBooleanMode = RbBoolean.IsChecked == true,
                     Protocol = CmbProtocol.Text,
+                    
+                    // Siemens
                     IpAddress = TxtIp.Text,
                     Rack = TxtRack.Text,
                     Slot = TxtSlot.Text,
                     DbAddressBool = TxtDbBool.Text,
-                    DbAddressInt = TxtDbInt.Text
+                    DbAddressInt = TxtDbInt.Text,
+                    
+                    // Inbound
+                    InboundPort = int.TryParse(TxtInboundPort.Text, out int port) ? port : 5000,
+                    VirtualComPort = TxtVirtualCom.Text,
+                    
+                    // Webhook
+                    WebhookUrl = TxtWebhookUrl.Text,
+                    WebhookVerb = CmbWebhookVerb.Text,
+                    AuthType = CmbAuthType.Text,
+                    AuthToken = TxtAuthToken.Text,
+                    PayloadTemplate = TxtPayloadTemplate.Text,
+                    CustomHeaders = headers != null ? new System.Collections.Generic.List<CustomHeader>(headers) : new System.Collections.Generic.List<CustomHeader>()
                 };
                 string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFile, json);
@@ -664,23 +699,35 @@ namespace ConnectML.UI
 
         private void CmbProtocol_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (PnlSiemensConfig == null || PnlApiConfig == null) return;
+            if (PnlSiemensConfig == null || PnlWebhookConfig == null) return;
             
             if (CmbProtocol.SelectedIndex == 0) // Siemens
             {
                 PnlSiemensConfig.Visibility = Visibility.Visible;
                 PnlSiemensDbConfig.Visibility = Visibility.Visible;
                 
-                PnlApiConfig.Visibility = Visibility.Collapsed;
-                PnlEgaBidiConfig.Visibility = Visibility.Collapsed;
+                PnlWebhookConfig.Visibility = Visibility.Collapsed;
             }
-            else // EGA API
+            else // Webhook Genérico
             {
                 PnlSiemensConfig.Visibility = Visibility.Collapsed;
                 PnlSiemensDbConfig.Visibility = Visibility.Collapsed;
                 
-                PnlApiConfig.Visibility = Visibility.Visible;
-                PnlEgaBidiConfig.Visibility = Visibility.Visible;
+                PnlWebhookConfig.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void CmbAuthType_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (PnlAuthToken == null) return;
+            
+            if (CmbAuthType.SelectedIndex == 0) // None
+            {
+                PnlAuthToken.Visibility = Visibility.Collapsed;
+            }
+            else // Basic, Bearer, HMAC
+            {
+                PnlAuthToken.Visibility = Visibility.Visible;
             }
         }
 

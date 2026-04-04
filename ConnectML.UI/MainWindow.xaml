@@ -529,7 +529,7 @@
                                                   VerticalAlignment="Center"
                                                   SelectionChanged="CmbProtocol_SelectionChanged">
                                             <ComboBoxItem Content="Siemens S7 (Profinet)"/>
-                                            <ComboBoxItem Content="EGA (API REST / JSON)"/>
+                                            <ComboBoxItem Content="Webhook REST Genérico"/>
                                         </ComboBox>
                                     </StackPanel>
 
@@ -559,7 +559,7 @@
                                         </StackPanel>
                                     </Grid>
 
-                                    <Grid x:Name="PnlSiemensDbConfig" Visibility="Collapsed">
+                                    <Grid x:Name="PnlSiemensDbConfig" Visibility="Collapsed" Margin="0,0,0,16">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="16"/>
@@ -577,57 +577,109 @@
                                         </StackPanel>
                                     </Grid>
 
-                                    <!-- API Config Fields -->
-                                    <Grid Margin="0,0,0,16" x:Name="PnlApiConfig">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="2*"/>
-                                            <ColumnDefinition Width="16"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="Endpoint URL (Base)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
-                                            <TextBox x:Name="TxtApiUrl" Text="http://localhost/connectml/api" Height="38"/>
-                                        </StackPanel>
-
-                                        <StackPanel Grid.Column="2">
-                                            <TextBlock Text="Porta" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
-                                            <TextBox x:Name="TxtApiPort" Text="5000" Height="38"/>
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <StackPanel x:Name="PnlEgaBidiConfig">
-                                        <Border BorderBrush="{StaticResource BorderDark}" BorderThickness="0,1,0,0" Margin="0,8,0,16"/>
-
-                                        <!-- Bidirectional Settings -->
-                                        <TextBlock Text="Fluxo de Dados Bidirecional" FontSize="14" FontWeight="Medium" Foreground="#cbd5e1" Margin="0,0,0,12"/>
-                                        
-                                        <Grid>
+                                    <!-- WEBHOOK REST Fields -->
+                                    <StackPanel x:Name="PnlWebhookConfig">
+                                        <!-- INBOUND CONFIG -->
+                                        <TextBlock Text="Configuração Local (Inbound)" FontSize="14" FontWeight="Medium" Foreground="#cbd5e1" Margin="0,0,0,12"/>
+                                        <Grid Margin="0,0,0,16">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="32"/>
+                                                <ColumnDefinition Width="16"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
 
-                                            <!-- Receive -->
                                             <StackPanel Grid.Column="0">
-                                                <TextBlock Text="RECEBER da API (Gatilhos)" FontSize="12" FontWeight="Bold" Foreground="{StaticResource BlueInfo}" Margin="0,0,0,8"/>
-                                                <CheckBox Content="Comando Iniciar (GO)" IsChecked="True" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,4"/>
-                                                <TextBlock Text="  ↳ Inclui: Rotina, Ordem/Corrida, Tempo" FontSize="11" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,8"/>
-                                                
-                                                <TextBlock Text="Porta Serial Virtual (MeasurLink)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,8,0,4"/>
-                                                <TextBox x:Name="TxtVirtualCom" Text="COM3" Height="28" Width="100" HorizontalAlignment="Left" Padding="10,4"/>
+                                                <TextBlock Text="Porta Servidor Kestrel" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
+                                                <TextBox x:Name="TxtInboundPort" Text="5000" Height="38" ToolTip="Porta em que o software escuta os comandos"/>
                                             </StackPanel>
 
-                                            <!-- Send -->
                                             <StackPanel Grid.Column="2">
-                                                <TextBlock Text="ENVIAR para API (Resultados)" FontSize="12" FontWeight="Bold" Foreground="{StaticResource BlueInfo}" Margin="0,0,0,8"/>
-                                                <CheckBox Content="Status da Medição (OK/NOK/Cont)" IsChecked="True" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,4"/>
-                                                <CheckBox Content="Nome da Rotina" IsChecked="True" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,4"/>
-                                                <CheckBox Content="Nome da Corrida (O.P.)" IsChecked="True" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,4"/>
-                                                <CheckBox Content="Evento Estatístico Ocorrido" IsChecked="True" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,4"/>
+                                                <TextBlock Text="Repasse COM Virtual (QIF)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
+                                                <TextBox x:Name="TxtVirtualCom" Text="COM3" Height="38"/>
                                             </StackPanel>
                                         </Grid>
+
+                                        <Border BorderBrush="{StaticResource BorderDark}" BorderThickness="0,1,0,0" Margin="0,8,0,16"/>
+
+                                        <!-- OUTBOUND CONFIG -->
+                                        <TextBlock Text="Webhook de Saída (Outbound JSON)" FontSize="14" FontWeight="Medium" Foreground="#cbd5e1" Margin="0,0,0,12"/>
+                                        
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="3*"/>
+                                                <ColumnDefinition Width="16"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="URL do Endpoint" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
+                                                <TextBox x:Name="TxtWebhookUrl" Text="https://" Height="38"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Text="Método HTTP" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
+                                                <ComboBox x:Name="CmbWebhookVerb" Height="38">
+                                                    <ComboBoxItem Content="POST"/>
+                                                    <ComboBoxItem Content="PUT"/>
+                                                    <ComboBoxItem Content="PATCH"/>
+                                                </ComboBox>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <!-- Authentication -->
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="1.5*"/>
+                                                <ColumnDefinition Width="16"/>
+                                                <ColumnDefinition Width="2.5*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="Tipo de Autenticação" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
+                                                <ComboBox x:Name="CmbAuthType" Height="38" SelectionChanged="CmbAuthType_SelectionChanged">
+                                                    <ComboBoxItem Content="None"/>
+                                                    <ComboBoxItem Content="Basic Auth"/>
+                                                    <ComboBoxItem Content="Bearer Token"/>
+                                                    <ComboBoxItem Content="HMAC (Secret)"/>
+                                                </ComboBox>
+                                            </StackPanel>
+
+                                            <StackPanel x:Name="PnlAuthToken" Grid.Column="2" Visibility="Collapsed">
+                                                <TextBlock Text="Token / Password / Secret" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
+                                                <TextBox x:Name="TxtAuthToken" Height="38"/>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <!-- Custom Headers -->
+                                        <StackPanel Margin="0,0,0,12">
+                                            <TextBlock Text="Headers Customizados" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
+                                            <DataGrid x:Name="DgCustomHeaders" AutoGenerateColumns="False" CanUserAddRows="True" CanUserDeleteRows="True"
+                                                      Background="{StaticResource BackgroundDark}" BorderBrush="{StaticResource BorderDark}" 
+                                                      RowBackground="{StaticResource BackgroundDark}" AlternatingRowBackground="{StaticResource SurfaceDark}"
+                                                      Foreground="{StaticResource TextPrimary}" Height="120" RowHeaderWidth="0">
+                                                <DataGrid.Columns>
+                                                    <DataGridTextColumn Header="Chave (Header-Name)" Binding="{Binding Key}" Width="*"/>
+                                                    <DataGridTextColumn Header="Valor" Binding="{Binding Value}" Width="*"/>
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                        </StackPanel>
+
+                                        <!-- Payload Template -->
+                                        <StackPanel Margin="0,0,0,8">
+                                            <TextBlock Text="Template do Payload (Motor Liquid)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
+                                            <TextBox x:Name="TxtPayloadTemplate" 
+                                                     Height="180" 
+                                                     AcceptsReturn="True" 
+                                                     TextWrapping="NoWrap" 
+                                                     VerticalScrollBarVisibility="Auto" 
+                                                     HorizontalScrollBarVisibility="Auto"
+                                                     FontFamily="Consolas" 
+                                                     FontSize="13" 
+                                                     Background="#0F172A" 
+                                                     Foreground="#38BDF8" 
+                                                     BorderBrush="#334155" 
+                                                     Padding="10"/>
+                                        </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
                             </StackPanel>
