@@ -4,6 +4,6 @@ namespace ConnectML.Core.Interfaces
 {
     public interface IOutboundDispatcher
     {
-        Task DispatchAsync(bool isOk, int failCount);
+        Task DispatchAsync(bool isOk, int failCount, string product);
     }
 }

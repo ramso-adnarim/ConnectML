@@ -13,12 +13,12 @@ namespace ConnectML.Infrastructure.Formatters
             _parser = new FluidParser();
         }
 
-        public string Format(string templateSource, bool isOk, int failCount)
+        public string Format(string templateSource, bool isOk, int failCount, string product)
         {
             if (string.IsNullOrWhiteSpace(templateSource))
             {
                 Log.Warning("[Liquid Formatter] O template de Payload está vazio. Retornando JSON padrão.");
-                return $"{{\"IsOk\": {isOk.ToString().ToLower()}, \"FailCount\": {failCount}}}";
+                return $"{{\"IsOk\": {isOk.ToString().ToLower()}, \"FailCount\": {failCount}, \"Product\": \"{product}\"}}";
             }
 
             try
@@ -28,7 +28,7 @@ namespace ConnectML.Infrastructure.Formatters
                     var options = new TemplateOptions();
 
                     // Model anonimo ou tipado
-                    var model = new { IsOk = isOk, FailCount = failCount };
+                    var model = new { IsOk = isOk, FailCount = failCount, Product = product };
 
                     var context = new TemplateContext(model, options);
                     string result = template.Render(context);

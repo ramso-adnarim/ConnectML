@@ -41,7 +41,7 @@ namespace ConnectML.Infrastructure.Dispatchers
             _formatter = new LiquidPayloadFormatter();
         }
 
-        public async Task DispatchAsync(bool isOk, int failCount)
+        public async Task DispatchAsync(bool isOk, int failCount, string product)
         {
             try
             {
@@ -52,7 +52,7 @@ namespace ConnectML.Infrastructure.Dispatchers
                 }
 
                 // 1. Processar o payload utilizando Liquid Tempaltes (Fluid)
-                string finalPayload = _formatter.Format(_payloadTemplate, isOk, failCount);
+                string finalPayload = _formatter.Format(_payloadTemplate, isOk, failCount, product);
 
                 var method = _webhookVerb?.ToUpper() switch
                 {

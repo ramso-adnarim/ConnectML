@@ -8,7 +8,7 @@ namespace ConnectML.Core
 {
     public static class QifParser
     {
-        public static (bool IsOk, int FailCount) Parse(string filePath)
+        public static (bool IsOk, int FailCount, string Product) Parse(string filePath)
         {
             try
             {
@@ -23,7 +23,7 @@ namespace ConnectML.Core
                 if (!measurementResultsElements.Any())
                 {
                     Log.Warning($"[QIF PARSER] Nenhum elemento MeasurementResults encontrado em {Path.GetFileName(filePath)}");
-                    return (false, 0);
+                    return (false, 0, "Desconhecido");
                 }
 
                 // Seleciona o MeasurementResults com o maior ID numérico
@@ -49,7 +49,7 @@ namespace ConnectML.Core
                 if (!statusElements.Any())
                 {
                     Log.Warning($"[QIF PARSER] Nenhuma característica encontrada na medição ID {latestId}");
-                    return (false, 0);
+                    return (false, 0, "Desconhecido");
                 }
 
                 int failCount = 0;
@@ -68,9 +68,15 @@ namespace ConnectML.Core
                 var inspectionStatus = latestMeasurement.Descendants()
                     .FirstOrDefault(x => x.Name.LocalName == "InspectionStatusEnum")?.Value;
 
-                Log.Information($"[QIF PARSER] Resultado ID {latestId}: {inspectionStatus ?? "N/A"}. Falhas: {failCount}");
+                // Extrai nome do Produto
+                var productName = doc.Descendants()
+                    .Where(x => x.Name.LocalName == "Product")
+                    .Descendants()
+                    .FirstOrDefault(x => x.Name.LocalName == "Name")?.Value ?? "Desconhecido";
 
-                return (isOk, failCount);
+                Log.Information($"[QIF PARSER] Resultado ID {latestId} (Produto: {productName}): {inspectionStatus ?? "N/A"}. Falhas: {failCount}");
+
+                return (isOk, failCount, productName);
             }
             catch (Exception ex)
             {

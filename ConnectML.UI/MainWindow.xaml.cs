@@ -595,7 +595,7 @@ namespace ConnectML.UI
                         customHeaders: customHeaders
                     );
 
-                    await outboundDispatcher.DispatchAsync(result.IsOk, result.FailCount);
+                    await outboundDispatcher.DispatchAsync(result.IsOk, result.FailCount, result.Product);
                 }
                 else
                 {
@@ -793,7 +793,7 @@ namespace ConnectML.UI
                         
                         // Inbound
                         TxtInboundPort.Text = config.InboundPort.ToString();
-                        SelectComboBoxItemByContent(CmbVirtualCom, config.VirtualComPort);
+                        CmbVirtualCom.Text = config.VirtualComPort;
                         
                         // Webhook
                         TxtWebhookUrl.Text = config.WebhookUrl;
@@ -941,6 +941,11 @@ namespace ConnectML.UI
                 PnlIntegrationBody.Visibility = Visibility.Visible;
                 ((System.Windows.Media.RotateTransform)IconToggleIntegration.RenderTransform).Angle = 0;
             }
+        }
+
+        private void BtnToggleWordWrap_Click(object sender, RoutedEventArgs e)
+        {
+            TxtPayloadTemplate.WordWrap = !TxtPayloadTemplate.WordWrap;
         }
 
         // Sink
