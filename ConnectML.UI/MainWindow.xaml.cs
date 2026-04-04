@@ -13,6 +13,8 @@ using ConnectML.UI.Models;
 using Microsoft.Win32;
 using Serilog;
 using Serilog.Core;
+using System.Collections.Generic;
+using System.Linq;
 using Serilog.Events;
 using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Hosting;
@@ -543,10 +545,69 @@ namespace ConnectML.UI
                 Log.Information($"Processando: {Path.GetFileName(filePath)}");
                 var result = QifParser.Parse(filePath);
 
-                if (RbBoolean.IsChecked == true)
-                    await _plcDriver.WriteBoolAsync(TxtDbBool.Text, result.IsOk);
+                // Resolve de forma thread-safe (STA) todos os valores que vêm dos elementos de UI
+                bool isWebhookMode = false;
+                string webhookUrl = string.Empty;
+                string webhookVerb = string.Empty;
+                string authType = string.Empty;
+                string authToken = string.Empty;
+                string payloadTemplate = string.Empty;
+                List<KeyValuePair<string, string>> customHeaders = new();
+
+                bool isRbBooleanChecked = false;
+                string txtDbBool = string.Empty;
+                string txtDbInt = string.Empty;
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    isWebhookMode = CmbProtocol.SelectedIndex == 1; // "Webhook REST Genérico"
+
+                    if (isWebhookMode)
+                    {
+                        webhookUrl = TxtWebhookUrl.Text;
+                        webhookVerb = ((ComboBoxItem)CmbWebhookVerb.SelectedItem)?.Content?.ToString() ?? "POST";
+                        authType = ((ComboBoxItem)CmbAuthType.SelectedItem)?.Content?.ToString() ?? "None";
+                        authToken = TxtAuthToken.Text;
+                        payloadTemplate = TxtPayloadTemplate.Text;
+
+                        customHeaders = DgCustomHeaders.Items.OfType<ConnectML.UI.Models.CustomHeader>()
+                            .Where(h => !string.IsNullOrEmpty(h.Key))
+                            .Select(h => new KeyValuePair<string, string>(h.Key, h.Value))
+                            .ToList();
+                    }
+                    else
+                    {
+                        isRbBooleanChecked = RbBoolean.IsChecked == true;
+                        txtDbBool = TxtDbBool.Text;
+                        txtDbInt = TxtDbInt.Text;
+                    }
+                });
+
+                if (isWebhookMode)
+                {
+                    // Fluxo Webhook
+                    var outboundDispatcher = new ConnectML.Infrastructure.Dispatchers.WebhookOutboundDispatcher(
+                        webhookUrl: webhookUrl,
+                        webhookVerb: webhookVerb,
+                        authType: authType,
+                        authToken: authToken,
+                        payloadTemplate: payloadTemplate,
+                        customHeaders: customHeaders
+                    );
+
+                    await outboundDispatcher.DispatchAsync(result.IsOk, result.FailCount);
+                }
                 else
-                    await _plcDriver.WriteIntAsync(TxtDbInt.Text, result.FailCount);
+                {
+                    // Fluxo Antigo Siemens S7
+                    if (_plcDriver != null)
+                    {
+                        if (isRbBooleanChecked)
+                            await _plcDriver.WriteBoolAsync(txtDbBool, result.IsOk);
+                        else
+                            await _plcDriver.WriteIntAsync(txtDbInt, result.FailCount);
+                    }
+                }
 
                 try
                 {
