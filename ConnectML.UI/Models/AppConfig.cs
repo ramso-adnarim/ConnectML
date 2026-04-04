@@ -24,6 +24,7 @@ namespace ConnectML.UI.Models
         public string WebhookVerb { get; set; } = "POST";
         public string AuthType { get; set; } = "None";
         public string AuthToken { get; set; } = "";
+        public string HmacHeaderName { get; set; } = "X-Hub-Signature-256";
         public List<Models.CustomHeader> CustomHeaders { get; set; } = new List<Models.CustomHeader>();
         public string PayloadTemplate { get; set; } = "{\n  \"status\": \"{{Status}}\",\n  \"routine\": \"{{Routine}}\",\n  \"part\": \"{{Run}}\"\n}";
     }

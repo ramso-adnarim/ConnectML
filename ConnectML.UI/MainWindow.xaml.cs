@@ -373,7 +373,12 @@ namespace ConnectML.UI
                             
                             webBuilder.ConfigureServices(services =>
                             {
+                                string webhookAuthType = ((ComboBoxItem)CmbAuthType.SelectedItem)?.Content?.ToString() ?? "None";
+                                string webhookAuthToken = TxtAuthToken.Text;
+                                string hmacHeaderName = string.IsNullOrWhiteSpace(TxtHmacHeaderName.Text) ? "X-Hub-Signature-256" : TxtHmacHeaderName.Text;
+
                                 services.AddSingleton<IInboundDispatcher>(new VirtualComDispatcher(comPort));
+                                services.AddSingleton(new ConnectML.UI.Models.WebhookInboundConfig(webhookAuthType, webhookAuthToken, hmacHeaderName));
                             });
 
                             webBuilder.Configure(app =>
@@ -557,6 +562,7 @@ namespace ConnectML.UI
                 string webhookVerb = string.Empty;
                 string authType = string.Empty;
                 string authToken = string.Empty;
+                string hmacHeaderName = string.Empty;
                 string payloadTemplate = string.Empty;
                 List<KeyValuePair<string, string>> customHeaders = new();
 
@@ -574,6 +580,7 @@ namespace ConnectML.UI
                         webhookVerb = ((ComboBoxItem)CmbWebhookVerb.SelectedItem)?.Content?.ToString() ?? "POST";
                         authType = ((ComboBoxItem)CmbAuthType.SelectedItem)?.Content?.ToString() ?? "None";
                         authToken = TxtAuthToken.Text;
+                        hmacHeaderName = string.IsNullOrWhiteSpace(TxtHmacHeaderName.Text) ? "X-Hub-Signature-256" : TxtHmacHeaderName.Text;
                         payloadTemplate = TxtPayloadTemplate.Text;
 
                         customHeaders = DgCustomHeaders.Items.OfType<ConnectML.UI.Models.CustomHeader>()
@@ -597,6 +604,7 @@ namespace ConnectML.UI
                         webhookVerb: webhookVerb,
                         authType: authType,
                         authToken: authToken,
+                        hmacHeaderName: hmacHeaderName,
                         payloadTemplate: payloadTemplate,
                         customHeaders: customHeaders
                     );
@@ -817,6 +825,7 @@ namespace ConnectML.UI
                         SelectComboBoxItemByContent(CmbWebhookVerb, config.WebhookVerb);
                         SelectComboBoxItemByContent(CmbAuthType, config.AuthType);
                         TxtAuthToken.Text = config.AuthToken;
+                        TxtHmacHeaderName.Text = config.HmacHeaderName;
                         TxtPayloadTemplate.Text = config.PayloadTemplate;
                         
                         // Headers DataGrid
@@ -875,6 +884,7 @@ namespace ConnectML.UI
                     WebhookVerb = CmbWebhookVerb.Text,
                     AuthType = CmbAuthType.Text,
                     AuthToken = TxtAuthToken.Text,
+                    HmacHeaderName = string.IsNullOrWhiteSpace(TxtHmacHeaderName.Text) ? "X-Hub-Signature-256" : TxtHmacHeaderName.Text,
                     PayloadTemplate = TxtPayloadTemplate.Text,
                     CustomHeaders = headers != null ? new System.Collections.Generic.List<CustomHeader>(headers) : new System.Collections.Generic.List<CustomHeader>()
                 };
@@ -911,10 +921,15 @@ namespace ConnectML.UI
             if (CmbAuthType.SelectedIndex == 0) // None
             {
                 PnlAuthToken.Visibility = Visibility.Collapsed;
+                if (PnlHmacHeader != null) PnlHmacHeader.Visibility = Visibility.Collapsed;
             }
             else // Basic, Bearer, HMAC
             {
                 PnlAuthToken.Visibility = Visibility.Visible;
+                if (PnlHmacHeader != null)
+                {
+                    PnlHmacHeader.Visibility = CmbAuthType.SelectedIndex == 3 ? Visibility.Visible : Visibility.Collapsed;
+                }
             }
         }
 

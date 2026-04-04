@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Polly;
 using Serilog;
 using ConnectML.Core.Interfaces;
 using ConnectML.Infrastructure.Formatters;
@@ -20,6 +22,7 @@ namespace ConnectML.Infrastructure.Dispatchers
         private readonly string _webhookVerb;
         private readonly string _authType;
         private readonly string _authToken;
+        private readonly string _hmacHeaderName;
         private readonly string _payloadTemplate;
         private readonly IEnumerable<KeyValuePair<string, string>> _customHeaders;
 
@@ -28,6 +31,7 @@ namespace ConnectML.Infrastructure.Dispatchers
             string webhookVerb,
             string authType,
             string authToken,
+            string hmacHeaderName,
             string payloadTemplate,
             IEnumerable<KeyValuePair<string, string>> customHeaders)
         {
@@ -35,6 +39,7 @@ namespace ConnectML.Infrastructure.Dispatchers
             _webhookVerb = webhookVerb;
             _authType = authType;
             _authToken = authToken;
+            _hmacHeaderName = string.IsNullOrWhiteSpace(hmacHeaderName) ? "X-Hub-Signature-256" : hmacHeaderName;
             _payloadTemplate = payloadTemplate;
             _customHeaders = customHeaders;
             
@@ -89,11 +94,60 @@ namespace ConnectML.Infrastructure.Dispatchers
                     var encoded = Convert.ToBase64String(bytes);
                     request.Headers.Authorization = new AuthenticationHeaderValue("Basic", encoded);
                 }
+                else if (_authType == "HMAC (Secret)" && !string.IsNullOrWhiteSpace(_authToken))
+                {
+                    var keyBytes = Encoding.UTF8.GetBytes(_authToken);
+                    var payloadBytes = Encoding.UTF8.GetBytes(finalPayload);
+                    using var hmac = new HMACSHA256(keyBytes);
+                    var hashBytes = hmac.ComputeHash(payloadBytes);
+                    var hashHex = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+
+                    request.Headers.TryAddWithoutValidation(_hmacHeaderName, "sha256=" + hashHex);
+                }
 
                 Log.Information($"[Webhook Outbound] Disparando {method.ToString()} para {_webhookUrl}...");
 
-                // 4. Envio HTTP na nuvem
-                var response = await _httpClient.SendAsync(request);
+                // 4. Envio HTTP na nuvem com Polly (Exponential Backoff de 3 tentativas: 2s, 4s, 8s)
+                var retryPolicy = Policy
+                    .Handle<HttpRequestException>() // Falhas de rota e DNS
+                    .OrResult<HttpResponseMessage>(r => (int)r.StatusCode >= 500 || r.StatusCode == System.Net.HttpStatusCode.RequestTimeout)
+                    .WaitAndRetryAsync(
+                        retryCount: 3,
+                        sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), // 2s, 4s, 8s
+                        onRetry: (outcome, timespan, retryAttempt, context) =>
+                        {
+                            Log.Warning($"[Webhook Outbound] Falha no disparo. Tentativa {retryAttempt} de 3. Aguardando {timespan.TotalSeconds} segundos para re-tentativa...");
+                        }
+                    );
+
+                var response = await retryPolicy.ExecuteAsync(async () =>
+                {
+                    // Como a policy pode tentar novamente e o HttpRequestMessage só pode ser enviado uma vez por instância,
+                    // devemos fabricar aqui dentro uma cópia limpa do Request para a próxima tentativa se for falha.
+                    using var retryRequest = new HttpRequestMessage(method, _webhookUrl);
+                    retryRequest.Content = new StringContent(finalPayload, Encoding.UTF8, "application/json");
+
+                    if (_customHeaders != null)
+                    {
+                        foreach (var header in _customHeaders)
+                        {
+                            if (!string.IsNullOrWhiteSpace(header.Key))
+                                retryRequest.Headers.TryAddWithoutValidation(header.Key, header.Value ?? string.Empty);
+                        }
+                    }
+
+                    if (request.Headers.Authorization != null)
+                    {
+                        retryRequest.Headers.Authorization = request.Headers.Authorization;
+                    }
+                    else if (request.Headers.Contains(_hmacHeaderName))
+                    {
+                        var hmacVal = request.Headers.GetValues(_hmacHeaderName);
+                        retryRequest.Headers.TryAddWithoutValidation(_hmacHeaderName, hmacVal);
+                    }
+
+                    return await _httpClient.SendAsync(retryRequest);
+                });
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -102,12 +156,12 @@ namespace ConnectML.Infrastructure.Dispatchers
                 else
                 {
                     string errorMsg = await response.Content.ReadAsStringAsync();
-                    Log.Warning($"[Webhook Outbound] O servidor respondeu com falha (StatusCode: {response.StatusCode}): {errorMsg}");
+                    Log.Error($"[Webhook Outbound] Falha definitiva no envio do Webhook após 3 tentativas. (StatusCode: {response.StatusCode}): {errorMsg}");
                 }
             }
             catch (Exception ex)
             {
-                Log.Error($"[Webhook Outbound] Erro crítico ao contatar serviço de destino: {ex.Message}");
+                Log.Error($"[Webhook Outbound] Falha definitiva no envio do Webhook após 3 tentativas. Erro crítico: {ex.Message}");
             }
         }
     }
