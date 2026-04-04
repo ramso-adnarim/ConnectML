@@ -39,6 +39,36 @@
         <SolidColorBrush x:Key="TerminalBg" Color="#0d1117"/>
 
         <!-- STYLES -->
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="{StaticResource SurfaceDark}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderDark}"/>
+        </Style>
+
+        <Style x:Key="DarkExpanderButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#25354a"/> <!-- Slightly lighter than SurfaceDark to give feedback -->
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="CardStyle" TargetType="Border">
             <Setter Property="Background" Value="{StaticResource SurfaceDark}"/>
             <Setter Property="BorderBrush" Value="{StaticResource BorderDark}"/>
@@ -139,6 +169,7 @@
                                           Grid.Column="2"
                                           Focusable="false"
                                           ClickMode="Press"
+                                          IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
                                           Background="{TemplateBinding Background}"
                                           BorderBrush="{TemplateBinding BorderBrush}"
                                           BorderThickness="{TemplateBinding BorderThickness}">
@@ -393,7 +424,7 @@
                         <Border Style="{StaticResource CardStyle}">
                             <StackPanel>
                                 <Border BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1">
-                                    <Button x:Name="BtnToggleSource" Click="BtnToggleSource_Click" Background="Transparent" BorderThickness="0" Padding="20,5" Height="40" HorizontalContentAlignment="Stretch" Cursor="Hand">
+                                    <Button x:Name="BtnToggleSource" Click="BtnToggleSource_Click" Style="{StaticResource DarkExpanderButtonStyle}" Padding="20,5" Height="40">
                                         <Grid>
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                                                 <Viewbox Width="24" Height="20" Margin="0,0,8,0">
@@ -444,7 +475,7 @@
                         <Border Style="{StaticResource CardStyle}" Margin="0,12,0,0">
                             <StackPanel>
                                 <Border BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1">
-                                    <Button x:Name="BtnToggleLogic" Click="BtnToggleLogic_Click" Background="Transparent" BorderThickness="0" Padding="24,5" Height="40" HorizontalContentAlignment="Stretch" Cursor="Hand">
+                                    <Button x:Name="BtnToggleLogic" Click="BtnToggleLogic_Click" Style="{StaticResource DarkExpanderButtonStyle}" Padding="24,5" Height="40">
                                         <Grid>
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                                                 <Viewbox Width="24" Height="24" Margin="0,0,8,0">
@@ -523,21 +554,30 @@
                         <!-- CARD 3: PLC OUTPUT -->
                         <Border Style="{StaticResource CardStyle}" Margin="0,12,0,0">
                             <StackPanel>
-                                <Border BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1" Padding="24,5" Height="40">
-                                    <Grid>
-                                        <StackPanel Orientation="Horizontal">
-                                            <Viewbox Width="24" Height="24" Margin="0,0,8,0">
-                                                <Path Fill="{StaticResource PurpleColor}" Data="M7.77,6.76L6.23,5.48L0.82,12l5.41,6.52l1.54-1.28L3.42,12L7.77,6.76z M16.23,6.76l4.35,5.24l-4.35,5.24l1.54,1.28 L23.18,12l-5.41-6.52L16.23,6.76z M12,13c0.55,0,1-0.45,1-1V3c0-0.55-0.45-1-1-1s-1,0.45-1,1v9C11,12.55,11.45,13,12,13z"/>
-                                            </Viewbox>
-                                            <TextBlock Text="Integração" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                        <Border HorizontalAlignment="Right" Style="{StaticResource BadgeStyle}" Margin="0,2,0,2">
-                                            <TextBlock Text="Saída" FontSize="12" FontWeight="Medium" Foreground="{StaticResource TextSecondary}"/>
-                                        </Border>
-                                    </Grid>
+                                <Border BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1">
+                                    <Button x:Name="BtnToggleIntegration" Click="BtnToggleIntegration_Click" Style="{StaticResource DarkExpanderButtonStyle}" Padding="24,5" Height="40">
+                                        <Grid>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                                <Viewbox Width="24" Height="24" Margin="0,0,8,0">
+                                                    <Path Fill="{StaticResource PurpleColor}" Data="M7.77,6.76L6.23,5.48L0.82,12l5.41,6.52l1.54-1.28L3.42,12L7.77,6.76z M16.23,6.76l4.35,5.24l-4.35,5.24l1.54,1.28 L23.18,12l-5.41-6.52L16.23,6.76z M12,13c0.55,0,1-0.45,1-1V3c0-0.55-0.45-1-1-1s-1,0.45-1,1v9C11,12.55,11.45,13,12,13z"/>
+                                                </Viewbox>
+                                                <TextBlock Text="Integração" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Foreground="{StaticResource TextPrimary}"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                <Border Style="{StaticResource BadgeStyle}" Margin="0,2,8,2">
+                                                    <TextBlock Text="Saída" FontSize="12" FontWeight="Medium" Foreground="{StaticResource TextSecondary}"/>
+                                                </Border>
+                                                <Path x:Name="IconToggleIntegration" Fill="{StaticResource TextSecondary}" Data="M7,10L12,15L17,10H7Z" Stretch="Uniform" Width="12" Height="12" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                                    <Path.RenderTransform>
+                                                        <RotateTransform Angle="0"/>
+                                                    </Path.RenderTransform>
+                                                </Path>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
                                 </Border>
 
-                                <StackPanel Margin="24,12">
+                                <StackPanel x:Name="PnlIntegrationBody" Margin="24,12">
                                     <StackPanel Margin="0,0,0,16" MaxWidth="448" HorizontalAlignment="Left">
                                         <TextBlock Text="Protocolo de Comunicação" FontSize="14" FontWeight="Medium" Foreground="#cbd5e1" Margin="0,0,0,6"/>
                                         <ComboBox x:Name="CmbProtocol" 
