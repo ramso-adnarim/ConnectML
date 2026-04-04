@@ -14,7 +14,12 @@ using Microsoft.Win32;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
-
+using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using ConnectML.UI.Endpoints;
+using ConnectML.Infrastructure.Dispatchers;
 // Aliases para evitar ambiguidade de tipos
 using WinForms = System.Windows.Forms;
 using Drawing = System.Drawing;
@@ -28,6 +33,7 @@ namespace ConnectML.UI
         private bool _isRunning = false;
         private FileSystemWatcher? _watcher;
         private IPlcDriver? _plcDriver;
+        private IHost? _host;
         private const string ConfigFile = "appsettings.json";
 
         // System Tray (Ícone na bandeja do sistema)
@@ -324,13 +330,6 @@ namespace ConnectML.UI
 
         private async Task StartService()
         {
-            if (CmbProtocol.SelectedIndex == 1) // Webhook REST Genérico
-            {
-                Log.Warning("Início bloqueado: Modo Webhook REST Genérico pendente de implementação. Apenas Mock gráfico na Sprint atual.");
-                MessageBox.Show("O modo Webhook REST Genérico está apenas como interface demonstrativa nesta etapa. A comunicação completa será finalizada em uma próxima etapa.", "Atenção", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
             string path = TxtSourcePath.Text;
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -354,27 +353,70 @@ namespace ConnectML.UI
                 }
             }
 
-            try
+            if (CmbProtocol.SelectedIndex == 1) // Webhook REST Genérico
             {
-                string ip = TxtIp.Text;
-                if (!int.TryParse(TxtRack.Text, out int rack)) rack = 0;
-                if (!int.TryParse(TxtSlot.Text, out int slot)) slot = 1;
+                int inboundPort = int.TryParse(TxtInboundPort.Text, out int port) ? port : 5000;
+                string comPort = CmbVirtualCom.Text;
 
-                if (string.IsNullOrWhiteSpace(TxtDbBool.Text) || string.IsNullOrWhiteSpace(TxtDbInt.Text))
+                try
                 {
-                     MessageBox.Show("Preencha os endereços de DB.", "Erro", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    _host = Host.CreateDefaultBuilder()
+                        .ConfigureWebHostDefaults(webBuilder =>
+                        {
+                            webBuilder.UseKestrel(options =>
+                            {
+                                options.ListenAnyIP(inboundPort);
+                            });
+                            
+                            webBuilder.ConfigureServices(services =>
+                            {
+                                services.AddSingleton<IInboundDispatcher>(new VirtualComDispatcher(comPort));
+                            });
+
+                            webBuilder.Configure(app =>
+                            {
+                                app.UseRouting();
+                                app.UseEndpoints(endpoints =>
+                                {
+                                    endpoints.MapWebhookEndpoints();
+                                });
+                            });
+                        })
+                        .Build();
+
+                    await _host.StartAsync();
+                    Log.Information($"Servidor Webhook (Inbound) Iniciado na porta {inboundPort}. Repasse Serial: {comPort}");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Não foi possível iniciar o servidor Inbound na porta {inboundPort}: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+            }
+            else // Siemens S7
+            {
+                try
+                {
+                    string ip = TxtIp.Text;
+                    if (!int.TryParse(TxtRack.Text, out int rack)) rack = 0;
+                    if (!int.TryParse(TxtSlot.Text, out int slot)) slot = 1;
+
+                    if (string.IsNullOrWhiteSpace(TxtDbBool.Text) || string.IsNullOrWhiteSpace(TxtDbInt.Text))
+                    {
+                         MessageBox.Show("Preencha os endereços de DB.", "Erro", MessageBoxButton.OK, MessageBoxImage.Warning);
+                         return;
+                    }
+
+                    var logger = new ConnectML.UI.Utils.SerilogLoggerAdapter<ConnectML.Infrastructure.PlcDrivers.SiemensS7Driver>();
+                    _plcDriver = new ConnectML.Infrastructure.PlcDrivers.SiemensS7Driver(logger);
+
+                    await _plcDriver.ConnectAsync(ip, rack, slot);
+                }
+                catch (Exception ex)
+                {
+                     MessageBox.Show($"Erro ao conectar PLC: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
                      return;
                 }
-
-                var logger = new ConnectML.UI.Utils.SerilogLoggerAdapter<ConnectML.Infrastructure.PlcDrivers.SiemensS7Driver>();
-                _plcDriver = new ConnectML.Infrastructure.PlcDrivers.SiemensS7Driver(logger);
-
-                await _plcDriver.ConnectAsync(ip, rack, slot);
-            }
-            catch (Exception ex)
-            {
-                 MessageBox.Show($"Erro ao conectar PLC: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-                 return;
             }
 
             PnlConfiguration.IsEnabled = false;
@@ -422,6 +464,13 @@ namespace ConnectML.UI
             if (_plcDriver != null)
             {
                 await _plcDriver.DisconnectAsync();
+            }
+
+            if (_host != null)
+            {
+                await _host.StopAsync(TimeSpan.FromSeconds(3));
+                _host.Dispose();
+                _host = null;
             }
 
             PnlConfiguration.IsEnabled = true;

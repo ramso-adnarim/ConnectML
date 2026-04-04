@@ -11,6 +11,7 @@
     <PackageReference Include="S7netplus" Version="0.20.0" />
     <PackageReference Include="Serilog" Version="4.3.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="System.IO.Ports" Version="10.0.5" />
   </ItemGroup>
 
   <PropertyGroup>
