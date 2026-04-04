@@ -3,6 +3,15 @@
 
 ConnectML é um middleware industrial desenvolvido para integrar dados de qualidade do MeasurLink (QIF) com sistemas de automação de fábrica (CLPs e SCADAs) e outros softwares de apontamento e integração.
 
+## Documentação
+
+Os arquivos de documentação do projeto podem ser encontrados na pasta `docs`. O sumário inclui:
+* [ARCHITECTURE.md](docs/ARCHITECTURE.md): Visão geral da arquitetura, fluxo de dados e decisões técnicas da aplicação.
+* [EGA_API_REQUIREMENTS.md](docs/EGA_API_REQUIREMENTS.md): Requisitos de integração e payload das APIs para o sistema EGA.
+* [PHASE2_IMPLEMENTATION_PLAN.md](docs/PHASE2_IMPLEMENTATION_PLAN.md): Plano de implementação da fase 2, estruturação e tarefas focadas na expansão.
+* [MOCKUP_GOOGLE_STITCH / CODE.html](docs/MOCKUP_GOOGLE_STITCH/CODE.html): Interface gráfica de configuração e testes interativos (Mockup HTML).
+* [QIF / QIF_SAMPLE_2_MEASUREMENTS.QIF](docs/QIF/QIF_SAMPLE_2_MEASUREMENTS.QIF): Amostra de arquivo QIF processado pelo sistema.
+
 ## Áreas do Projeto
 
 A solução segue uma arquitetura modular em camadas (.NET 8):
