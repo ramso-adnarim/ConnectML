@@ -794,9 +794,15 @@ namespace ConnectML.UI
                         // Inbound
                         TxtInboundPort.Text = config.InboundPort.ToString();
                         
-                        if (!string.IsNullOrEmpty(config.VirtualComPort) && !CmbVirtualCom.Items.Contains(config.VirtualComPort))
+                        if (!string.IsNullOrEmpty(config.VirtualComPort))
                         {
-                            CmbVirtualCom.Items.Add(config.VirtualComPort);
+                            bool portExists = CmbVirtualCom.Items.Cast<object>().Any(item => 
+                                item.ToString()?.Equals(config.VirtualComPort, StringComparison.OrdinalIgnoreCase) == true);
+                            
+                            if (!portExists)
+                            {
+                                CmbVirtualCom.Items.Add(config.VirtualComPort);
+                            }
                         }
                         SelectComboBoxItemByContent(CmbVirtualCom, config.VirtualComPort);
                         

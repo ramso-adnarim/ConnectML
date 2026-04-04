@@ -767,20 +767,20 @@
                                                     </Viewbox>
                                                 </Button>
                                             </Grid>
-                                            <Border BorderBrush="#334155" BorderThickness="1" Background="#0F172A" Height="120">
-                                                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                                            <Border BorderBrush="#334155" BorderThickness="1" Background="#0F172A">
+                                                <Grid Margin="4">
                                                     <avalonEdit:TextEditor x:Name="TxtPayloadTemplate" 
-                                                                           HorizontalScrollBarVisibility="Disabled"
-                                                                           VerticalScrollBarVisibility="Disabled"
+                                                                           Height="112" 
+                                                                           HorizontalScrollBarVisibility="Auto"
+                                                                           VerticalScrollBarVisibility="Auto"
                                                                            WordWrap="False"
                                                                            ShowLineNumbers="False"
                                                                            SyntaxHighlighting="JavaScript"
                                                                            FontFamily="Consolas" 
                                                                            FontSize="13" 
                                                                            Background="Transparent" 
-                                                                           Foreground="#D4D4D4" 
-                                                                           Padding="4"/>
-                                                </ScrollViewer>
+                                                                           Foreground="#D4D4D4" />
+                                                </Grid>
                                             </Border>
                                         </StackPanel>
                                     </StackPanel>
