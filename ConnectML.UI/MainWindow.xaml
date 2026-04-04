@@ -48,6 +48,39 @@
             <Setter Property="BorderBrush" Value="{StaticResource BorderDark}"/>
         </Style>
 
+        <Style TargetType="DataGridRow">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderDark}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="SnapsToDevicePixels" Value="true"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#25354a"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#33136dec"/>
+                    <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="BorderBrush" Value="Transparent"/>
+                </Trigger>
+                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                    <Setter Property="BorderBrush" Value="{StaticResource PrimaryColor}"/>
+                    <Setter Property="BorderThickness" Value="1"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="DarkExpanderButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -410,7 +443,7 @@
         <!-- MAIN LAYOUT -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="450"/>
+                <ColumnDefinition Width="*" MinWidth="350"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="380" x:Name="ColLogs" MinWidth="390"/>
             </Grid.ColumnDefinitions>
@@ -418,7 +451,7 @@
             <!-- LEFT PANEL: CONFIGURATION -->
             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Background="{StaticResource BackgroundDark}">
                 <StackPanel Margin="10,10,10,10" x:Name="PnlConfiguration">
-                    <StackPanel MaxWidth="896" HorizontalAlignment="Center">
+                    <StackPanel MaxWidth="896" HorizontalAlignment="Stretch">
 
                         <!-- CARD 1: SOURCE -->
                         <Border Style="{StaticResource CardStyle}">
@@ -714,7 +747,8 @@
                                             <DataGrid x:Name="DgCustomHeaders" AutoGenerateColumns="False" CanUserAddRows="True" CanUserDeleteRows="True"
                                                       Background="{StaticResource BackgroundDark}" BorderBrush="{StaticResource BorderDark}" 
                                                       RowBackground="{StaticResource BackgroundDark}" AlternatingRowBackground="{StaticResource SurfaceDark}"
-                                                      Foreground="{StaticResource TextPrimary}" Height="120" RowHeaderWidth="0">
+                                                      HorizontalGridLinesBrush="{StaticResource BorderDark}" VerticalGridLinesBrush="{StaticResource BorderDark}"
+                                                      GridLinesVisibility="All" Foreground="{StaticResource TextPrimary}" Height="120" RowHeaderWidth="0">
                                                 <DataGrid.Columns>
                                                     <DataGridTextColumn Header="Chave (Header-Name)" Binding="{Binding Key}" Width="*"/>
                                                     <DataGridTextColumn Header="Valor" Binding="{Binding Value}" Width="*"/>

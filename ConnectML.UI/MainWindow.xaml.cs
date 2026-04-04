@@ -41,9 +41,9 @@ namespace ConnectML.UI
         private bool _isLogsCollapsed = false;
         private bool _autoHiddenBySpace = false;
         private double _userPreferredLogsWidth = 380; // Largura preferida padrão
-        private const double MinConfigWidth = 500; 
+        private const double MinConfigWidth = 350; 
         private const double IdealConfigWidth = 564;
-        private const double MinLogsWidth = 420;
+        private const double MinLogsWidth = 300;
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         extern static bool DestroyIcon(IntPtr handle);
