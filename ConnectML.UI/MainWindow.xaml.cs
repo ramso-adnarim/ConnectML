@@ -83,6 +83,7 @@ namespace ConnectML.UI
             // Restaura estado inicial dos expanders
             ((System.Windows.Media.RotateTransform)IconToggleSource.RenderTransform).Angle = 0;
             ((System.Windows.Media.RotateTransform)IconToggleLogic.RenderTransform).Angle = 0;
+            ((System.Windows.Media.RotateTransform)IconToggleIntegration.RenderTransform).Angle = 0;
             
             // Captura o redimensionamento do divisor para salvar a preferência do usuário
             PnlLogsContainer.SizeChanged += (s, e) =>
@@ -663,7 +664,7 @@ namespace ConnectML.UI
                         TxtSourcePath.Text = config.SourcePath;
                         if (config.IsBooleanMode) RbBoolean.IsChecked = true; else RbNumeric.IsChecked = true;
                         
-                        CmbProtocol.Text = config.Protocol;
+                        SelectComboBoxItemByContent(CmbProtocol, config.Protocol);
                         
                         // Siemens
                         TxtIp.Text = config.IpAddress;
@@ -674,12 +675,12 @@ namespace ConnectML.UI
                         
                         // Inbound
                         TxtInboundPort.Text = config.InboundPort.ToString();
-                        CmbVirtualCom.Text = config.VirtualComPort;
+                        SelectComboBoxItemByContent(CmbVirtualCom, config.VirtualComPort);
                         
                         // Webhook
                         TxtWebhookUrl.Text = config.WebhookUrl;
-                        CmbWebhookVerb.Text = config.WebhookVerb;
-                        CmbAuthType.Text = config.AuthType;
+                        SelectComboBoxItemByContent(CmbWebhookVerb, config.WebhookVerb);
+                        SelectComboBoxItemByContent(CmbAuthType, config.AuthType);
                         TxtAuthToken.Text = config.AuthToken;
                         TxtPayloadTemplate.Text = config.PayloadTemplate;
                         
@@ -692,6 +693,24 @@ namespace ConnectML.UI
                 }
             }
             catch (Exception ex) { Log.Error($"Erro configs: {ex.Message}"); }
+        }
+
+        private void SelectComboBoxItemByContent(ComboBox cb, string? targetValue)
+        {
+            if (string.IsNullOrEmpty(targetValue)) return;
+            foreach (var item in cb.Items)
+            {
+                if (item is ComboBoxItem cbi && cbi.Content?.ToString() == targetValue)
+                {
+                    cb.SelectedItem = cbi;
+                    return;
+                }
+                else if (item is string str && str == targetValue)
+                {
+                    cb.SelectedItem = str;
+                    return;
+                }
+            }
         }
 
         private void SaveSettings()
@@ -789,6 +808,20 @@ namespace ConnectML.UI
             {
                 PnlLogicBody.Visibility = Visibility.Visible;
                 ((System.Windows.Media.RotateTransform)IconToggleLogic.RenderTransform).Angle = 0;
+            }
+        }
+
+        private void BtnToggleIntegration_Click(object sender, RoutedEventArgs e)
+        {
+            if (PnlIntegrationBody.Visibility == Visibility.Visible)
+            {
+                PnlIntegrationBody.Visibility = Visibility.Collapsed;
+                ((System.Windows.Media.RotateTransform)IconToggleIntegration.RenderTransform).Angle = -90;
+            }
+            else
+            {
+                PnlIntegrationBody.Visibility = Visibility.Visible;
+                ((System.Windows.Media.RotateTransform)IconToggleIntegration.RenderTransform).Angle = 0;
             }
         }
 
