@@ -57,6 +57,32 @@ namespace ConnectML.UI
 
             // Verificação Inicial de Layout
             SizeChanged += Window_SizeChanged;
+
+            // Populate Virtual COM Ports
+            try
+            {
+                var ports = System.IO.Ports.SerialPort.GetPortNames();
+                foreach (var port in ports)
+                {
+                    CmbVirtualCom.Items.Add(port);
+                }
+                if (CmbVirtualCom.Items.Count > 0 && string.IsNullOrEmpty(CmbVirtualCom.Text))
+                {
+                    CmbVirtualCom.SelectedIndex = 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"Não foi possível listar portas COM: {ex.Message}");
+            }
+
+            // Garante que o painel mostre a configuração correta do Webhook baseado no LoadSettings
+            CmbProtocol_SelectionChanged(this, null!);
+            CmbAuthType_SelectionChanged(this, null!);
+            
+            // Restaura estado inicial dos expanders
+            ((System.Windows.Media.RotateTransform)IconToggleSource.RenderTransform).Angle = 0;
+            ((System.Windows.Media.RotateTransform)IconToggleLogic.RenderTransform).Angle = 0;
             
             // Captura o redimensionamento do divisor para salvar a preferência do usuário
             PnlLogsContainer.SizeChanged += (s, e) =>
@@ -297,6 +323,13 @@ namespace ConnectML.UI
 
         private async Task StartService()
         {
+            if (CmbProtocol.SelectedIndex == 1) // Webhook REST Genérico
+            {
+                Log.Warning("Início bloqueado: Modo Webhook REST Genérico pendente de implementação. Apenas Mock gráfico na Sprint atual.");
+                MessageBox.Show("O modo Webhook REST Genérico está apenas como interface demonstrativa nesta etapa. A comunicação completa será finalizada em uma próxima etapa.", "Atenção", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
             string path = TxtSourcePath.Text;
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -641,7 +674,7 @@ namespace ConnectML.UI
                         
                         // Inbound
                         TxtInboundPort.Text = config.InboundPort.ToString();
-                        TxtVirtualCom.Text = config.VirtualComPort;
+                        CmbVirtualCom.Text = config.VirtualComPort;
                         
                         // Webhook
                         TxtWebhookUrl.Text = config.WebhookUrl;
@@ -681,7 +714,7 @@ namespace ConnectML.UI
                     
                     // Inbound
                     InboundPort = int.TryParse(TxtInboundPort.Text, out int port) ? port : 5000,
-                    VirtualComPort = TxtVirtualCom.Text,
+                    VirtualComPort = CmbVirtualCom.Text,
                     
                     // Webhook
                     WebhookUrl = TxtWebhookUrl.Text,
@@ -728,6 +761,34 @@ namespace ConnectML.UI
             else // Basic, Bearer, HMAC
             {
                 PnlAuthToken.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void BtnToggleSource_Click(object sender, RoutedEventArgs e)
+        {
+            if (PnlSourceBody.Visibility == Visibility.Visible)
+            {
+                PnlSourceBody.Visibility = Visibility.Collapsed;
+                ((System.Windows.Media.RotateTransform)IconToggleSource.RenderTransform).Angle = -90;
+            }
+            else
+            {
+                PnlSourceBody.Visibility = Visibility.Visible;
+                ((System.Windows.Media.RotateTransform)IconToggleSource.RenderTransform).Angle = 0;
+            }
+        }
+
+        private void BtnToggleLogic_Click(object sender, RoutedEventArgs e)
+        {
+            if (PnlLogicBody.Visibility == Visibility.Visible)
+            {
+                PnlLogicBody.Visibility = Visibility.Collapsed;
+                ((System.Windows.Media.RotateTransform)IconToggleLogic.RenderTransform).Angle = -90;
+            }
+            else
+            {
+                PnlLogicBody.Visibility = Visibility.Visible;
+                ((System.Windows.Media.RotateTransform)IconToggleLogic.RenderTransform).Angle = 0;
             }
         }
 
