@@ -687,7 +687,7 @@
 
                                             <StackPanel Grid.Column="2">
                                                 <TextBlock Text="Repasse COM Virtual (QIF)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
-                                                <ComboBox x:Name="CmbVirtualCom" Height="38"/>
+                                                <ComboBox x:Name="CmbVirtualCom" Height="38" IsEditable="True"/>
                                             </StackPanel>
                                         </Grid>
 
@@ -777,7 +777,7 @@
                                                                        FontSize="13" 
                                                                        Background="#0F172A" 
                                                                        Foreground="#D4D4D4" 
-                                                                       Padding="6"/>
+                                                                       Margin="4"/>
                                             </Border>
                                         </StackPanel>
                                     </StackPanel>
