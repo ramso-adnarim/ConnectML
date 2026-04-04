@@ -687,7 +687,7 @@
 
                                             <StackPanel Grid.Column="2">
                                                 <TextBlock Text="Repasse COM Virtual (QIF)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
-                                                <ComboBox x:Name="CmbVirtualCom" Height="38" IsEditable="True"/>
+                                                <ComboBox x:Name="CmbVirtualCom" Height="38"/>
                                             </StackPanel>
                                         </Grid>
 
@@ -767,17 +767,20 @@
                                                     </Viewbox>
                                                 </Button>
                                             </Grid>
-                                            <Border BorderBrush="#334155" BorderThickness="1" Background="#0F172A">
-                                                <avalonEdit:TextEditor x:Name="TxtPayloadTemplate" 
-                                                                       Height="120" 
-                                                                       WordWrap="False"
-                                                                       ShowLineNumbers="False"
-                                                                       SyntaxHighlighting="JavaScript"
-                                                                       FontFamily="Consolas" 
-                                                                       FontSize="13" 
-                                                                       Background="#0F172A" 
-                                                                       Foreground="#D4D4D4" 
-                                                                       Margin="4"/>
+                                            <Border BorderBrush="#334155" BorderThickness="1" Background="#0F172A" Height="120">
+                                                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                                                    <avalonEdit:TextEditor x:Name="TxtPayloadTemplate" 
+                                                                           HorizontalScrollBarVisibility="Disabled"
+                                                                           VerticalScrollBarVisibility="Disabled"
+                                                                           WordWrap="False"
+                                                                           ShowLineNumbers="False"
+                                                                           SyntaxHighlighting="JavaScript"
+                                                                           FontFamily="Consolas" 
+                                                                           FontSize="13" 
+                                                                           Background="Transparent" 
+                                                                           Foreground="#D4D4D4" 
+                                                                           Padding="4"/>
+                                                </ScrollViewer>
                                             </Border>
                                         </StackPanel>
                                     </StackPanel>

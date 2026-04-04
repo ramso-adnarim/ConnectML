@@ -793,7 +793,12 @@ namespace ConnectML.UI
                         
                         // Inbound
                         TxtInboundPort.Text = config.InboundPort.ToString();
-                        CmbVirtualCom.Text = config.VirtualComPort;
+                        
+                        if (!string.IsNullOrEmpty(config.VirtualComPort) && !CmbVirtualCom.Items.Contains(config.VirtualComPort))
+                        {
+                            CmbVirtualCom.Items.Add(config.VirtualComPort);
+                        }
+                        SelectComboBoxItemByContent(CmbVirtualCom, config.VirtualComPort);
                         
                         // Webhook
                         TxtWebhookUrl.Text = config.WebhookUrl;
