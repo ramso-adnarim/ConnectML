@@ -823,24 +823,24 @@
                                     <Button x:Name="BtnToggleLogs" Click="BtnToggleLogs_Click" Margin="0,0,8,0" 
                                             Style="{StaticResource RoundedButtonStyle}" Width="24" Height="24" Background="Transparent">
                                         <Viewbox Width="10" Height="10">
-                                            <Path Fill="{StaticResource TextSecondary}" Data="M15.41,16.59L10.83,12l4.58-4.59L14,6l-6,6l6,6L15.41,16.59z"/>
+                                            <Path Fill="{StaticResource TextSecondary}" Data="M8.59,16.59L13.17,12L8.59,7.41L10,6l6,6l-6,6L8.59,16.59z" Stretch="Uniform" Width="10" Height="10"/>
                                         </Viewbox>
                                     </Button>
                                    
                                     <Viewbox Width="16" Height="16" Margin="0,0,8,0">
-                                        <Path Fill="{StaticResource TextSecondary}" Data="M20,4H4C2.89,4,2,4.89,2,6v12c0,1.11,0.89,2,2,2h16c1.11,0,2-0.89,2-2V6C22,4.89,21.11,4,20,4z M20,18H4V6h16V18z M7.5,15l4.5-4.5L7.5,6L6,7.5l3,3l-3,3L7.5,15z M14,14h5v2h-5V14z"/>
+                                        <Path Fill="{StaticResource TextSecondary}" Data="M20,4H4C2.89,4,2,4.89,2,6v12c0,1.11,0.89,2,2,2h16c1.11,0,2-0.89,2-2V6C22,4.89,21.11,4,20,4z M20,18H4V6h16V18z M7.5,15l4.5-4.5L7.5,6L6,7.5l3,3l-3,3L7.5,15z M14,14h5v2h-5V14z" Stretch="Uniform" Width="10" Height="10"/>
                                     </Viewbox>
-                                    <TextBlock Text="REGISTRO EM TEMPO REAL" FontSize="14" FontWeight="Bold" Foreground="#e2e8f0" VerticalAlignment="Center" Margin="0,-1,0,0"/>
+                                    <TextBlock Text="LOG" FontSize="14" FontWeight="Bold" Foreground="#e2e8f0" VerticalAlignment="Center" Margin="0,-1,0,0"/>
                                 </StackPanel>
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <Button Click="BtnCopyLogs_Click" ToolTip="Copiar Registros" Style="{StaticResource RoundedButtonStyle}" Background="Transparent" Height="Auto" Padding="6,2" Margin="0,0,4,0">
+                                <StackPanel Orientation="Vertical" HorizontalAlignment="Right">
+                                    <Button Click="BtnCopyLogs_Click" ToolTip="Copiar todo o registro" Style="{StaticResource RoundedButtonStyle}" Background="Transparent" Height="Auto" Padding="6,2" Margin="0,0,4,0">
                                         <StackPanel Orientation="Horizontal">
-                                            <Path Fill="{StaticResource TextSecondary}" Data="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" Stretch="Uniform" Width="12" Height="12" Margin="0,0,4,0"/>
-                                            <TextBlock Text="Copiar" FontSize="12" Foreground="{StaticResource TextSecondary}"/>
+                                            <Path Fill="{StaticResource TextSecondary}" Data="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" Stretch="Uniform" Width="10" Height="10" Margin="0,0,4,0"/>
+                                            <TextBlock Text="Copiar" FontSize="10" Foreground="{StaticResource TextSecondary}"/>
                                         </StackPanel>
                                     </Button>
-                                    <Button Click="BtnClearLogs_Click" ToolTip="Limpar Registros" Style="{StaticResource RoundedButtonStyle}" Background="Transparent" Height="Auto" Padding="6,2">
-                                        <TextBlock Text="Limpar" FontSize="12" Foreground="{StaticResource TextSecondary}"/>
+                                    <Button Click="BtnClearLogs_Click" ToolTip="Limpar registros" Style="{StaticResource RoundedButtonStyle}" Background="Transparent" Height="Auto" Margin="0,6,0,0"  Padding="6,2">
+                                        <TextBlock Text="Limpar" FontSize="10" Foreground="{StaticResource TextSecondary}"/>
                                     </Button>
                                 </StackPanel>
                             </Grid>
@@ -874,9 +874,9 @@
                                 <RotateTransform Angle="-90"/>
                             </Grid.LayoutTransform>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <TextBlock Text="REGISTRO EM TEMPO REAL" FontSize="12" FontWeight="Bold" Foreground="{StaticResource TextSecondary}" Margin="0,0,8,0"/>
+                                <TextBlock Text="VER LOG" FontSize="12" FontWeight="Bold" Foreground="{StaticResource TextSecondary}" Margin="0,0,8,0"/>
                                 <Viewbox Width="10" Height="10">
-                                   <Path Fill="{StaticResource TextSecondary}" Data="M10,6L8.59,7.41L13.17,12l-4.58,4.59L10,18l6-6L10,6z M6,6h2v12H6V6z"/>
+                                    <Path Fill="{StaticResource TextSecondary}" Data="M10,6L8.59,7.41L13.17,12l-4.58,4.59L10,18l6-6L10,6z M6,6h2v12H6V6z" Stretch="Uniform" Width="12" Height="12"/>
                                 </Viewbox>
                             </StackPanel>
                         </Grid>
