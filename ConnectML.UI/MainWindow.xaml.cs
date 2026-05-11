@@ -804,6 +804,7 @@ namespace ConnectML.UI
                         TxtSlot.Text = config.Slot;
                         TxtDbBool.Text = config.DbAddressBool;
                         TxtDbInt.Text = config.DbAddressInt;
+                        TxtDbStatus.Text = config.DbAddressStatus;
                         
                         // Inbound
                         TxtInboundPort.Text = config.InboundPort.ToString();
@@ -874,6 +875,7 @@ namespace ConnectML.UI
                     Slot = TxtSlot.Text,
                     DbAddressBool = TxtDbBool.Text,
                     DbAddressInt = TxtDbInt.Text,
+                    DbAddressStatus = TxtDbStatus.Text,
                     
                     // Inbound
                     InboundPort = int.TryParse(TxtInboundPort.Text, out int port) ? port : 5000,

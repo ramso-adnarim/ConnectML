@@ -661,6 +661,8 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="16"/>
                                             <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="16"/>
+                                            <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0">
@@ -671,6 +673,11 @@
                                         <StackPanel Grid.Column="2">
                                             <TextBlock Text="DB (Inteira)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
                                             <TextBox x:Name="TxtDbInt" Text="DB10.2" Height="38" ToolTip="Endereço para contador"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="4">
+                                            <TextBlock Text="DB (Status)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
+                                            <TextBox x:Name="TxtDbStatus" Text="DB10.4" Height="38" ToolTip="Endereço para handshake"/>
                                         </StackPanel>
                                     </Grid>
 
