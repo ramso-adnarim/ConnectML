@@ -379,6 +379,8 @@
                         </Style>
                     </StackPanel.Resources>
 
+                    <CheckBox x:Name="ChkAutoStart" Content="Reinício Automático" VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}" Margin="12,0,0,0" ToolTip="Inicia o serviço automaticamente ao abrir o aplicativo se ele foi encerrado rodando da última vez."/>
+
                     <Button x:Name="BtnStartStop" Width="70" Height="36" Padding="16,0" Click="BtnStartStop_Click"
                             Background="{StaticResource StartGreenBg}" BorderBrush="{StaticResource StartGreenBorder}" BorderThickness="1">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">

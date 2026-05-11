@@ -33,6 +33,7 @@ namespace ConnectML.UI
     public partial class MainWindow : Window
     {
         private bool _isRunning = false;
+        private bool _lastRunSuccessful = false;
         private FileSystemWatcher? _watcher;
         private IPlcDriver? _plcDriver;
         private IHost? _host;
@@ -65,6 +66,7 @@ namespace ConnectML.UI
 
             // Verificação Inicial de Layout
             SizeChanged += Window_SizeChanged;
+            Loaded += Window_Loaded;
 
             // Populate Virtual COM Ports
             try
@@ -111,6 +113,18 @@ namespace ConnectML.UI
                    }
                }
             };
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (ChkAutoStart.IsChecked == true && _lastRunSuccessful)
+            {
+                Log.Information("Auto-Start habilitado e última execução foi bem-sucedida. Iniciando serviço e minimizando automaticamente...");
+                // Dispara o evento de start
+                BtnStartStop_Click(this, new RoutedEventArgs());
+                // Esconde a janela para a bandeja
+                BtnMinimize_Click(this, new RoutedEventArgs());
+            }
         }
 
         private void InitializeTrayIcon()
@@ -452,6 +466,8 @@ namespace ConnectML.UI
             _watcher.EnableRaisingEvents = true;
 
             _isRunning = true;
+            _lastRunSuccessful = true;
+            SaveSettings();
             Log.Information("Serviço Iniciado. Monitorando: " + path);
 
             // Inicia a animação do ícone na bandeja
@@ -501,6 +517,8 @@ namespace ConnectML.UI
             StatusIndicator.Opacity = 1;
             StatusIndicator.RenderTransform = new ScaleTransform(1, 1);
 
+            _lastRunSuccessful = false;
+            SaveSettings();
             Log.Information("Serviço Parado.");
 
             StopTrayAnimation();
@@ -804,6 +822,9 @@ namespace ConnectML.UI
                         TxtSourcePath.Text = config.SourcePath;
                         if (config.IsBooleanMode) RbBoolean.IsChecked = true; else RbNumeric.IsChecked = true;
                         
+                        ChkAutoStart.IsChecked = config.AutoStartEnabled;
+                        _lastRunSuccessful = config.LastRunSuccessful;
+                        
                         SelectComboBoxItemByContent(CmbProtocol, config.Protocol);
                         
                         // Siemens
@@ -876,6 +897,8 @@ namespace ConnectML.UI
                     SourcePath = TxtSourcePath.Text,
                     IsBooleanMode = RbBoolean.IsChecked == true,
                     Protocol = CmbProtocol.Text,
+                    AutoStartEnabled = ChkAutoStart.IsChecked == true,
+                    LastRunSuccessful = _lastRunSuccessful,
                     
                     // Siemens
                     IpAddress = TxtIp.Text,
