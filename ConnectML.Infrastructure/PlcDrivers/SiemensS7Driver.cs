@@ -112,6 +112,40 @@ namespace ConnectML.Infrastructure.PlcDrivers
             }, "WriteInt");
         }
 
+        public async Task<bool> ReadBoolAsync(string dbAddress)
+        {
+            return await ExecuteWithRetryAndResultAsync(async () =>
+            {
+                var finalAddress = NormalizeAddress(dbAddress, true);
+                if (_plc != null)
+                {
+                    var result = await _plc.ReadAsync(finalAddress);
+                    bool bResult = result is bool b ? b : false;
+                    _logger.LogInformation($"[S7 REAL] Read Bit {finalAddress}: {bResult}");
+                    return bResult;
+                }
+                return false;
+            }, "ReadBool");
+        }
+
+        public async Task<int> ReadIntAsync(string dbAddress)
+        {
+            return await ExecuteWithRetryAndResultAsync(async () =>
+            {
+                var finalAddress = NormalizeAddress(dbAddress, false);
+                if (_plc != null)
+                {
+                    var result = await _plc.ReadAsync(finalAddress);
+                    int iResult = 0;
+                    if (result is short s) iResult = s;
+                    else if (result is ushort us) iResult = us;
+                    _logger.LogInformation($"[S7 REAL] Read Int {finalAddress}: {iResult}");
+                    return iResult;
+                }
+                return 0;
+            }, "ReadInt");
+        }
+
         private async Task ExecuteWithRetryAsync(Func<Task> action, string operationName)
         {
             // 1. Pre-Check
@@ -143,6 +177,36 @@ namespace ConnectML.Infrastructure.PlcDrivers
                 {
                     _logger.LogError(retryEx, $"[S7 REAL] {operationName}: Falha definitiva após retry.");
                     throw; // Throw original or new exception? Usually throwing the last one is better for context.
+                }
+            }
+        }
+
+        private async Task<T> ExecuteWithRetryAndResultAsync<T>(Func<Task<T>> action, string operationName)
+        {
+            if (!IsConnected)
+            {
+                _logger.LogWarning($"[S7 REAL] {operationName}: Detectado desconectado antes da operação. Tentando reconectar...");
+                await AttemptReconnectAsync();
+            }
+
+            try
+            {
+                return await action();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, $"[S7 REAL] {operationName}: Falha na primeira tentativa. Tentando reconectar e reenviar...");
+                try
+                {
+                    await AttemptReconnectAsync();
+                    var result = await action();
+                    _logger.LogInformation($"[S7 REAL] {operationName}: Sucesso na segunda tentativa.");
+                    return result;
+                }
+                catch (Exception retryEx)
+                {
+                    _logger.LogError(retryEx, $"[S7 REAL] {operationName}: Falha definitiva após retry.");
+                    throw;
                 }
             }
         }

@@ -43,5 +43,29 @@ namespace ConnectML.Core
             await Task.Delay(50);
             Log.Information($"[PLC MOCK] Escrevendo INT em {dbAddress} -> {value}");
         }
+
+        public async Task<bool> ReadBoolAsync(string dbAddress)
+        {
+            if (!IsConnected)
+            {
+                Log.Warning("[PLC MOCK] Tentativa de leitura sem conexão!");
+                return false;
+            }
+            await Task.Delay(50);
+            Log.Information($"[PLC MOCK] Lendo BOOL em {dbAddress} -> false (Mock)");
+            return false;
+        }
+
+        public async Task<int> ReadIntAsync(string dbAddress)
+        {
+            if (!IsConnected)
+            {
+                Log.Warning("[PLC MOCK] Tentativa de leitura sem conexão!");
+                return 0;
+            }
+            await Task.Delay(50);
+            Log.Information($"[PLC MOCK] Lendo INT em {dbAddress} -> 0 (Mock)");
+            return 0;
+        }
     }
 }

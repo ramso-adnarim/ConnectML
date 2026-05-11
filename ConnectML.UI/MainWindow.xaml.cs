@@ -990,6 +990,76 @@ namespace ConnectML.UI
             TxtPayloadTemplate.WordWrap = !TxtPayloadTemplate.WordWrap;
         }
 
+        private async void BtnTestBool_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isRunning) return;
+            string dbAddress = TxtDbBool.Text;
+            if (string.IsNullOrWhiteSpace(dbAddress)) return;
+
+            Log.Information($"[Transient] Iniciando teste em {dbAddress}...");
+            await RunTransientTestAsync(async (driver) => 
+            {
+                bool current = await driver.ReadBoolAsync(dbAddress);
+                bool next = !current;
+                await driver.WriteBoolAsync(dbAddress, next);
+                Log.Information($"[Transient] {dbAddress} foi de {current} para {next}");
+            });
+        }
+
+        private async void BtnTestInt_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isRunning) return;
+            string dbAddress = TxtDbInt.Text;
+            if (string.IsNullOrWhiteSpace(dbAddress)) return;
+
+            Log.Information($"[Transient] Iniciando teste em {dbAddress}...");
+            await RunTransientTestAsync(async (driver) => 
+            {
+                int current = await driver.ReadIntAsync(dbAddress);
+                int next = current + 1;
+                await driver.WriteIntAsync(dbAddress, next);
+                Log.Information($"[Transient] {dbAddress} foi de {current} para {next}");
+            });
+        }
+
+        private async void BtnTestStatus_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isRunning) return;
+            string dbAddress = TxtDbStatus.Text;
+            if (string.IsNullOrWhiteSpace(dbAddress)) return;
+
+            Log.Information($"[Transient] Iniciando teste em {dbAddress}...");
+            await RunTransientTestAsync(async (driver) => 
+            {
+                bool current = await driver.ReadBoolAsync(dbAddress);
+                Log.Information($"[Transient] {dbAddress} lido como {current}");
+            });
+        }
+
+        private async Task RunTransientTestAsync(Func<IPlcDriver, Task> testAction)
+        {
+            string ip = TxtIp.Text;
+            int.TryParse(TxtRack.Text, out int rack);
+            int.TryParse(TxtSlot.Text, out int slot);
+
+            var logger = new ConnectML.UI.Utils.SerilogLoggerAdapter<ConnectML.Infrastructure.PlcDrivers.SiemensS7Driver>();
+            var driver = new ConnectML.Infrastructure.PlcDrivers.SiemensS7Driver(logger);
+
+            try
+            {
+                await driver.ConnectAsync(ip, rack, slot);
+                await testAction(driver);
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"[Transient] Falha no teste: {ex.Message}");
+            }
+            finally
+            {
+                await driver.DisconnectAsync();
+            }
+        }
+
         // Sink
         public class UiSink : ILogEventSink
         {

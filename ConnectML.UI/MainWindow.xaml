@@ -667,17 +667,50 @@
 
                                         <StackPanel Grid.Column="0">
                                             <TextBlock Text="DB (Booleana)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
-                                            <TextBox x:Name="TxtDbBool" Text="DB10.0" Height="38" ToolTip="Endereço para OK/NOK"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox x:Name="TxtDbBool" Text="DB10.0" Height="38" ToolTip="Endereço para OK/NOK" Grid.Column="0" Margin="0,0,4,0"/>
+                                                <Button x:Name="BtnTestBool" Grid.Column="1" Width="38" Height="38" Style="{StaticResource RoundedButtonStyle}" ToolTip="Testar (Toggle)" Click="BtnTestBool_Click">
+                                                    <Viewbox Width="16" Height="16">
+                                                        <Path Fill="{StaticResource TextSecondary}" Data="M17,7H7A5,5 0 0,0 2,12A5,5 0 0,0 7,17H17A5,5 0 0,0 22,12A5,5 0 0,0 17,7M17,15A3,3 0 0,1 14,12A3,3 0 0,1 17,9A3,3 0 0,1 20,12A3,3 0 0,1 17,15Z" Stretch="Uniform"/>
+                                                    </Viewbox>
+                                                </Button>
+                                            </Grid>
                                         </StackPanel>
 
                                         <StackPanel Grid.Column="2">
                                             <TextBlock Text="DB (Inteira)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
-                                            <TextBox x:Name="TxtDbInt" Text="DB10.2" Height="38" ToolTip="Endereço para contador"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox x:Name="TxtDbInt" Text="DB10.2" Height="38" ToolTip="Endereço para contador" Grid.Column="0" Margin="0,0,4,0"/>
+                                                <Button x:Name="BtnTestInt" Grid.Column="1" Width="38" Height="38" Style="{StaticResource RoundedButtonStyle}" ToolTip="Testar (Incrementar)" Click="BtnTestInt_Click">
+                                                    <Viewbox Width="16" Height="16">
+                                                        <Path Fill="{StaticResource TextSecondary}" Data="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" Stretch="Uniform"/>
+                                                    </Viewbox>
+                                                </Button>
+                                            </Grid>
                                         </StackPanel>
 
                                         <StackPanel Grid.Column="4">
                                             <TextBlock Text="DB (Status)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
-                                            <TextBox x:Name="TxtDbStatus" Text="DB10.4" Height="38" ToolTip="Endereço para handshake"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox x:Name="TxtDbStatus" Text="DB10.4" Height="38" ToolTip="Endereço para handshake" Grid.Column="0" Margin="0,0,4,0"/>
+                                                <Button x:Name="BtnTestStatus" Grid.Column="1" Width="38" Height="38" Style="{StaticResource RoundedButtonStyle}" ToolTip="Testar (Ler Status)" Click="BtnTestStatus_Click">
+                                                    <Viewbox Width="16" Height="16">
+                                                        <Path Fill="{StaticResource TextSecondary}" Data="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z" Stretch="Uniform"/>
+                                                    </Viewbox>
+                                                </Button>
+                                            </Grid>
                                         </StackPanel>
                                     </Grid>
 
