@@ -218,7 +218,7 @@ namespace ConnectML.Simulator
 
                 Console.WriteLine($"[S7 SERVER] Leitura recebida -> DB{dbNumber}, Offset={byteAddr}, Bytes={readLenBytes}");
 
-                byte[] res = new byte[21 + readLenBytes];
+                byte[] res = new byte[25 + readLenBytes];
                 res[0] = 0x03; res[1] = 0x00; 
                 res[2] = (byte)(res.Length >> 8); res[3] = (byte)(res.Length & 0xFF);
                 res[4] = 0x02; res[5] = 0xF0; res[6] = 0x80;
@@ -226,19 +226,21 @@ namespace ConnectML.Simulator
                 res[11] = refHigh; res[12] = refLow;
                 res[13] = 0x00; res[14] = 0x02; 
                 res[15] = (byte)((readLenBytes + 4) >> 8); res[16] = (byte)((readLenBytes + 4) & 0xFF); 
+                res[17] = 0x00; res[18] = 0x00; // Error Class & Code
                 
-                res[17] = 0x04; res[18] = 0x01; 
-                res[19] = 0xFF; 
-                res[20] = 0x04; 
+                res[19] = 0x04; res[20] = 0x01; // Function Read, 1 item
+                
+                res[21] = 0xFF; // Success
+                res[22] = 0x04; // TS Byte/Word
                 int bitsLen = readLenBytes * 8;
                 if (tsReq == 0x01 || tsReq == 0x03) bitsLen = 1;
 
-                res[21] = (byte)(bitsLen >> 8); res[22] = (byte)(bitsLen & 0xFF);
+                res[23] = (byte)(bitsLen >> 8); res[24] = (byte)(bitsLen & 0xFF);
 
                 for (int i = 0; i < readLenBytes; i++)
                 {
                     if (byteAddr + i < DBs[dbNumber].Length)
-                        res[23 + i] = DBs[dbNumber][byteAddr + i];
+                        res[25 + i] = DBs[dbNumber][byteAddr + i];
                 }
 
                 await stream.WriteAsync(res, 0, res.Length);
@@ -313,8 +315,9 @@ namespace ConnectML.Simulator
                 res[11] = refHigh; res[12] = refLow; 
                 res[13] = 0x00; res[14] = 0x02; 
                 res[15] = 0x00; res[16] = 0x01; 
-                res[17] = 0x05; res[18] = 0x01; 
-                res[19] = 0xFF; // Success
+                res[17] = 0x00; res[18] = 0x00; // Error Class & Code
+                res[19] = 0x05; res[20] = 0x01; // Function Write, 1 item
+                res[21] = 0xFF; // Success
                 
                 await stream.WriteAsync(res, 0, res.Length);
             }
