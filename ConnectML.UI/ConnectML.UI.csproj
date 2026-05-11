@@ -8,6 +8,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>ConnectML.UI</RootNamespace>
     <ApplicationIcon>ConnectML-logo-ico.ico</ApplicationIcon>
+    <StartupObject>ConnectML.UI.Program</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +25,7 @@
     <PackageReference Include="Serilog" Version="4.3.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="System.IO.Ports" Version="10.0.5" />
+    <PackageReference Include="Velopack" Version="0.0.1298" />
   </ItemGroup>
 
   <ItemGroup>
