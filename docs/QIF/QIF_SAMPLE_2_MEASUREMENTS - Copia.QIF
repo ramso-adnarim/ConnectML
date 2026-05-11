@@ -1,0 +1,356 @@
+<?xml version="1.0" encoding="utf-8"?>
+<QIFDocument xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://qifstandards.org/xsd/qif3 ../QIFApplications/QIFDocument.xsd" versionQIF="3.0.0" idMax="23" xmlns="http://qifstandards.org/xsd/qif3">
+  <QPId>22ecdfb0-b33e-4b38-9258-848ad55ec3fe</QPId>
+  <Header>
+    <Application>
+      <Name>MeasurLink application</Name>
+      <Organization>Mitutoyo America Corporation</Organization>
+    </Application>
+  </Header>
+  <StandardsDefinitions n="1">
+    <Standard id="1">
+      <Organization>
+        <OtherStandardsOrganization>Mitutoyo</OtherStandardsOrganization>
+      </Organization>
+      <Designator>ML10.5</Designator>
+    </Standard>
+  </StandardsDefinitions>
+  <FileUnits>
+    <PrimaryUnits />
+    <OtherUnits n="1">
+      <LinearUnit>
+        <SIUnitName>meter</SIUnitName>
+        <UnitName>millimeter</UnitName>
+        <UnitConversion>
+          <Factor>0.001</Factor>
+          <Offset>0</Offset>
+        </UnitConversion>
+      </LinearUnit>
+    </OtherUnits>
+  </FileUnits>
+  <DatumReferenceFrames n="1">
+    <DatumReferenceFrame id="2" />
+  </DatumReferenceFrames>
+  <Product>
+    <Header>
+      <Name>D-1001</Name>
+    </Header>
+    <PartSet n="1">
+      <Part id="5">
+        <Header>
+          <Name>D-1001</Name>
+        </Header>
+        <UUID>fffe800c-6284-422c-8fcb-2fc19ce29c38</UUID>
+        <CharacteristicNominalIds n="2">
+          <Id>4</Id>
+          <Id>8</Id>
+        </CharacteristicNominalIds>
+      </Part>
+    </PartSet>
+  </Product>
+  <Characteristics>
+    <FormalStandardId>1</FormalStandardId>
+    <CharacteristicDefinitions n="2">
+      <UserDefinedLinearCharacteristicDefinition id="3">
+        <Name>A</Name>
+        <Tolerance>
+          <MaxValue linearUnit="millimeter">9</MaxValue>
+          <MinValue linearUnit="millimeter">1</MinValue>
+          <DefinedAsLimit>true</DefinedAsLimit>
+        </Tolerance>
+        <WhatToMeasure>A</WhatToMeasure>
+      </UserDefinedLinearCharacteristicDefinition>
+      <UserDefinedLinearCharacteristicDefinition id="7">
+        <Name>B</Name>
+        <Tolerance>
+          <MaxValue linearUnit="millimeter">9</MaxValue>
+          <MinValue linearUnit="millimeter">1</MinValue>
+          <DefinedAsLimit>true</DefinedAsLimit>
+        </Tolerance>
+        <WhatToMeasure>B</WhatToMeasure>
+      </UserDefinedLinearCharacteristicDefinition>
+    </CharacteristicDefinitions>
+    <CharacteristicNominals n="2">
+      <UserDefinedLinearCharacteristicNominal id="4">
+        <CharacteristicDefinitionId>3</CharacteristicDefinitionId>
+        <TargetValue linearUnit="millimeter">5</TargetValue>
+      </UserDefinedLinearCharacteristicNominal>
+      <UserDefinedLinearCharacteristicNominal id="8">
+        <CharacteristicDefinitionId>7</CharacteristicDefinitionId>
+        <TargetValue linearUnit="millimeter">5</TargetValue>
+      </UserDefinedLinearCharacteristicNominal>
+    </CharacteristicNominals>
+    <CharacteristicItems n="2">
+      <UserDefinedLinearCharacteristicItem id="6">
+        <Description>D-1001.A</Description>
+        <Name>A</Name>
+        <CharacteristicDesignator>
+          <Designator>403</Designator>
+          <UUID>c9e18806-efe1-4b83-b938-022dcebf0815</UUID>
+        </CharacteristicDesignator>
+        <CharacteristicNominalId>4</CharacteristicNominalId>
+      </UserDefinedLinearCharacteristicItem>
+      <UserDefinedLinearCharacteristicItem id="9">
+        <Description>D-1001.B</Description>
+        <Name>B</Name>
+        <CharacteristicDesignator>
+          <Designator>404</Designator>
+          <UUID>5c09f8e3-b56a-4e8a-b2d2-8d947e928e05</UUID>
+        </CharacteristicDesignator>
+        <CharacteristicNominalId>8</CharacteristicNominalId>
+      </UserDefinedLinearCharacteristicItem>
+    </CharacteristicItems>
+  </Characteristics>
+  <Results>
+    <MeasurementResultsSet n="2">
+      <MeasurementResults id="10">
+        <MeasuredCharacteristics>
+          <CharacteristicMeasurements n="2">
+            <UserDefinedLinearCharacteristicMeasurement id="11">
+              <Attributes n="1">
+                <AttributeUser name="Mitutoyo.MeasurLink.Traceability" nameUserAttribute="MLTraceability">
+                  <UserDataXML>
+                    <ml:Traceability xmlns:ml="http://www.measurlink.com">
+                      <TaggedTraceability xmlns="">
+                        <List>Operador</List>
+                        <Item>Osmar</Item>
+                      </TaggedTraceability>
+                    </ml:Traceability>
+                  </UserDataXML>
+                </AttributeUser>
+              </Attributes>
+              <Status>
+                <CharacteristicStatusEnum>PASS</CharacteristicStatusEnum>
+              </Status>
+              <CharacteristicItemId>6</CharacteristicItemId>
+              <TimeStamp>2026-01-07T00:22:04.9684233-03:00</TimeStamp>
+              <Value>5</Value>
+            </UserDefinedLinearCharacteristicMeasurement>
+            <UserDefinedLinearCharacteristicMeasurement id="12">
+              <Attributes n="1">
+                <AttributeUser name="Mitutoyo.MeasurLink.Traceability" nameUserAttribute="MLTraceability">
+                  <UserDataXML>
+                    <ml:Traceability xmlns:ml="http://www.measurlink.com">
+                      <TaggedTraceability xmlns="">
+                        <List>Operador</List>
+                        <Item>Victor</Item>
+                      </TaggedTraceability>
+                    </ml:Traceability>
+                  </UserDataXML>
+                </AttributeUser>
+              </Attributes>
+              <Status>
+                <CharacteristicStatusEnum>PASS</CharacteristicStatusEnum>
+              </Status>
+              <CharacteristicItemId>9</CharacteristicItemId>
+              <TimeStamp>2026-01-07T00:22:22.5436695-03:00</TimeStamp>
+              <Value>5</Value>
+            </UserDefinedLinearCharacteristicMeasurement>
+          </CharacteristicMeasurements>
+        </MeasuredCharacteristics>
+        <InspectionStatus>
+          <InspectionStatusEnum>PASS</InspectionStatusEnum>
+        </InspectionStatus>
+        <ActualComponentIds n="1">
+          <Id>13</Id>
+        </ActualComponentIds>
+      </MeasurementResults>
+      <MeasurementResults id="14">
+        <MeasuredCharacteristics>
+          <CharacteristicMeasurements n="2">
+            <UserDefinedLinearCharacteristicMeasurement id="15">
+              <Attributes n="1">
+                <AttributeUser name="Mitutoyo.MeasurLink.Traceability" nameUserAttribute="MLTraceability">
+                  <UserDataXML>
+                    <ml:Traceability xmlns:ml="http://www.measurlink.com">
+                      <TaggedTraceability xmlns="">
+                        <List>Operador</List>
+                        <Item>Osmar</Item>
+                      </TaggedTraceability>
+                    </ml:Traceability>
+                  </UserDataXML>
+                </AttributeUser>
+              </Attributes>
+              <Status>
+                <CharacteristicStatusEnum>FAIL</CharacteristicStatusEnum>
+              </Status>
+              <CharacteristicItemId>6</CharacteristicItemId>
+              <TimeStamp>2026-01-07T00:24:26.0641152-03:00</TimeStamp>
+              <Value>5.4</Value>
+            </UserDefinedLinearCharacteristicMeasurement>
+            <UserDefinedLinearCharacteristicMeasurement id="16">
+              <Attributes n="1">
+                <AttributeUser name="Mitutoyo.MeasurLink.Traceability" nameUserAttribute="MLTraceability">
+                  <UserDataXML>
+                    <ml:Traceability xmlns:ml="http://www.measurlink.com">
+                      <TaggedTraceability xmlns="">
+                        <List>Operador</List>
+                        <Item>Victor</Item>
+                      </TaggedTraceability>
+                    </ml:Traceability>
+                  </UserDataXML>
+                </AttributeUser>
+              </Attributes>
+              <Status>
+                <CharacteristicStatusEnum>PASS</CharacteristicStatusEnum>
+              </Status>
+              <CharacteristicItemId>9</CharacteristicItemId>
+              <TimeStamp>2026-01-07T00:24:40.380765-03:00</TimeStamp>
+              <Value>4.2</Value>
+            </UserDefinedLinearCharacteristicMeasurement>
+          </CharacteristicMeasurements>
+        </MeasuredCharacteristics>
+        <InspectionStatus>
+          <InspectionStatusEnum>PASS</InspectionStatusEnum>
+        </InspectionStatus>
+        <ActualComponentIds n="1">
+          <Id>17</Id>
+        </ActualComponentIds>
+      </MeasurementResults>
+    </MeasurementResultsSet>
+    <ActualComponentSets n="1">
+      <ActualComponentSet n="2">
+        <ActualComponent id="13">
+          <SerialNumber>133</SerialNumber>
+          <Status>
+            <InspectionStatusEnum>PASS</InspectionStatusEnum>
+          </Status>
+        </ActualComponent>
+        <ActualComponent id="17">
+          <SerialNumber>152</SerialNumber>
+          <Status>
+            <InspectionStatusEnum>PASS</InspectionStatusEnum>
+          </Status>
+        </ActualComponent>
+      </ActualComponentSet>
+    </ActualComponentSets>
+  </Results>
+  <Statistics>
+    <StatisticalStudiesResults n="2">
+      <CapabilityStudyResults id="18">
+        <Status>
+          <StatsEvalStatusEnum>INFORMATIONAL</StatsEvalStatusEnum>
+        </Status>
+        <CharacteristicsStats n="1">
+          <UserDefinedLinearCharacteristicStats>
+            <Subgroups n="2">
+              <Subgroup id="19">
+                <MeasuredIds>
+                  <Ids n="1">
+                    <Id>11</Id>
+                  </Ids>
+                </MeasuredIds>
+              </Subgroup>
+              <Subgroup id="20">
+                <MeasuredIds>
+                  <Ids n="1">
+                    <Id>15</Id>
+                  </Ids>
+                </MeasuredIds>
+              </Subgroup>
+            </Subgroups>
+            <Status>
+              <StatsEvalStatusEnum>INFORMATIONAL</StatsEvalStatusEnum>
+            </Status>
+            <ValueStats>
+              <TotalNumber>
+                <Value>2</Value>
+              </TotalNumber>
+              <NumberSubgroups>
+                <Value>2</Value>
+              </NumberSubgroups>
+              <Average>
+                <Value>5.2</Value>
+              </Average>
+              <Maximum>
+                <Value>5.4</Value>
+              </Maximum>
+              <Minimum>
+                <Value>5</Value>
+              </Minimum>
+              <StandardDeviation>
+                <Value>0.282842712474603</Value>
+              </StandardDeviation>
+              <Cp>
+                <Value>3.76</Value>
+              </Cp>
+              <Cpk>
+                <Value>3.572</Value>
+              </Cpk>
+              <Pp>
+                <Value>4.71404520791058</Value>
+              </Pp>
+              <Ppk>
+                <Value>4.47834294751505</Value>
+              </Ppk>
+            </ValueStats>
+          </UserDefinedLinearCharacteristicStats>
+        </CharacteristicsStats>
+        <NumberOfSamples>2</NumberOfSamples>
+        <SubgroupSize>1</SubgroupSize>
+      </CapabilityStudyResults>
+      <CapabilityStudyResults id="21">
+        <Status>
+          <StatsEvalStatusEnum>INFORMATIONAL</StatsEvalStatusEnum>
+        </Status>
+        <CharacteristicsStats n="1">
+          <UserDefinedLinearCharacteristicStats>
+            <Subgroups n="2">
+              <Subgroup id="22">
+                <MeasuredIds>
+                  <Ids n="1">
+                    <Id>12</Id>
+                  </Ids>
+                </MeasuredIds>
+              </Subgroup>
+              <Subgroup id="23">
+                <MeasuredIds>
+                  <Ids n="1">
+                    <Id>16</Id>
+                  </Ids>
+                </MeasuredIds>
+              </Subgroup>
+            </Subgroups>
+            <Status>
+              <StatsEvalStatusEnum>INFORMATIONAL</StatsEvalStatusEnum>
+            </Status>
+            <ValueStats>
+              <TotalNumber>
+                <Value>2</Value>
+              </TotalNumber>
+              <NumberSubgroups>
+                <Value>2</Value>
+              </NumberSubgroups>
+              <Average>
+                <Value>4.6</Value>
+              </Average>
+              <Maximum>
+                <Value>5</Value>
+              </Maximum>
+              <Minimum>
+                <Value>4.2</Value>
+              </Minimum>
+              <StandardDeviation>
+                <Value>0.565685424949244</Value>
+              </StandardDeviation>
+              <Cp>
+                <Value>1.88</Value>
+              </Cp>
+              <Cpk>
+                <Value>1.692</Value>
+              </Cpk>
+              <Pp>
+                <Value>2.35702260395513</Value>
+              </Pp>
+              <Ppk>
+                <Value>2.12132034355962</Value>
+              </Ppk>
+            </ValueStats>
+          </UserDefinedLinearCharacteristicStats>
+        </CharacteristicsStats>
+        <NumberOfSamples>2</NumberOfSamples>
+        <SubgroupSize>1</SubgroupSize>
+      </CapabilityStudyResults>
+    </StatisticalStudiesResults>
+  </Statistics>
+</QIFDocument>
