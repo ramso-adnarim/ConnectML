@@ -569,6 +569,7 @@ namespace ConnectML.UI
                 bool isRbBooleanChecked = false;
                 string txtDbBool = string.Empty;
                 string txtDbInt = string.Empty;
+                string txtDbStatus = string.Empty;
 
                 Application.Current.Dispatcher.Invoke(() =>
                 {
@@ -593,6 +594,7 @@ namespace ConnectML.UI
                         isRbBooleanChecked = RbBoolean.IsChecked == true;
                         txtDbBool = TxtDbBool.Text;
                         txtDbInt = TxtDbInt.Text;
+                        txtDbStatus = TxtDbStatus.Text;
                     }
                 });
 
@@ -620,6 +622,12 @@ namespace ConnectML.UI
                             await _plcDriver.WriteBoolAsync(txtDbBool, result.IsOk);
                         else
                             await _plcDriver.WriteIntAsync(txtDbInt, result.FailCount);
+                            
+                        if (!string.IsNullOrWhiteSpace(txtDbStatus))
+                        {
+                            Log.Information($"Escrevendo Handshake Status 1 no endereço {txtDbStatus}...");
+                            await _plcDriver.WriteBoolAsync(txtDbStatus, true);
+                        }
                     }
                 }
 
