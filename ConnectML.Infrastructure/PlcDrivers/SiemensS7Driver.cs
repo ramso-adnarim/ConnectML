@@ -168,25 +168,26 @@ namespace ConnectML.Infrastructure.PlcDrivers
                     buffer[1] = (byte)stringBytes.Length;
                     Array.Copy(stringBytes, 0, buffer, 2, stringBytes.Length);
 
-                    // Escreve os bytes na DB no offset especificado com proteção de exceção robusta
-                    try
+                    // Escreve os bytes na DB no offset especificado.
+                    // Para evitar que a exceção seja tratada como "não tratada" na ThreadPool pelo Depurador do VS,
+                    // nós a capturamos dentro do Task.Run e a retornamos como valor, lançando-a no thread chamador.
+                    var exceptionResult = await Task.Run<Exception?>(() =>
                     {
-                        await Task.Run(() =>
+                        try
                         {
-                            try
-                            {
-                                _plc.WriteBytes(DataType.DataBlock, dbNum, startByte, buffer);
-                            }
-                            catch (Exception innerEx)
-                            {
-                                throw new Exception($"Erro na escrita de bytes no CLP (DB{dbNum}, Offset {startByte}): {innerEx.Message}", innerEx);
-                            }
-                        });
-                    }
-                    catch (Exception ex)
+                            _plc.WriteBytes(DataType.DataBlock, dbNum, startByte, buffer);
+                            return null;
+                        }
+                        catch (Exception innerEx)
+                        {
+                            return innerEx;
+                        }
+                    });
+
+                    if (exceptionResult != null)
                     {
-                        _logger.LogError(ex, $"[S7 REAL] Falha ao escrever string em {dbAddress}");
-                        throw;
+                        _logger.LogError(exceptionResult, $"[S7 REAL] Falha ao escrever string em {dbAddress}");
+                        throw new Exception($"Erro na escrita de bytes no CLP (DB{dbNum}, Offset {startByte}): {exceptionResult.Message}", exceptionResult);
                     }
 
                     _logger.LogInformation($"[S7 REAL] Write String {dbAddress}: \"{value}\" (Max: {maxLen}, Real: {stringBytes.Length})");
@@ -201,55 +202,55 @@ namespace ConnectML.Infrastructure.PlcDrivers
                 var (dbNum, startByte) = ParseDbAddress(dbAddress);
                 if (_plc != null)
                 {
-                    // Lê o cabeçalho de 2 bytes para determinar os tamanhos
-                    byte[] header;
-                    try
+                    // Lê o cabeçalho de 2 bytes para determinar os tamanhos.
+                    // Captura e retorna exceções como valor para evitar quebras no ThreadPool.
+                    var headerResult = await Task.Run<(byte[]? header, Exception? ex)>(() =>
                     {
-                        header = await Task.Run(() =>
+                        try
                         {
-                            try
-                            {
-                                return _plc.ReadBytes(DataType.DataBlock, dbNum, startByte, 2);
-                            }
-                            catch (Exception innerEx)
-                            {
-                                throw new Exception($"Erro na leitura do cabeçalho da String (DB{dbNum}, Offset {startByte}): {innerEx.Message}", innerEx);
-                            }
-                        });
-                    }
-                    catch (Exception ex)
+                            var h = _plc.ReadBytes(DataType.DataBlock, dbNum, startByte, 2);
+                            return (h, null);
+                        }
+                        catch (Exception innerEx)
+                        {
+                            return (null, innerEx);
+                        }
+                    });
+
+                    if (headerResult.ex != null)
                     {
-                        _logger.LogError(ex, $"[S7 REAL] Falha ao ler cabeçalho da string em {dbAddress}");
-                        throw;
+                        _logger.LogError(headerResult.ex, $"[S7 REAL] Falha ao ler cabeçalho da string em {dbAddress}");
+                        throw new Exception($"Erro na leitura do cabeçalho da String (DB{dbNum}, Offset {startByte}): {headerResult.ex.Message}", headerResult.ex);
                     }
 
+                    byte[] header = headerResult.header!;
                     int maxLen = header[0];
                     int actualLen = header[1];
 
                     if (actualLen > 0)
                     {
-                        // Lê a quantidade real de caracteres armazenados
-                        byte[] stringBytes;
-                        try
+                        // Lê a quantidade real de caracteres armazenados.
+                        // Captura e retorna exceções como valor para evitar quebras no ThreadPool.
+                        var bodyResult = await Task.Run<(byte[]? bytes, Exception? ex)>(() =>
                         {
-                            stringBytes = await Task.Run(() =>
+                            try
                             {
-                                try
-                                {
-                                    return _plc.ReadBytes(DataType.DataBlock, dbNum, startByte + 2, actualLen);
-                                }
-                                catch (Exception innerEx)
-                                {
-                                    throw new Exception($"Erro na leitura do corpo da String (DB{dbNum}, Offset {startByte + 2}, Tamanho {actualLen}): {innerEx.Message}", innerEx);
-                                }
-                            });
-                        }
-                        catch (Exception ex)
+                                var b = _plc.ReadBytes(DataType.DataBlock, dbNum, startByte + 2, actualLen);
+                                return (b, null);
+                            }
+                            catch (Exception innerEx)
+                            {
+                                return (null, innerEx);
+                            }
+                        });
+
+                        if (bodyResult.ex != null)
                         {
-                            _logger.LogError(ex, $"[S7 REAL] Falha ao ler corpo da string em {dbAddress}");
-                            throw;
+                            _logger.LogError(bodyResult.ex, $"[S7 REAL] Falha ao ler corpo da string em {dbAddress}");
+                            throw new Exception($"Erro na leitura do corpo da String (DB{dbNum}, Offset {startByte + 2}, Tamanho {actualLen}): {bodyResult.ex.Message}", bodyResult.ex);
                         }
 
+                        byte[] stringBytes = bodyResult.bytes!;
                         string result = System.Text.Encoding.ASCII.GetString(stringBytes);
                         _logger.LogInformation($"[S7 REAL] Read String {dbAddress}: \"{result}\"");
                         return result;
