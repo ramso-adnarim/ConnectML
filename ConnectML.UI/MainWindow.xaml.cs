@@ -1127,6 +1127,31 @@ namespace ConnectML.UI
             }
         }
 
+        private void LogsSplitter_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
+        {
+            double margins = 20;
+            double windowWidth = this.ActualWidth;
+            
+            // Arrastando para a esquerda (aumentando log, encolhendo config)
+            if (e.HorizontalChange < 0)
+            {
+                double maxLogsWidth = windowWidth - MinConfigWidth - LogsSplitter.ActualWidth - margins;
+                if (ColLogs.ActualWidth > maxLogsWidth)
+                {
+                    ColLogs.Width = new GridLength(maxLogsWidth);
+                }
+            }
+            // Arrastando para a direita (encolhendo log, aumentando config)
+            else if (e.HorizontalChange > 0)
+            {
+                double maxConfigWidth = windowWidth - MinLogsWidth - LogsSplitter.ActualWidth - margins;
+                if (ColConfig.ActualWidth > maxConfigWidth)
+                {
+                    ColConfig.Width = new GridLength(maxConfigWidth);
+                }
+            }
+        }
+
         private void BtnToggleLogs_Click(object sender, RoutedEventArgs e)
         {
             bool shouldCollapse = !_isLogsCollapsed;

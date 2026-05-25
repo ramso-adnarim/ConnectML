@@ -860,7 +860,7 @@
             </ScrollViewer>
 
             <!-- SPLITTER -->
-            <GridSplitter x:Name="LogsSplitter" Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="{StaticResource BorderDark}" ResizeBehavior="PreviousAndNext"/>
+            <GridSplitter x:Name="LogsSplitter" Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="{StaticResource BorderDark}" ResizeBehavior="PreviousAndNext" DragDelta="LogsSplitter_DragDelta"/>
 
             <!-- RIGHT PANEL: LOGS CONTAINER -->
             <Grid Grid.Column="2" x:Name="PnlLogsContainer">
