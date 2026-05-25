@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:ConnectML.UI"
         xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
         mc:Ignorable="d"
-        Title="ConnectML" Height="700" Width="980"
+        Title="ConnectML - V1.1.0" Height="700" Width="980"
         Background="{DynamicResource BackgroundDark}"
         Foreground="{DynamicResource TextPrimary}"
         WindowStartupLocation="CenterScreen"
