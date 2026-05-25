@@ -41,7 +41,7 @@ namespace ConnectML.UI
 
         private void UpdateText()
         {
-            TxtCountdown.Text = $"Retentando em {_secondsRemaining}s...";
+            TxtCountdown.Text = $"Tentando novamente em {_secondsRemaining}s...";
         }
 
         private void BtnCancel_Click(object sender, RoutedEventArgs e)

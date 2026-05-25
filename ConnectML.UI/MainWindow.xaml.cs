@@ -164,7 +164,7 @@ namespace ConnectML.UI
         {
             if (ChkAutoStart.IsChecked == true && _lastRunSuccessful)
             {
-                Log.Information("Auto-Start habilitado e última execução foi bem-sucedida. Iniciando serviço e minimizando automaticamente...");
+                Log.Information("Iniciando serviço e minimizando automaticamente...");
                 // Dispara o evento de start
                 BtnStartStop_Click(this, new RoutedEventArgs());
                 // Esconde a janela para a bandeja
@@ -585,7 +585,7 @@ namespace ConnectML.UI
                 }
                 catch (Exception ex)
                 {
-                     Log.Warning(ex, $"[Startup] Falha na conexão inicial com o CLP no IP {ip}. Iniciando fluxo de retentativa regressiva...");
+                     Log.Warning(ex, $"[Startup] Falha na conexão com o CLP no IP {ip}. Iniciando tentativa regressiva...");
                      _ = HandlePlcConnectionFailureAsync(ip, rack, slot, path);
                      return;
                 }
@@ -732,7 +732,7 @@ namespace ConnectML.UI
             if (!shouldRetry)
             {
                 // Customer clicou em "Cancelar" ou fechou a contagem regressiva ou clicou no "Parar" principal
-                Log.Information("[Auto-Start Retry] Retentativas de conexão canceladas pelo customer.");
+                Log.Information("[Auto-Start Retry] Tentativas de conexão canceladas pelo usuário.");
                 await StopService();
 
                 // Garante que a interface principal reapareça (ex: Auto-Start cancelado)
@@ -744,7 +744,7 @@ namespace ConnectML.UI
             RestoreWindow();
 
             // Altera status visual para retentativa progressiva ativa
-            TxtStatus.Text = "RETENTANDO CONEXÃO";
+            TxtStatus.Text = "TENTANDO CONEXÃO";
             TxtStatus.Foreground = (Brush)FindResource("AmberColor");
             StatusIndicator.Fill = (Brush)FindResource("AmberColor");
             TxtFooterStatus.Text = "Conectando ao CLP a cada 5s...";
@@ -819,7 +819,7 @@ namespace ConnectML.UI
                 catch (Exception ex)
                 {
                     // Falhou, loga apenas no Serilog/UI log block sem popup!
-                    Log.Warning($"[Auto-Start Retry] Tentativa #{attempts} de conexão falhou. Nova retentativa em 5s. Detalhes: {ex.Message}");
+                    Log.Warning($"[Auto-Start Retry] Tentativa #{attempts} de conexão falhou. Nova em 5s. Detalhes: {ex.Message}");
                 }
 
                 try
@@ -991,8 +991,8 @@ namespace ConnectML.UI
                 // Notificação de balão de erro crítico no System Tray (apenas se minimizada/na bandeja)
                 if (WindowState == WindowState.Minimized || !IsVisible)
                 {
-                    string errorMsg = isWebhookMode ? "Erro ao enviar Webhook." : "Erro de comunicação com o CLP.";
-                    _notifyIcon?.ShowBalloonTip(4000, "Falha Crítica", $"{errorMsg} Detalhes: {ex.Message}", WinForms.ToolTipIcon.Error);
+                    string fileName = Path.GetFileName(filePath);
+                    _notifyIcon?.ShowBalloonTip(4000, "Erro de Integração", $"Falha no arquivo {fileName}. Detalhes: {ex.Message}", WinForms.ToolTipIcon.Error);
                 }
 
                 try

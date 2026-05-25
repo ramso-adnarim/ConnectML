@@ -398,7 +398,7 @@
                         </Style>
                     </StackPanel.Resources>
 
-                    <CheckBox x:Name="ChkAutoStart" Content="Reinício Automático" VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}" Margin="12,0,0,0" ToolTip="Inicia o serviço automaticamente ao abrir o aplicativo se ele foi encerrado rodando da última vez."/>
+                    <CheckBox x:Name="ChkAutoStart" Content="Reinício automático" VerticalAlignment="Center" Foreground="{StaticResource TextSecondary}" Margin="12,0,0,0" ToolTip="Inicia o serviço automaticamente ao abrir o aplicativo se ele foi encerrado rodando da última vez."/>
 
                     <Button x:Name="BtnStartStop" Width="70" Height="36" Padding="16,0" Click="BtnStartStop_Click"
                             Background="{StaticResource StartGreenBg}" BorderBrush="{StaticResource StartGreenBorder}" BorderThickness="1">
@@ -559,7 +559,7 @@
                                 <Grid x:Name="PnlLogicBody" Margin="24, 12">
                                     <StackPanel>
                                         <Grid Margin="0,0,0,12">
-                                            <TextBlock Text="Campos de Configuração" FontSize="14" FontWeight="Medium" Foreground="#cbd5e1" VerticalAlignment="Center"/>
+                                            <TextBlock Text="Campos de dados" FontSize="14" FontWeight="Medium" Foreground="#cbd5e1" VerticalAlignment="Center"/>
                                             <Button x:Name="BtnAddConfig" Click="BtnAddConfig_Click" Width="30" Height="30" HorizontalAlignment="Right" Style="{StaticResource RoundedButtonStyle}" ToolTip="Adicionar Campo">
                                                 <Viewbox Width="12" Height="12">
                                                     <Path Fill="{StaticResource TextSecondary}" Data="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" Stretch="Uniform"/>
@@ -580,8 +580,8 @@
                                                                   SelectedValuePath="Tag"
                                                                   Height="38" VerticalAlignment="Center"
                                                                   SelectionChanged="CmbFieldType_SelectionChanged">
-                                                            <ComboBoxItem Content="Verdadeiro/Falso" Tag="Boolean"/>
-                                                            <ComboBoxItem Content="Contador" Tag="Numeric"/>
+                                                            <ComboBoxItem Content="Aprovado/Reprovado" Tag="Boolean"/>
+                                                            <ComboBoxItem Content="Contador de falhas" Tag="Numeric"/>
                                                             <ComboBoxItem Content="Nome da Peça (Part Number)" Tag="String"/>
                                                         </ComboBox>
                                                                   
@@ -674,7 +674,7 @@
                                     <UniformGrid x:Name="PnlSiemensDbConfig" Visibility="Collapsed" Margin="0,0,0,16" SizeChanged="PnlSiemensDbConfig_SizeChanged">
                                         <!-- DB (Booleana) -->
                                         <StackPanel x:Name="GrpDbBool" Margin="0,0,12,12">
-                                            <TextBlock Text="DB (Booleana)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
+                                            <TextBlock Text="GO/NG (Bool)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
@@ -691,7 +691,7 @@
 
                                         <!-- DB (Inteira) -->
                                         <StackPanel x:Name="GrpDbInt" Margin="0,0,12,12">
-                                            <TextBlock Text="DB (Inteira)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
+                                            <TextBlock Text="Contador (Int)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
@@ -708,7 +708,7 @@
 
                                         <!-- DB (PartNumber) -->
                                         <StackPanel x:Name="GrpDbPartNumber" Margin="0,0,12,12">
-                                            <TextBlock Text="DB (PartNumber)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
+                                            <TextBlock Text="Peça (String)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
@@ -725,7 +725,7 @@
 
                                         <!-- DB (Status) -->
                                         <StackPanel x:Name="GrpDbStatus" Margin="0,0,12,12">
-                                            <TextBlock Text="DB (Status)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
+                                            <TextBlock Text="Status (Bool)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
@@ -928,7 +928,7 @@
 
                         <Border Grid.Row="2" Background="{StaticResource SurfaceDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,1,0,0" Padding="12,8">
                             <Grid>
-                                <TextBlock Text="Versão 1.0.0" FontSize="10" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                <TextBlock Text="Versão 1.1.0" FontSize="10" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                     <Ellipse x:Name="StatusDot" Width="6" Height="6" Fill="{StaticResource TextSecondary}" Margin="0,0,6,0"/>
                                     <TextBlock x:Name="TxtFooterStatus" Text="Offline" FontSize="10" Foreground="{StaticResource TextSecondary}"/>

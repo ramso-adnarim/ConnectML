@@ -19,17 +19,17 @@
             <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,12">
                 <Path Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" 
                       Fill="#ef4444" Width="20" Height="20" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                <TextBlock Text="Conexão Inicial Falhou" FontSize="14" FontWeight="Bold" Foreground="#f1f5f9" VerticalAlignment="Center"/>
+                <TextBlock Text="Falha na conexão" FontSize="14" FontWeight="Bold" Foreground="#f1f5f9" VerticalAlignment="Center"/>
             </StackPanel>
             
             <!-- Body (Contagem Regressiva) -->
             <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
-                <TextBlock x:Name="TxtCountdown" Text="Retentando em 6s..." FontSize="16" Foreground="#cbd5e1" HorizontalAlignment="Center" Margin="0,0,0,6"/>
+                <TextBlock x:Name="TxtCountdown" Text="Tentando novamente em 6s..." FontSize="16" Foreground="#cbd5e1" HorizontalAlignment="Center" Margin="0,0,0,6"/>
                 <TextBlock Text="Certifique-se de que o CLP está online e no IP correto." FontSize="10" Foreground="#64748b" HorizontalAlignment="Center" TextAlignment="Center"/>
             </StackPanel>
             
             <!-- Actions -->
-            <Button x:Name="BtnCancel" Grid.Row="2" Content="Cancelar Retentativa" Height="32" Width="150" 
+            <Button x:Name="BtnCancel" Grid.Row="2" Content="Cancelar tentativa" Height="32" Width="150" 
                     Background="#334155" Foreground="#f1f5f9" BorderThickness="0" Cursor="Hand" Click="BtnCancel_Click">
                 <Button.Resources>
                     <Style TargetType="Border">

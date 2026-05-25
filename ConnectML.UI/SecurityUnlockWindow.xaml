@@ -48,7 +48,7 @@
             <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,12">
                 <Path Data="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z" 
                       Fill="#60a5fa" Width="20" Height="20" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                <TextBlock Text="Acesso Administrativo" FontSize="14" FontWeight="Bold" Foreground="#f1f5f9" VerticalAlignment="Center"/>
+                <TextBlock Text="Liberar acesso" FontSize="14" FontWeight="Bold" Foreground="#f1f5f9" VerticalAlignment="Center"/>
             </StackPanel>
             
             <!-- Body Inputs -->
@@ -58,7 +58,7 @@
                 <TextBox x:Name="TxtUsername" Margin="0,0,0,10" VerticalContentAlignment="Center" KeyDown="Txt_KeyDown"/>
                 
                 <!-- Password -->
-                <TextBlock Text="Senha de Acesso:" FontSize="11" Foreground="#94a3b8" Margin="0,0,0,4"/>
+                <TextBlock Text="Senha:" FontSize="11" Foreground="#94a3b8" Margin="0,0,0,4"/>
                 <PasswordBox x:Name="TxtPassword" VerticalContentAlignment="Center" KeyDown="Txt_KeyDown"/>
             </StackPanel>
             
@@ -95,7 +95,7 @@
                 </Button>
                 
                 <!-- Confirm Button -->
-                <Button x:Name="BtnConfirm" Grid.Column="2" Content="Desbloquear" Height="32" 
+                <Button x:Name="BtnConfirm" Grid.Column="2" Content="Confirmar" Height="32" 
                         Background="#136dec" Foreground="#ffffff" BorderThickness="0" Cursor="Hand" Click="BtnConfirm_Click">
                     <Button.Resources>
                         <Style TargetType="Border">
