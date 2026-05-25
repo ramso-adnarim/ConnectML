@@ -198,6 +198,7 @@ namespace ConnectML.UI
                 };
 
                 _notifyIcon.DoubleClick += (s, e) => RestoreWindow();
+                _notifyIcon.BalloonTipClicked += (s, e) => RestoreWindow();
             }
             catch (Exception ex)
             {
@@ -982,8 +983,11 @@ namespace ConnectML.UI
                     File.Delete(filePath);
                     Log.Information("Processado e removido.");
                     
-                    // Notificação de balão no System Tray
-                    _notifyIcon?.ShowBalloonTip(3000, "Arquivo Processado", $"O arquivo foi processado com sucesso.\nPeça (Part Number): {result.Product}", WinForms.ToolTipIcon.Info);
+                    // Notificação de balão no System Tray (apenas se minimizada/na bandeja)
+                    if (WindowState == WindowState.Minimized || !IsVisible)
+                    {
+                        _notifyIcon?.ShowBalloonTip(3000, "Arquivo Processado", $"O arquivo foi processado com sucesso.\nPeça (Part Number): {result.Product}", WinForms.ToolTipIcon.Info);
+                    }
                 }
                 catch (Exception ex) { Log.Error($"Erro ao deletar: {ex.Message}"); }
             }
@@ -991,9 +995,12 @@ namespace ConnectML.UI
             {
                 Log.Error(ex, "Falha no processamento.");
                 
-                // Notificação de balão de erro crítico no System Tray
-                string errorMsg = isWebhookMode ? "Erro ao enviar Webhook." : "Erro de comunicação com o CLP.";
-                _notifyIcon?.ShowBalloonTip(4000, "Falha Crítica", $"{errorMsg} Detalhes: {ex.Message}", WinForms.ToolTipIcon.Error);
+                // Notificação de balão de erro crítico no System Tray (apenas se minimizada/na bandeja)
+                if (WindowState == WindowState.Minimized || !IsVisible)
+                {
+                    string errorMsg = isWebhookMode ? "Erro ao enviar Webhook." : "Erro de comunicação com o CLP.";
+                    _notifyIcon?.ShowBalloonTip(4000, "Falha Crítica", $"{errorMsg} Detalhes: {ex.Message}", WinForms.ToolTipIcon.Error);
+                }
 
                 try
                 {
@@ -1081,6 +1088,7 @@ namespace ConnectML.UI
                 
                 // Permite que a coluna de logs se expanda flexivelmente
                 ColLogs.MinWidth = 0;
+                ColLogs.MaxWidth = double.PositiveInfinity;
                 ColLogs.Width = new GridLength(1, GridUnitType.Star);
                 
                 // Garante que o painel de logs esteja visível se estivesse recolhido
@@ -1099,6 +1107,7 @@ namespace ConnectML.UI
                 {
                     LogsSplitter.Visibility = Visibility.Visible;
                     ColLogs.MinWidth = MinLogsWidth;
+                    ColLogs.MaxWidth = this.ActualWidth - MinConfigWidth - 20;
                     ColLogs.Width = new GridLength(_userPreferredLogsWidth);
                 }
                 else
