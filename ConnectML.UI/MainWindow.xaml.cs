@@ -1086,6 +1086,9 @@ namespace ConnectML.UI
                 // Oculta o Splitter
                 LogsSplitter.Visibility = Visibility.Collapsed;
                 
+                // Oculta o botão de recolher logs para evitar estados inválidos
+                BtnToggleLogs.Visibility = Visibility.Collapsed;
+                
                 // Permite que a coluna de logs se expanda flexivelmente
                 ColLogs.MinWidth = 0;
                 ColLogs.MaxWidth = double.PositiveInfinity;
@@ -1102,6 +1105,9 @@ namespace ConnectML.UI
                 // Restaura o layout com largura mínima para configurações
                 ColConfig.MinWidth = MinConfigWidth;
                 ColConfig.Width = new GridLength(1, GridUnitType.Star);
+                
+                // Reabilita o botão de recolher logs
+                BtnToggleLogs.Visibility = Visibility.Visible;
                 
                 if (!_isLogsCollapsed)
                 {
