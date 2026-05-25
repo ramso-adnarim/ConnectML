@@ -57,6 +57,7 @@ namespace ConnectML.UI
         private bool _testPartNumberToggle = false;
         private bool _isRetrying = false;
         private CancellationTokenSource? _retryCts;
+        private AlertCountdownWindow? _activeCountdownWindow;
         private double _userPreferredLogsWidth = 380; // Largura preferida padrão
         private const double MinConfigWidth = 350; 
         private const double IdealConfigWidth = 564;
@@ -608,6 +609,17 @@ namespace ConnectML.UI
             _isRunning = false;
             _isRetrying = false;
 
+            // Fecha a janela de contagem ativa se ela estiver aberta
+            if (_activeCountdownWindow != null)
+            {
+                try
+                {
+                    _activeCountdownWindow.Close();
+                }
+                catch { }
+                _activeCountdownWindow = null;
+            }
+
             if (_retryCts != null)
             {
                 _retryCts.Cancel();
@@ -663,6 +675,12 @@ namespace ConnectML.UI
 
         private async Task HandlePlcConnectionFailureAsync(string ip, int rack, int slot, string path)
         {
+            // Evita disparar multiplas retentativas concorrentes
+            if (_isRetrying) return;
+
+            // Ativa o estado de retentativa imediatamente para que cliques em "Parar" cancelem
+            _isRetrying = true;
+
             // Desabilita as configurações pois iniciou o processo de ativação/retentativa
             PnlConfiguration.IsEnabled = false;
 
@@ -684,20 +702,24 @@ namespace ConnectML.UI
             // Abre a janela de alerta customizada de contagem regressiva de 6 segundos de forma NÃO-BLOQUEANTE
             var countdownWin = new AlertCountdownWindow();
             countdownWin.Owner = this;
+
+            // Salva referência na classe para permitir fechamento remoto em caso de "Parar"
+            _activeCountdownWindow = countdownWin;
+
             countdownWin.Show();
 
             bool shouldRetry = await countdownWin.CountdownTask;
 
+            // Limpa a referência da janela
+            _activeCountdownWindow = null;
+
             if (!shouldRetry)
             {
-                // Customer clicou em "Cancelar" ou fechou a contagem regressiva
+                // Customer clicou em "Cancelar" ou fechou a contagem regressiva ou clicou no "Parar" principal
                 Log.Information("[Auto-Start Retry] Retentativas de conexão canceladas pelo customer.");
                 await StopService();
                 return;
             }
-
-            // Expiraram os 6 segundos! Inicia a rotina de retentativas
-            _isRetrying = true;
 
             // Se a janela principal estiver minimizada na bandeja do sistema, traz de volta para o primeiro plano
             if (WindowState == WindowState.Minimized || !IsVisible)
