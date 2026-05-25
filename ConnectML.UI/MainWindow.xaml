@@ -539,51 +539,37 @@
                                 </Border>
                                 <Grid x:Name="PnlLogicBody" Margin="24, 12">
                                     <StackPanel>
-                                        <TextBlock Text="Lógica de escrita" FontSize="14" FontWeight="Medium" Foreground="#cbd5e1" Margin="0,0,0,12"/>
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <RadioButton x:Name="RbBoolean" GroupName="LogicMode" IsChecked="True" Grid.Column="0" Margin="0,0,4,0">
-                                                <RadioButton.Template>
-                                                    <ControlTemplate TargetType="RadioButton">
-                                                        <Border x:Name="rBorder" Background="{StaticResource BackgroundDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="1" CornerRadius="8" Padding="12" Cursor="Hand">
-                                                            <StackPanel>
-                                                                <TextBlock Text="Verdadeiro/Falso" FontWeight="SemiBold" FontSize="14" Foreground="{StaticResource TextPrimary}"/>
-                                                                <TextBlock Text="Variável booleana" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,2,0,0"/>
-                                                            </StackPanel>
-                                                        </Border>
-                                                        <ControlTemplate.Triggers>
-                                                            <Trigger Property="IsChecked" Value="True">
-                                                                <Setter TargetName="rBorder" Property="Background" Value="#0D136dec"/>
-                                                                <Setter TargetName="rBorder" Property="BorderBrush" Value="{StaticResource PrimaryColor}"/>
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </RadioButton.Template>
-                                            </RadioButton>
-
-                                            <RadioButton x:Name="RbNumeric" GroupName="LogicMode" Grid.Column="1" Margin="4,0,0,0">
-                                                <RadioButton.Template>
-                                                    <ControlTemplate TargetType="RadioButton">
-                                                        <Border x:Name="rBorder" Background="{StaticResource BackgroundDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="1" CornerRadius="8" Padding="12" Cursor="Hand">
-                                                            <StackPanel>
-                                                                <TextBlock Text="Contador" FontWeight="SemiBold" FontSize="14" Foreground="{StaticResource TextPrimary}"/>
-                                                                <TextBlock Text="Variável numérica (inteiro)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,2,0,0"/>
-                                                            </StackPanel>
-                                                        </Border>
-                                                        <ControlTemplate.Triggers>
-                                                            <Trigger Property="IsChecked" Value="True">
-                                                                <Setter TargetName="rBorder" Property="Background" Value="#0D136dec"/>
-                                                                <Setter TargetName="rBorder" Property="BorderBrush" Value="{StaticResource PrimaryColor}"/>
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </RadioButton.Template>
-                                            </RadioButton>
+                                        <Grid Margin="0,0,0,12">
+                                            <TextBlock Text="Campos de Configuração" FontSize="14" FontWeight="Medium" Foreground="#cbd5e1" VerticalAlignment="Center"/>
+                                            <Button x:Name="BtnAddConfig" Content="+" Click="BtnAddConfig_Click" Width="30" Height="30" HorizontalAlignment="Right" Style="{StaticResource PrimaryButtonStyle}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" ToolTip="Adicionar Campo"/>
                                         </Grid>
+                                        
+                                        <ItemsControl x:Name="ItemsConfigList">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="0,6">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        
+                                                        <ComboBox SelectedValue="{Binding FieldType, Mode=TwoWay}"
+                                                                  SelectedValuePath="Tag"
+                                                                  Height="38" VerticalAlignment="Center"
+                                                                  SelectionChanged="CmbFieldType_SelectionChanged">
+                                                            <ComboBoxItem Content="Verdadeiro/Falso" Tag="Boolean"/>
+                                                            <ComboBoxItem Content="Contador" Tag="Numeric"/>
+                                                            <ComboBoxItem Content="Nome da Peça (Part Number)" Tag="String"/>
+                                                        </ComboBox>
+                                                                  
+                                                        <Button Grid.Column="1" Content="-" Click="BtnRemoveConfig_Click" Width="30" Height="38" Margin="8,0,0,0" Style="{StaticResource RoundedButtonStyle}" Background="{StaticResource StopRedBg}" Foreground="{StaticResource StopRed}" BorderBrush="{StaticResource StopRedBorder}" BorderThickness="1" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Visibility="{Binding RemoveButtonVisibility}" ToolTip="Remover Campo"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <!-- Inline Webhook warning -->
+                                        <TextBlock x:Name="TxtInlineWarning" Foreground="{StaticResource StopRed}" FontSize="12" Margin="0,8,0,0" Visibility="Collapsed" TextWrapping="Wrap" FontWeight="SemiBold"/>
                                     </StackPanel>
                                 </Grid>
                             </StackPanel>

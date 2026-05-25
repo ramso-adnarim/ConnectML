@@ -26,11 +26,17 @@ namespace ConnectML.Infrastructure.Formatters
                 if (_parser.TryParse(templateSource, out IFluidTemplate template, out string error))
                 {
                     var options = new TemplateOptions();
+                    var context = new TemplateContext(options);
+                    
+                    // Registra variáveis no contexto do Fluid (Liquid) de forma direta e thread-safe
+                    context.SetValue("IsOk", isOk);
+                    context.SetValue("Status", isOk ? "OK" : "NOK"); // Mapeia status legível
+                    context.SetValue("FailCount", failCount);
+                    context.SetValue("Product", product);
+                    context.SetValue("PartNumber", product); // Requisito da Fase 4
+                    context.SetValue("Routine", product);    // Retrocompatibilidade
+                    context.SetValue("Run", failCount);      // Retrocompatibilidade
 
-                    // Model anonimo ou tipado
-                    var model = new { IsOk = isOk, FailCount = failCount, Product = product };
-
-                    var context = new TemplateContext(model, options);
                     string result = template.Render(context);
 
                     return result;

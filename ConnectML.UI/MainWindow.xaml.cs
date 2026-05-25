@@ -28,6 +28,8 @@ using Drawing = System.Drawing;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows.Interop;
+using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
 
 namespace ConnectML.UI
 {
@@ -39,6 +41,7 @@ namespace ConnectML.UI
         private IPlcDriver? _plcDriver;
         private IHost? _host;
         private const string ConfigFile = "appsettings.json";
+        private ObservableCollection<ConfigFieldItem> _configFields = null!;
 
         // System Tray (Ícone na bandeja do sistema)
         private WinForms.NotifyIcon? _notifyIcon;
@@ -85,7 +88,17 @@ namespace ConnectML.UI
             InitializeComponent();
             SetupLogging();
             InitializeTrayIcon();
+            
+            _configFields = new ObservableCollection<ConfigFieldItem>();
+            ItemsConfigList.ItemsSource = _configFields;
+            
             LoadSettings();
+
+            if (_configFields.Count == 0)
+            {
+                _configFields.Add(new ConfigFieldItem { FieldType = "Boolean" });
+            }
+            UpdateConfigFieldsState();
 
             // Verificação Inicial de Layout
             SizeChanged += Window_SizeChanged;
@@ -377,6 +390,54 @@ namespace ConnectML.UI
                 return;
             }
 
+            // 1. Validação Webhook REST se o protocolo ativo for Webhook
+            if (TxtInlineWarning != null)
+            {
+                TxtInlineWarning.Text = "";
+                TxtInlineWarning.Visibility = Visibility.Collapsed;
+            }
+
+            if (CmbProtocol.SelectedIndex == 1) // Webhook REST Genérico
+            {
+                string template = TxtPayloadTemplate.Text;
+                List<string> missingTags = new List<string>();
+
+                foreach (var field in _configFields)
+                {
+                    if (field.FieldType == "Boolean")
+                    {
+                        if (!ContainsTemplateTag(template, "IsOk") && !ContainsTemplateTag(template, "Status"))
+                        {
+                            missingTags.Add("{{ IsOk }} ou {{ Status }}");
+                        }
+                    }
+                    else if (field.FieldType == "Numeric")
+                    {
+                        if (!ContainsTemplateTag(template, "FailCount") && !ContainsTemplateTag(template, "Run"))
+                        {
+                            missingTags.Add("{{ FailCount }} ou {{ Run }}");
+                        }
+                    }
+                    else if (field.FieldType == "String")
+                    {
+                        if (!ContainsTemplateTag(template, "PartNumber") && !ContainsTemplateTag(template, "Product") && !ContainsTemplateTag(template, "Routine"))
+                        {
+                            missingTags.Add("{{ PartNumber }}");
+                        }
+                    }
+                }
+
+                if (missingTags.Any())
+                {
+                    if (TxtInlineWarning != null)
+                    {
+                        TxtInlineWarning.Text = "Aviso: O template do payload deve conter as tags correspondentes aos campos ativos: " + string.Join(", ", missingTags) + ".";
+                        TxtInlineWarning.Visibility = Visibility.Visible;
+                    }
+                    return; // Bloqueia o início do serviço
+                }
+            }
+
             SaveSettings();
 
             if (!Directory.Exists(path))
@@ -607,7 +668,9 @@ namespace ConnectML.UI
                 string payloadTemplate = string.Empty;
                 List<KeyValuePair<string, string>> customHeaders = new();
 
-                bool isRbBooleanChecked = false;
+                bool hasBoolField = false;
+                bool hasNumericField = false;
+                bool hasStringField = false;
                 string txtDbBool = string.Empty;
                 string txtDbInt = string.Empty;
                 string txtDbStatus = string.Empty;
@@ -615,6 +678,10 @@ namespace ConnectML.UI
                 Application.Current.Dispatcher.Invoke(() =>
                 {
                     isWebhookMode = CmbProtocol.SelectedIndex == 1; // "Webhook REST Genérico"
+
+                    hasBoolField = _configFields.Any(f => f.FieldType == "Boolean");
+                    hasNumericField = _configFields.Any(f => f.FieldType == "Numeric");
+                    hasStringField = _configFields.Any(f => f.FieldType == "String");
 
                     if (isWebhookMode)
                     {
@@ -632,7 +699,6 @@ namespace ConnectML.UI
                     }
                     else
                     {
-                        isRbBooleanChecked = RbBoolean.IsChecked == true;
                         txtDbBool = TxtDbBool.Text;
                         txtDbInt = TxtDbInt.Text;
                         txtDbStatus = TxtDbStatus.Text;
@@ -659,9 +725,10 @@ namespace ConnectML.UI
                     // Fluxo Antigo Siemens S7
                     if (_plcDriver != null)
                     {
-                        if (isRbBooleanChecked)
+                        if (hasBoolField && !string.IsNullOrWhiteSpace(txtDbBool))
                             await _plcDriver.WriteBoolAsync(txtDbBool, result.IsOk);
-                        else
+                        
+                        if (hasNumericField && !string.IsNullOrWhiteSpace(txtDbInt))
                             await _plcDriver.WriteIntAsync(txtDbInt, result.FailCount);
                             
                         if (!string.IsNullOrWhiteSpace(txtDbStatus))
@@ -843,7 +910,18 @@ namespace ConnectML.UI
                     if (config != null)
                     {
                         TxtSourcePath.Text = config.SourcePath;
-                        if (config.IsBooleanMode) RbBoolean.IsChecked = true; else RbNumeric.IsChecked = true;
+                        _configFields.Clear();
+                        if (config.ConfigFields != null && config.ConfigFields.Count > 0)
+                        {
+                            foreach (var field in config.ConfigFields)
+                            {
+                                _configFields.Add(new ConfigFieldItem { FieldType = field });
+                            }
+                        }
+                        else
+                        {
+                            _configFields.Add(new ConfigFieldItem { FieldType = config.IsBooleanMode ? "Boolean" : "Numeric" });
+                        }
                         
                         ChkAutoStart.IsChecked = config.AutoStartEnabled;
                         _lastRunSuccessful = config.LastRunSuccessful;
@@ -918,7 +996,8 @@ namespace ConnectML.UI
                 var config = new AppConfig
                 {
                     SourcePath = TxtSourcePath.Text,
-                    IsBooleanMode = RbBoolean.IsChecked == true,
+                    IsBooleanMode = _configFields.Any(f => f.FieldType == "Boolean"),
+                    ConfigFields = _configFields.Select(f => f.FieldType).ToList(),
                     Protocol = CmbProtocol.Text,
                     AutoStartEnabled = ChkAutoStart.IsChecked == true,
                     LastRunSuccessful = _lastRunSuccessful,
@@ -952,6 +1031,11 @@ namespace ConnectML.UI
 
         private void CmbProtocol_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (TxtInlineWarning != null)
+            {
+                TxtInlineWarning.Text = "";
+                TxtInlineWarning.Visibility = Visibility.Collapsed;
+            }
             if (PnlSiemensConfig == null || PnlWebhookConfig == null) return;
             
             if (CmbProtocol.SelectedIndex == 0) // Siemens
@@ -1112,6 +1196,134 @@ namespace ConnectML.UI
             private readonly Action<LogEvent> _action;
             public UiSink(Action<LogEvent> action) => _action = action;
             public void Emit(LogEvent logEvent) => _action(logEvent);
+        }
+
+        private void UpdateConfigFieldsState()
+        {
+            if (_configFields == null) return;
+
+            // Regra de Mínimo e Máximo
+            if (_configFields.Count <= 1)
+            {
+                foreach (var item in _configFields)
+                {
+                    item.RemoveButtonVisibility = Visibility.Collapsed;
+                }
+            }
+            else
+            {
+                foreach (var item in _configFields)
+                {
+                    item.RemoveButtonVisibility = Visibility.Visible;
+                }
+            }
+
+            // Regra de Máximo (3)
+            if (_configFields.Count >= 3)
+            {
+                if (BtnAddConfig != null)
+                {
+                    BtnAddConfig.Visibility = Visibility.Collapsed;
+                    BtnAddConfig.IsEnabled = false;
+                }
+            }
+            else
+            {
+                if (BtnAddConfig != null)
+                {
+                    BtnAddConfig.Visibility = Visibility.Visible;
+                    BtnAddConfig.IsEnabled = true;
+                }
+            }
+            
+            // Atualiza visibilidade S7 de forma responsiva (Sprint 3)
+            UpdateS7PanelVisibility();
+        }
+
+        private void UpdateS7PanelVisibility()
+        {
+            // S7 fields visibility will be fully wired up in Sprint 3
+        }
+
+        private void BtnAddConfig_Click(object sender, RoutedEventArgs e)
+        {
+            if (_configFields != null && _configFields.Count < 3)
+            {
+                if (TxtInlineWarning != null)
+                {
+                    TxtInlineWarning.Text = "";
+                    TxtInlineWarning.Visibility = Visibility.Collapsed;
+                }
+
+                _configFields.Add(new ConfigFieldItem { FieldType = "Boolean" });
+                UpdateConfigFieldsState();
+            }
+        }
+
+        private void BtnRemoveConfig_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.DataContext is ConfigFieldItem item && _configFields != null)
+            {
+                if (TxtInlineWarning != null)
+                {
+                    TxtInlineWarning.Text = "";
+                    TxtInlineWarning.Visibility = Visibility.Collapsed;
+                }
+
+                _configFields.Remove(item);
+                UpdateConfigFieldsState();
+            }
+        }
+
+        private void CmbFieldType_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (TxtInlineWarning != null)
+            {
+                TxtInlineWarning.Text = "";
+                TxtInlineWarning.Visibility = Visibility.Collapsed;
+            }
+            UpdateConfigFieldsState();
+        }
+
+        private bool ContainsTemplateTag(string template, string tagName)
+        {
+            if (string.IsNullOrEmpty(template)) return false;
+            string pattern = @"\{\{\s*" + Regex.Escape(tagName) + @"\s*\}\}";
+            return Regex.IsMatch(template, pattern, RegexOptions.IgnoreCase);
+        }
+
+        public class ConfigFieldItem : System.ComponentModel.INotifyPropertyChanged
+        {
+            private string _fieldType = "Boolean";
+            public string FieldType
+            {
+                get => _fieldType;
+                set
+                {
+                    if (_fieldType != value)
+                    {
+                        _fieldType = value;
+                        OnPropertyChanged(nameof(FieldType));
+                    }
+                }
+            }
+
+            private Visibility _removeButtonVisibility = Visibility.Collapsed;
+            public Visibility RemoveButtonVisibility
+            {
+                get => _removeButtonVisibility;
+                set
+                {
+                    if (_removeButtonVisibility != value)
+                    {
+                        _removeButtonVisibility = value;
+                        OnPropertyChanged(nameof(RemoveButtonVisibility));
+                    }
+                }
+            }
+
+            public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+            protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
         }
     }
 }
