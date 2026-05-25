@@ -541,7 +541,11 @@
                                     <StackPanel>
                                         <Grid Margin="0,0,0,12">
                                             <TextBlock Text="Campos de Configuração" FontSize="14" FontWeight="Medium" Foreground="#cbd5e1" VerticalAlignment="Center"/>
-                                            <Button x:Name="BtnAddConfig" Content="+" Click="BtnAddConfig_Click" Width="30" Height="30" HorizontalAlignment="Right" Style="{StaticResource PrimaryButtonStyle}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" ToolTip="Adicionar Campo"/>
+                                            <Button x:Name="BtnAddConfig" Click="BtnAddConfig_Click" Width="30" Height="30" HorizontalAlignment="Right" Style="{StaticResource RoundedButtonStyle}" ToolTip="Adicionar Campo">
+                                                <Viewbox Width="12" Height="12">
+                                                    <Path Fill="{StaticResource TextSecondary}" Data="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" Stretch="Uniform"/>
+                                                </Viewbox>
+                                            </Button>
                                         </Grid>
                                         
                                         <ItemsControl x:Name="ItemsConfigList">
@@ -562,7 +566,11 @@
                                                             <ComboBoxItem Content="Nome da Peça (Part Number)" Tag="String"/>
                                                         </ComboBox>
                                                                   
-                                                        <Button Grid.Column="1" Content="-" Click="BtnRemoveConfig_Click" Width="30" Height="38" Margin="8,0,0,0" Style="{StaticResource RoundedButtonStyle}" Background="{StaticResource StopRedBg}" Foreground="{StaticResource StopRed}" BorderBrush="{StaticResource StopRedBorder}" BorderThickness="1" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Visibility="{Binding RemoveButtonVisibility}" ToolTip="Remover Campo"/>
+                                                        <Button Grid.Column="1" Click="BtnRemoveConfig_Click" Width="30" Height="30" Margin="8,0,0,0" Style="{StaticResource RoundedButtonStyle}" Background="{StaticResource StopRedBg}" Foreground="{StaticResource StopRed}" BorderBrush="{StaticResource StopRedBorder}" BorderThickness="1" VerticalAlignment="Center" Visibility="{Binding RemoveButtonVisibility}" ToolTip="Remover Campo">
+                                                            <Viewbox Width="12" Height="12">
+                                                                <Path Fill="{StaticResource StopRed}" Data="M19,13H5V11H19V13Z" Stretch="Uniform"/>
+                                                            </Viewbox>
+                                                        </Button>
                                                     </Grid>
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>

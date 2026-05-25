@@ -400,38 +400,66 @@ namespace ConnectML.UI
             if (CmbProtocol.SelectedIndex == 1) // Webhook REST Genérico
             {
                 string template = TxtPayloadTemplate.Text;
-                List<string> missingTags = new List<string>();
+                List<string> errorMessages = new List<string>();
 
+                bool hasBoolField = _configFields.Any(f => f.FieldType == "Boolean");
+                bool hasNumericField = _configFields.Any(f => f.FieldType == "Numeric");
+                bool hasStringField = _configFields.Any(f => f.FieldType == "String");
+
+                // 1. Validação: De ativos para tags (cada campo ativo deve ter sua tag no template)
                 foreach (var field in _configFields)
                 {
                     if (field.FieldType == "Boolean")
                     {
                         if (!ContainsTemplateTag(template, "IsOk") && !ContainsTemplateTag(template, "Status"))
                         {
-                            missingTags.Add("{{ IsOk }} ou {{ Status }}");
+                            errorMessages.Add("- O campo 'Verdadeiro/Falso' está ativo, adicione {{ IsOk }} ou {{ Status }} no payload.");
                         }
                     }
                     else if (field.FieldType == "Numeric")
                     {
                         if (!ContainsTemplateTag(template, "FailCount") && !ContainsTemplateTag(template, "Run"))
                         {
-                            missingTags.Add("{{ FailCount }} ou {{ Run }}");
+                            errorMessages.Add("- O campo 'Contador' está ativo, adicione {{ FailCount }} ou {{ Run }} no payload.");
                         }
                     }
                     else if (field.FieldType == "String")
                     {
                         if (!ContainsTemplateTag(template, "PartNumber") && !ContainsTemplateTag(template, "Product") && !ContainsTemplateTag(template, "Routine"))
                         {
-                            missingTags.Add("{{ PartNumber }}");
+                            errorMessages.Add("- O campo 'Nome da Peça' está ativo, adicione {{ PartNumber }} no payload.");
                         }
                     }
                 }
 
-                if (missingTags.Any())
+                // 2. Validação: De tags para ativos (se uma tag está no template, o campo correspondente deve estar ativo)
+                if (ContainsTemplateTag(template, "IsOk") || ContainsTemplateTag(template, "Status"))
+                {
+                    if (!hasBoolField)
+                    {
+                        errorMessages.Add("- A tag de status (IsOk/Status) está no payload, mas o campo 'Verdadeiro/Falso' não está ativo.");
+                    }
+                }
+                if (ContainsTemplateTag(template, "FailCount") || ContainsTemplateTag(template, "Run"))
+                {
+                    if (!hasNumericField)
+                    {
+                        errorMessages.Add("- A tag de contagem (FailCount/Run) está no payload, mas o campo 'Contador' não está ativo.");
+                    }
+                }
+                if (ContainsTemplateTag(template, "PartNumber") || ContainsTemplateTag(template, "Product") || ContainsTemplateTag(template, "Routine"))
+                {
+                    if (!hasStringField)
+                    {
+                        errorMessages.Add("- A tag de peça (PartNumber/Product) está no payload, mas o campo 'Nome da Peça (Part Number)' não está ativo.");
+                    }
+                }
+
+                if (errorMessages.Any())
                 {
                     if (TxtInlineWarning != null)
                     {
-                        TxtInlineWarning.Text = "Aviso: O template do payload deve conter as tags correspondentes aos campos ativos: " + string.Join(", ", missingTags) + ".";
+                        TxtInlineWarning.Text = "Erro de Validação de Configuração:\n" + string.Join("\n", errorMessages);
                         TxtInlineWarning.Visibility = Visibility.Visible;
                     }
                     return; // Bloqueia o início do serviço
@@ -1255,7 +1283,12 @@ namespace ConnectML.UI
                     TxtInlineWarning.Visibility = Visibility.Collapsed;
                 }
 
-                _configFields.Add(new ConfigFieldItem { FieldType = "Boolean" });
+                // Encontra o primeiro tipo que não está em uso
+                var usedTypes = _configFields.Select(f => f.FieldType).ToList();
+                var allTypes = new[] { "Boolean", "Numeric", "String" };
+                var unusedType = allTypes.FirstOrDefault(t => !usedTypes.Contains(t)) ?? "Boolean";
+
+                _configFields.Add(new ConfigFieldItem { FieldType = unusedType });
                 UpdateConfigFieldsState();
             }
         }
@@ -1275,6 +1308,8 @@ namespace ConnectML.UI
             }
         }
 
+        private bool _isUpdatingFieldTypes = false;
+
         private void CmbFieldType_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (TxtInlineWarning != null)
@@ -1282,6 +1317,45 @@ namespace ConnectML.UI
                 TxtInlineWarning.Text = "";
                 TxtInlineWarning.Visibility = Visibility.Collapsed;
             }
+
+            if (_isUpdatingFieldTypes) return;
+
+            if (sender is ComboBox cb && cb.DataContext is ConfigFieldItem currentItem && _configFields != null)
+            {
+                string newType = cb.SelectedValue?.ToString() ?? "Boolean";
+
+                // Encontra se já existe outro item com esse mesmo tipo
+                var duplicateItem = _configFields.FirstOrDefault(item => item != currentItem && item.FieldType == newType);
+                if (duplicateItem != null)
+                {
+                    string? oldType = null;
+                    if (e.RemovedItems.Count > 0)
+                    {
+                        if (e.RemovedItems[0] is ComboBoxItem cbi)
+                            oldType = cbi.Tag?.ToString();
+                        else if (e.RemovedItems[0] is string str)
+                            oldType = str;
+                    }
+
+                    if (string.IsNullOrEmpty(oldType))
+                    {
+                        var allTypes = new[] { "Boolean", "Numeric", "String" };
+                        var usedTypes = _configFields.Select(item => item.FieldType).ToList();
+                        oldType = allTypes.FirstOrDefault(t => !usedTypes.Contains(t)) ?? "Boolean";
+                    }
+
+                    _isUpdatingFieldTypes = true;
+                    try
+                    {
+                        duplicateItem.FieldType = oldType;
+                    }
+                    finally
+                    {
+                        _isUpdatingFieldTypes = false;
+                    }
+                }
+            }
+
             UpdateConfigFieldsState();
         }
 
