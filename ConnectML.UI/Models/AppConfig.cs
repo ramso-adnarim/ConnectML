@@ -16,6 +16,7 @@ namespace ConnectML.UI.Models
         public string Slot { get; set; } = "1";
         public string DbAddressBool { get; set; } = "DB10.0";
         public string DbAddressInt { get; set; } = "DB10.2";
+        public string DbAddressPartNumber { get; set; } = "DB10.6";
         public string DbAddressStatus { get; set; } = "DB10.4";
 
         // Inbound / Local

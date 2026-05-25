@@ -8,8 +8,10 @@ namespace ConnectML.Core.Interfaces
         Task DisconnectAsync();
         Task WriteBoolAsync(string dbAddress, bool value);
         Task WriteIntAsync(string dbAddress, int value);
+        Task WriteStringAsync(string dbAddress, string value);
         Task<bool> ReadBoolAsync(string dbAddress);
         Task<int> ReadIntAsync(string dbAddress);
+        Task<string> ReadStringAsync(string dbAddress);
         bool IsConnected { get; }
     }
 }

@@ -146,6 +146,89 @@ namespace ConnectML.Infrastructure.PlcDrivers
             }, "ReadInt");
         }
 
+        public async Task WriteStringAsync(string dbAddress, string value)
+        {
+            await ExecuteWithRetryAsync(async () =>
+            {
+                var (dbNum, startByte) = ParseDbAddress(dbAddress);
+                if (_plc != null)
+                {
+                    int maxLen = 254; // Padrão Siemens para strings normais em DBs
+                    
+                    // Converte string para bytes ASCII
+                    byte[] stringBytes = System.Text.Encoding.ASCII.GetBytes(value ?? string.Empty);
+                    if (stringBytes.Length > maxLen)
+                    {
+                        Array.Resize(ref stringBytes, maxLen);
+                    }
+
+                    // Buffer: Byte 0 = Max Length, Byte 1 = Real Length, Bytes 2+ = ASCII Data
+                    byte[] buffer = new byte[maxLen + 2];
+                    buffer[0] = (byte)maxLen;
+                    buffer[1] = (byte)stringBytes.Length;
+                    Array.Copy(stringBytes, 0, buffer, 2, stringBytes.Length);
+
+                    // Escreve os bytes na DB no offset especificado
+                    await Task.Run(() => _plc.WriteBytes(DataType.DataBlock, dbNum, startByte, buffer));
+                    _logger.LogInformation($"[S7 REAL] Write String {dbAddress}: \"{value}\" (Max: {maxLen}, Real: {stringBytes.Length})");
+                }
+            }, "WriteString");
+        }
+
+        public async Task<string> ReadStringAsync(string dbAddress)
+        {
+            return await ExecuteWithRetryAndResultAsync(async () =>
+            {
+                var (dbNum, startByte) = ParseDbAddress(dbAddress);
+                if (_plc != null)
+                {
+                    // Lê o cabeçalho de 2 bytes para determinar os tamanhos
+                    byte[] header = await Task.Run(() => _plc.ReadBytes(DataType.DataBlock, dbNum, startByte, 2));
+                    int maxLen = header[0];
+                    int actualLen = header[1];
+
+                    if (actualLen > 0)
+                    {
+                        // Lê a quantidade real de caracteres armazenados
+                        byte[] stringBytes = await Task.Run(() => _plc.ReadBytes(DataType.DataBlock, dbNum, startByte + 2, actualLen));
+                        string result = System.Text.Encoding.ASCII.GetString(stringBytes);
+                        _logger.LogInformation($"[S7 REAL] Read String {dbAddress}: \"{result}\"");
+                        return result;
+                    }
+                }
+                return string.Empty;
+            }, "ReadString");
+        }
+
+        private (int dbNum, int startByte) ParseDbAddress(string address)
+        {
+            if (string.IsNullOrWhiteSpace(address))
+                throw new ArgumentException("O endereço do CLP não pode estar vazio.");
+
+            address = address.ToUpper().Trim();
+
+            // Formato esperado: DB10.20 ou DB10.DBB20 ou DB10.DBX20.0
+            if (address.StartsWith("DB"))
+            {
+                var parts = address.Substring(2).Split('.');
+                if (parts.Length >= 2)
+                {
+                    string dbNumStr = parts[0];
+                    string offsetStr = parts[1];
+
+                    // Remove caracteres comuns do offset nativo como DBB, DBW, DBX etc
+                    offsetStr = System.Text.RegularExpressions.Regex.Replace(offsetStr, @"[A-Z]+", "");
+
+                    if (int.TryParse(dbNumStr, out int dbNum) && int.TryParse(offsetStr, out int startByte))
+                    {
+                        return (dbNum, startByte);
+                    }
+                }
+            }
+
+            throw new ArgumentException($"Endereço de DB S7 inválido: {address}. Formato esperado: DBX.Y (Ex: DB10.20)");
+        }
+
         private async Task ExecuteWithRetryAsync(Func<Task> action, string operationName)
         {
             // 1. Pre-Check

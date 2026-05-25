@@ -53,6 +53,7 @@ namespace ConnectML.UI
         // Memória de Layout Responsivo
         private bool _isLogsCollapsed = false;
         private bool _autoHiddenBySpace = false;
+        private bool _testPartNumberToggle = false;
         private double _userPreferredLogsWidth = 380; // Largura preferida padrão
         private const double MinConfigWidth = 350; 
         private const double IdealConfigWidth = 564;
@@ -535,9 +536,16 @@ namespace ConnectML.UI
                     if (!int.TryParse(TxtRack.Text, out int rack)) rack = 0;
                     if (!int.TryParse(TxtSlot.Text, out int slot)) slot = 1;
 
-                    if (string.IsNullOrWhiteSpace(TxtDbBool.Text) || string.IsNullOrWhiteSpace(TxtDbInt.Text))
+                    bool hasBool = _configFields.Any(f => f.FieldType == "Boolean");
+                    bool hasNumeric = _configFields.Any(f => f.FieldType == "Numeric");
+                    bool hasString = _configFields.Any(f => f.FieldType == "String");
+
+                    if ((hasBool && string.IsNullOrWhiteSpace(TxtDbBool.Text)) ||
+                        (hasNumeric && string.IsNullOrWhiteSpace(TxtDbInt.Text)) ||
+                        (hasString && string.IsNullOrWhiteSpace(TxtDbPartNumber.Text)) ||
+                        string.IsNullOrWhiteSpace(TxtDbStatus.Text))
                     {
-                         MessageBox.Show("Preencha os endereços de DB.", "Erro", MessageBoxButton.OK, MessageBoxImage.Warning);
+                         MessageBox.Show("Por favor, preencha todos os endereços de DB para os campos ativos e status.", "Erro", MessageBoxButton.OK, MessageBoxImage.Warning);
                          return;
                     }
 
@@ -701,6 +709,7 @@ namespace ConnectML.UI
                 bool hasStringField = false;
                 string txtDbBool = string.Empty;
                 string txtDbInt = string.Empty;
+                string txtDbPartNumber = string.Empty;
                 string txtDbStatus = string.Empty;
 
                 Application.Current.Dispatcher.Invoke(() =>
@@ -729,6 +738,7 @@ namespace ConnectML.UI
                     {
                         txtDbBool = TxtDbBool.Text;
                         txtDbInt = TxtDbInt.Text;
+                        txtDbPartNumber = TxtDbPartNumber.Text;
                         txtDbStatus = TxtDbStatus.Text;
                     }
                 });
@@ -758,6 +768,9 @@ namespace ConnectML.UI
                         
                         if (hasNumericField && !string.IsNullOrWhiteSpace(txtDbInt))
                             await _plcDriver.WriteIntAsync(txtDbInt, result.FailCount);
+
+                        if (hasStringField && !string.IsNullOrWhiteSpace(txtDbPartNumber))
+                            await _plcDriver.WriteStringAsync(txtDbPartNumber, result.Product);
                             
                         if (!string.IsNullOrWhiteSpace(txtDbStatus))
                         {
@@ -962,6 +975,7 @@ namespace ConnectML.UI
                         TxtSlot.Text = config.Slot;
                         TxtDbBool.Text = config.DbAddressBool;
                         TxtDbInt.Text = config.DbAddressInt;
+                        TxtDbPartNumber.Text = config.DbAddressPartNumber ?? "DB10.6";
                         TxtDbStatus.Text = config.DbAddressStatus;
                         
                         // Inbound
@@ -1036,6 +1050,7 @@ namespace ConnectML.UI
                     Slot = TxtSlot.Text,
                     DbAddressBool = TxtDbBool.Text,
                     DbAddressInt = TxtDbInt.Text,
+                    DbAddressPartNumber = TxtDbPartNumber.Text,
                     DbAddressStatus = TxtDbStatus.Text,
                     
                     // Inbound
@@ -1194,6 +1209,23 @@ namespace ConnectML.UI
             });
         }
 
+        private async void BtnTestPartNumber_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isRunning) return;
+            string dbAddress = TxtDbPartNumber.Text;
+            if (string.IsNullOrWhiteSpace(dbAddress)) return;
+
+            _testPartNumberToggle = !_testPartNumberToggle;
+            string nextVal = _testPartNumberToggle ? "True" : "False";
+
+            Log.Information($"[Transient] Iniciando teste de escrita de string em {dbAddress} com valor \"{nextVal}\"...");
+            await RunTransientTestAsync(async (driver) => 
+            {
+                await driver.WriteStringAsync(dbAddress, nextVal);
+                Log.Information($"[Transient] {dbAddress} escrito com sucesso: \"{nextVal}\"");
+            });
+        }
+
         private async Task RunTransientTestAsync(Func<IPlcDriver, Task> testAction)
         {
             string ip = TxtIp.Text;
@@ -1270,7 +1302,23 @@ namespace ConnectML.UI
 
         private void UpdateS7PanelVisibility()
         {
-            // S7 fields visibility will be fully wired up in Sprint 3
+            if (_configFields == null || PnlSiemensDbConfig == null) return;
+
+            bool hasBool = _configFields.Any(f => f.FieldType == "Boolean");
+            bool hasNumeric = _configFields.Any(f => f.FieldType == "Numeric");
+            bool hasString = _configFields.Any(f => f.FieldType == "String");
+
+            if (GrpDbBool != null)
+                GrpDbBool.Visibility = hasBool ? Visibility.Visible : Visibility.Collapsed;
+
+            if (GrpDbInt != null)
+                GrpDbInt.Visibility = hasNumeric ? Visibility.Visible : Visibility.Collapsed;
+
+            if (GrpDbPartNumber != null)
+                GrpDbPartNumber.Visibility = hasString ? Visibility.Visible : Visibility.Collapsed;
+
+            if (GrpDbStatus != null)
+                GrpDbStatus.Visibility = Visibility.Visible;
         }
 
         private void BtnAddConfig_Click(object sender, RoutedEventArgs e)
