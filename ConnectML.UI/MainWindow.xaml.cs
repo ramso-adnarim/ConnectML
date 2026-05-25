@@ -1079,6 +1079,12 @@ namespace ConnectML.UI
             
             if (_isConfigCollapsed)
             {
+                // Garante que o painel de logs esteja visível se estivesse recolhido ANTES de configurar as larguras colapsadas
+                if (_isLogsCollapsed)
+                {
+                    SetLogsState(false);
+                }
+
                 // Recolhe as configurações e permite logs ocuparem 100% da janela
                 ColConfig.MinWidth = 0;
                 ColConfig.Width = new GridLength(0);
@@ -1093,12 +1099,6 @@ namespace ConnectML.UI
                 ColLogs.MinWidth = 0;
                 ColLogs.MaxWidth = double.PositiveInfinity;
                 ColLogs.Width = new GridLength(1, GridUnitType.Star);
-                
-                // Garante que o painel de logs esteja visível se estivesse recolhido
-                if (_isLogsCollapsed)
-                {
-                    SetLogsState(false);
-                }
             }
             else
             {
