@@ -273,59 +273,49 @@ namespace ConnectML.UI
                 return;
             }
 
-            // Estratégia de Lógica Responsiva V3.1:
-            // 1. Priorizar o crescimento do Painel Direito (Logs) quando a janela for grande.
-            // 2. Prevenir Sobreposição: Manter larguras mínimas (450 Esquerda, 390 Direita).
-            // 3. Prioridade de Encolhimento: Logs até Mínimo -> Config até Mínimo -> Recolher Logs.
-
             double margins = 20;
+            double splitterWidth = LogsSplitter.ActualWidth > 0 ? LogsSplitter.ActualWidth : 4;
             
-            // Calcula espaço para logs mantendo Configuração no "Ideal" (564)
-            double targetLogsWidth = windowWidth - IdealConfigWidth - margins;
-            
-            // Se resultar em menos que o mínimo permitido para Logs, precisamos roubar espaço da Config ou Recolher
-            if (targetLogsWidth < MinLogsWidth)
-            {
-                  // Verifica se podemos apenas encolher a Configuração até seu mínimo (450)
-                  double spaceWithMinConfig = windowWidth - MinConfigWidth - margins;
-                  
-                  if (spaceWithMinConfig >= MinLogsWidth)
-                  {
-                      // Cenário: Janela cabe ambos nos mínimos.
-                      // Define Painel Direito para Mínimo explicitamente para prevenir sobreposição.
-                      // Painel Esquerdo tomará o resto (variável entre 450 e 564).
-                      targetLogsWidth = MinLogsWidth;
-                  }
-                  else
-                  {
-                      // Cenário: Janela muito pequena para ambos.
-                      // Hora de recolher (Collapse).
-                      if (!_isLogsCollapsed)
-                      {
-                          _autoHiddenBySpace = true;
-                          SetLogsState(true);
-                      }
-                      return; // Concluído
-                  }
-            }
-
-            // Aplicar restrições
+            // Se logs estão colapsados, o menu esquerdo ocupa 100% da largura
             if (_isLogsCollapsed)
             {
-                if (_autoHiddenBySpace)
-                {
-                    // Podemos restaurar?
-                    if ((windowWidth - margins) > (MinConfigWidth + MinLogsWidth))
-                    {
-                        _autoHiddenBySpace = false;
-                        SetLogsState(false);
-                    }
-                }
+                ColConfig.Width = new GridLength(1, GridUnitType.Star);
+                return;
+            }
+
+            // Verificamos se a janela comporta ambos nos tamanhos mínimos
+            double minRequiredWidth = MinConfigWidth + MinLogsWidth + splitterWidth + margins;
+            
+            if (windowWidth < minRequiredWidth)
+            {
+                // Janela muito pequena -> recolhe logs automaticamente
+                _autoHiddenBySpace = true;
+                SetLogsState(true);
             }
             else
             {
-                ColLogs.Width = new GridLength(targetLogsWidth);
-                ColLogs.MaxWidth = windowWidth - MinConfigWidth - margins;
+                if (_autoHiddenBySpace)
+                {
+                    _autoHiddenBySpace = false;
+                    SetLogsState(false);
+                }
+
+                // Mantém a Configuração na largura preferida (Pixel) ou Ideal (564)
+                double configWidth = ColConfig.Width.IsAbsolute ? ColConfig.Width.Value : IdealConfigWidth;
+                
+                // Limita a largura da configuração para não esmagar os logs
+                double maxConfigWidth = windowWidth - MinLogsWidth - splitterWidth - margins;
+                if (configWidth > maxConfigWidth)
+                {
+                    configWidth = maxConfigWidth;
+                }
+                if (configWidth < MinConfigWidth)
+                {
+                    configWidth = MinConfigWidth;
+                }
+
+                ColConfig.Width = new GridLength(configWidth);
+                ColLogs.Width = new GridLength(1, GridUnitType.Star); // Logs ocupam o restante responsivamente
             }
         }
         
@@ -1102,10 +1092,6 @@ namespace ConnectML.UI
             }
             else
             {
-                // Restaura o layout com largura mínima para configurações
-                ColConfig.MinWidth = MinConfigWidth;
-                ColConfig.Width = new GridLength(1, GridUnitType.Star);
-                
                 // Reabilita o botão de recolher logs
                 BtnToggleLogs.Visibility = Visibility.Visible;
                 
@@ -1113,43 +1099,54 @@ namespace ConnectML.UI
                 {
                     LogsSplitter.Visibility = Visibility.Visible;
                     ColLogs.MinWidth = MinLogsWidth;
-                    ColLogs.MaxWidth = this.ActualWidth - MinConfigWidth - 20;
-                    ColLogs.Width = new GridLength(_userPreferredLogsWidth);
+                    ColLogs.MaxWidth = double.PositiveInfinity;
+                    
+                    // Calcula a largura da configuração para que os logs tenham _userPreferredLogsWidth
+                    double configWidth = this.ActualWidth - _userPreferredLogsWidth - (LogsSplitter.ActualWidth > 0 ? LogsSplitter.ActualWidth : 4) - 20;
+                    if (configWidth < MinConfigWidth) configWidth = MinConfigWidth;
+                    
+                    ColConfig.MinWidth = MinConfigWidth;
+                    ColConfig.Width = new GridLength(configWidth);
+                    ColLogs.Width = new GridLength(1, GridUnitType.Star);
                 }
                 else
                 {
+                    ColConfig.MinWidth = MinConfigWidth;
+                    ColConfig.Width = new GridLength(1, GridUnitType.Star);
+                    
                     ColLogs.MinWidth = 0;
                     ColLogs.Width = GridLength.Auto;
                 }
                 
-                // Força a reavaliação responsiva forçando o evento SizeChanged
+                // Força a reavaliação responsiva
                 ApplyResponsiveLayout(this.ActualWidth);
             }
         }
 
         private void LogsSplitter_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
         {
+            if (_isConfigCollapsed || _isLogsCollapsed) return;
+
+            double currentWidth = ColConfig.ActualWidth;
+            double newWidth = currentWidth + e.HorizontalChange;
+
+            // Define os limites rígidos do divisor
+            double minWidth = MinConfigWidth; // 350
             double margins = 20;
-            double windowWidth = this.ActualWidth;
-            
-            // Arrastando para a esquerda (aumentando log, encolhendo config)
-            if (e.HorizontalChange < 0)
-            {
-                double maxLogsWidth = windowWidth - MinConfigWidth - LogsSplitter.ActualWidth - margins;
-                if (ColLogs.ActualWidth > maxLogsWidth)
-                {
-                    ColLogs.Width = new GridLength(maxLogsWidth);
-                }
-            }
-            // Arrastando para a direita (encolhendo log, aumentando config)
-            else if (e.HorizontalChange > 0)
-            {
-                double maxConfigWidth = windowWidth - MinLogsWidth - LogsSplitter.ActualWidth - margins;
-                if (ColConfig.ActualWidth > maxConfigWidth)
-                {
-                    ColConfig.Width = new GridLength(maxConfigWidth);
-                }
-            }
+            double splitterWidth = LogsSplitter.ActualWidth > 0 ? LogsSplitter.ActualWidth : 4;
+            double maxWidth = this.ActualWidth - MinLogsWidth - splitterWidth - margins;
+
+            if (maxWidth < minWidth) maxWidth = minWidth;
+
+            // Clampa a largura desejada dentro dos limites
+            if (newWidth < minWidth) newWidth = minWidth;
+            if (newWidth > maxWidth) newWidth = maxWidth;
+
+            // Atualiza a largura da configuração em Pixels
+            ColConfig.Width = new GridLength(newWidth, GridUnitType.Pixel);
+
+            // Garante que a coluna de logs continue sendo Star (*) para preenchimento fluído
+            ColLogs.Width = new GridLength(1, GridUnitType.Star);
         }
 
         private void BtnToggleLogs_Click(object sender, RoutedEventArgs e)
@@ -1168,12 +1165,6 @@ namespace ConnectML.UI
             {
                  // Usuário expandindo manualmente
                  SetLogsState(false);
-                 
-                 // A lógica de restauração da largura precisa ser cuidadosa para não achatar se a janela for pequena.
-                 // Mas o usuário pediu, então tentamos o nosso melhor.
-                 // Talvez redimensionar a janela se necessário?
-                 
-                 // Confiamos em SetLogsState para restaurar _userPreferredLogsWidth
             }
         }
 
@@ -1190,6 +1181,7 @@ namespace ConnectML.UI
                  LogsSplitter.IsEnabled = true;
 
                  ColLogs.MinWidth = MinLogsWidth;
+                 ColLogs.MaxWidth = double.PositiveInfinity;
 
                  // Calcula largura a restaurar
                  double widthToRestore = _userPreferredLogsWidth < MinLogsWidth ? MinLogsWidth : _userPreferredLogsWidth;
@@ -1203,18 +1195,15 @@ namespace ConnectML.UI
                  {
                      // Redimensiona Janela da Aplicação
                      this.Width = requiredWidth;
-                     
-                     // Remove temporariamente limite MaxWidth para permitir ajuste
-                     // O evento SizeChanged disparará e ajustará limites novamente
-                     ColLogs.MaxWidth = double.PositiveInfinity;
-                 }
-                 else
-                 {
-                     // Garante que MaxWidth permita a restauração
-                     ColLogs.MaxWidth = currentWidth - MinConfigWidth - margins;
+                     currentWidth = requiredWidth;
                  }
 
-                 ColLogs.Width = new GridLength(widthToRestore);
+                 // Configura a largura da configuração para que a coluna de logs tenha exatamente a largura restaurada
+                 double configWidth = currentWidth - widthToRestore - (LogsSplitter.ActualWidth > 0 ? LogsSplitter.ActualWidth : 4) - margins;
+                 if (configWidth < MinConfigWidth) configWidth = MinConfigWidth;
+
+                 ColConfig.Width = new GridLength(configWidth);
+                 ColLogs.Width = new GridLength(1, GridUnitType.Star);
              }
              else
              {
@@ -1228,6 +1217,9 @@ namespace ConnectML.UI
                  PnlLogsCollapsed.Visibility = Visibility.Visible;
                  LogsSplitter.IsEnabled = false;
                  LogsSplitter.Visibility = Visibility.Collapsed;
+
+                 // A configuração passa a ocupar 100% da largura
+                 ColConfig.Width = new GridLength(1, GridUnitType.Star);
              }
         }
 

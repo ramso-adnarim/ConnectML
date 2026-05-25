@@ -460,9 +460,9 @@
         <!-- MAIN LAYOUT -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="350" x:Name="ColConfig"/>
+                <ColumnDefinition Width="564" MinWidth="350" x:Name="ColConfig"/>
                 <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="380" x:Name="ColLogs" MinWidth="390"/>
+                <ColumnDefinition Width="*" x:Name="ColLogs" MinWidth="300"/>
             </Grid.ColumnDefinitions>
 
             <!-- LEFT PANEL: CONFIGURATION -->
@@ -859,8 +859,14 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- SPLITTER -->
-            <GridSplitter x:Name="LogsSplitter" Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="{StaticResource BorderDark}" ResizeBehavior="PreviousAndNext" DragDelta="LogsSplitter_DragDelta"/>
+            <!-- SPLITTER (Thumb-based for stable pixel-to-star resizing without flickering) -->
+            <Thumb x:Name="LogsSplitter" Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Cursor="SizeWE" DragDelta="LogsSplitter_DragDelta">
+                <Thumb.Template>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border Background="{StaticResource BorderDark}"/>
+                    </ControlTemplate>
+                </Thumb.Template>
+            </Thumb>
 
             <!-- RIGHT PANEL: LOGS CONTAINER -->
             <Grid Grid.Column="2" x:Name="PnlLogsContainer">
