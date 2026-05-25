@@ -27,6 +27,7 @@ using WinForms = System.Windows.Forms;
 using Drawing = System.Drawing;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Windows.Interop;
 
 namespace ConnectML.UI
 {
@@ -56,6 +57,28 @@ namespace ConnectML.UI
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         extern static bool DestroyIcon(IntPtr handle);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern int RegisterWindowMessage(string lpString);
+
+        private static readonly int WM_SHOWME = RegisterWindowMessage("WM_SHOWME_CONNECTML");
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            HwndSource source = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
+            source.AddHook(new HwndSourceHook(WndProc));
+        }
+
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == WM_SHOWME)
+            {
+                RestoreWindow();
+                handled = true;
+            }
+            return IntPtr.Zero;
+        }
 
         public MainWindow()
         {

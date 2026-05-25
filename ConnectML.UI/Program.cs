@@ -12,14 +12,11 @@ namespace ConnectML.UI
         [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr FindWindow(string? lpClassName, string? lpWindowName);
 
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool SetForegroundWindow(IntPtr hWnd);
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern int RegisterWindowMessage(string lpString);
 
-        [DllImport("user32.dll")]
-        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-        private const int SW_RESTORE = 9;
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern bool PostMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
 
         [STAThread]
         public static void Main(string[] args)
@@ -30,14 +27,13 @@ namespace ConnectML.UI
 
             if (!createdNew)
             {
-                // Instância anterior já está ativa. Procura a janela existente para restaurá-la.
+                // Instância anterior já está ativa. Procura a janela existente.
                 IntPtr hWnd = FindWindow(null, "ConnectML - V1.1.0");
                 if (hWnd != IntPtr.Zero)
                 {
-                    // Restaura a janela se estiver minimizada
-                    ShowWindow(hWnd, SW_RESTORE);
-                    // Traz a janela para primeiro plano
-                    SetForegroundWindow(hWnd);
+                    // Envia uma mensagem customizada para que a instância ativa se restaure de forma limpa pelo thread do WPF
+                    int wmShowMe = RegisterWindowMessage("WM_SHOWME_CONNECTML");
+                    PostMessage(hWnd, wmShowMe, IntPtr.Zero, IntPtr.Zero);
                 }
 
                 // Encerra a execução desta nova instância silenciosamente
