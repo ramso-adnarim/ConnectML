@@ -1165,65 +1165,93 @@ namespace ConnectML.UI
 
         private async void BtnTestBool_Click(object sender, RoutedEventArgs e)
         {
-            if (_isRunning) return;
-            string dbAddress = TxtDbBool.Text;
-            if (string.IsNullOrWhiteSpace(dbAddress)) return;
-
-            Log.Information($"[Transient] Iniciando teste em {dbAddress}...");
-            await RunTransientTestAsync(async (driver) => 
+            try
             {
-                bool current = await driver.ReadBoolAsync(dbAddress);
-                bool next = !current;
-                await driver.WriteBoolAsync(dbAddress, next);
-                Log.Information($"[Transient] {dbAddress} foi de {current} para {next}");
-            });
+                if (_isRunning) return;
+                string dbAddress = TxtDbBool.Text;
+                if (string.IsNullOrWhiteSpace(dbAddress)) return;
+
+                Log.Information($"[Transient] Iniciando teste em {dbAddress}...");
+                await RunTransientTestAsync(async (driver) => 
+                {
+                    bool current = await driver.ReadBoolAsync(dbAddress);
+                    bool next = !current;
+                    await driver.WriteBoolAsync(dbAddress, next);
+                    Log.Information($"[Transient] {dbAddress} foi de {current} para {next}");
+                });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, $"[Transient] Erro crítico no teste da DB Booleana ({TxtDbBool.Text}): {ex.Message}");
+            }
         }
 
         private async void BtnTestInt_Click(object sender, RoutedEventArgs e)
         {
-            if (_isRunning) return;
-            string dbAddress = TxtDbInt.Text;
-            if (string.IsNullOrWhiteSpace(dbAddress)) return;
-
-            Log.Information($"[Transient] Iniciando teste em {dbAddress}...");
-            await RunTransientTestAsync(async (driver) => 
+            try
             {
-                int current = await driver.ReadIntAsync(dbAddress);
-                int next = current + 1;
-                await driver.WriteIntAsync(dbAddress, next);
-                Log.Information($"[Transient] {dbAddress} foi de {current} para {next}");
-            });
+                if (_isRunning) return;
+                string dbAddress = TxtDbInt.Text;
+                if (string.IsNullOrWhiteSpace(dbAddress)) return;
+
+                Log.Information($"[Transient] Iniciando teste em {dbAddress}...");
+                await RunTransientTestAsync(async (driver) => 
+                {
+                    int current = await driver.ReadIntAsync(dbAddress);
+                    int next = current + 1;
+                    await driver.WriteIntAsync(dbAddress, next);
+                    Log.Information($"[Transient] {dbAddress} foi de {current} para {next}");
+                });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, $"[Transient] Erro crítico no teste da DB Inteira ({TxtDbInt.Text}): {ex.Message}");
+            }
         }
 
         private async void BtnTestStatus_Click(object sender, RoutedEventArgs e)
         {
-            if (_isRunning) return;
-            string dbAddress = TxtDbStatus.Text;
-            if (string.IsNullOrWhiteSpace(dbAddress)) return;
-
-            Log.Information($"[Transient] Iniciando teste em {dbAddress}...");
-            await RunTransientTestAsync(async (driver) => 
+            try
             {
-                bool current = await driver.ReadBoolAsync(dbAddress);
-                Log.Information($"[Transient] {dbAddress} lido como {current}");
-            });
+                if (_isRunning) return;
+                string dbAddress = TxtDbStatus.Text;
+                if (string.IsNullOrWhiteSpace(dbAddress)) return;
+
+                Log.Information($"[Transient] Iniciando teste em {dbAddress}...");
+                await RunTransientTestAsync(async (driver) => 
+                {
+                    bool current = await driver.ReadBoolAsync(dbAddress);
+                    Log.Information($"[Transient] {dbAddress} lido como {current}");
+                });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, $"[Transient] Erro crítico no teste da DB Status ({TxtDbStatus.Text}): {ex.Message}");
+            }
         }
 
         private async void BtnTestPartNumber_Click(object sender, RoutedEventArgs e)
         {
-            if (_isRunning) return;
-            string dbAddress = TxtDbPartNumber.Text;
-            if (string.IsNullOrWhiteSpace(dbAddress)) return;
-
-            _testPartNumberToggle = !_testPartNumberToggle;
-            string nextVal = _testPartNumberToggle ? "True" : "False";
-
-            Log.Information($"[Transient] Iniciando teste de escrita de string em {dbAddress} com valor \"{nextVal}\"...");
-            await RunTransientTestAsync(async (driver) => 
+            try
             {
-                await driver.WriteStringAsync(dbAddress, nextVal);
-                Log.Information($"[Transient] {dbAddress} escrito com sucesso: \"{nextVal}\"");
-            });
+                if (_isRunning) return;
+                string dbAddress = TxtDbPartNumber.Text;
+                if (string.IsNullOrWhiteSpace(dbAddress)) return;
+
+                _testPartNumberToggle = !_testPartNumberToggle;
+                string nextVal = _testPartNumberToggle ? "True" : "False";
+
+                Log.Information($"[Transient] Iniciando teste de escrita de string em {dbAddress} com valor \"{nextVal}\"...");
+                await RunTransientTestAsync(async (driver) => 
+                {
+                    await driver.WriteStringAsync(dbAddress, nextVal);
+                    Log.Information($"[Transient] {dbAddress} escrito com sucesso: \"{nextVal}\"");
+                });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, $"[Transient] Erro crítico no teste do DB PartNumber ({TxtDbPartNumber.Text}): {ex.Message}");
+            }
         }
 
         private async Task RunTransientTestAsync(Func<IPlcDriver, Task> testAction)
@@ -1319,6 +1347,47 @@ namespace ConnectML.UI
 
             if (GrpDbStatus != null)
                 GrpDbStatus.Visibility = Visibility.Visible;
+
+            // Recalcula colunas do UniformGrid com base nos itens ativos e largura atual
+            if (PnlSiemensDbConfig is System.Windows.Controls.Primitives.UniformGrid grid)
+            {
+                double width = grid.ActualWidth;
+                if (width > 0)
+                {
+                    int visibleCount = 0;
+                    if (hasBool) visibleCount++;
+                    if (hasNumeric) visibleCount++;
+                    if (hasString) visibleCount++;
+                    visibleCount++; // GrpDbStatus está sempre visível
+                    
+                    int cols = (int)(width / 140);
+                    if (cols < 1) cols = 1;
+                    if (cols > visibleCount) cols = visibleCount;
+                    grid.Columns = cols;
+                }
+            }
+        }
+
+        private void PnlSiemensDbConfig_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (PnlSiemensDbConfig is System.Windows.Controls.Primitives.UniformGrid grid)
+            {
+                double width = e.NewSize.Width;
+                
+                int visibleCount = 0;
+                if (GrpDbBool != null && GrpDbBool.Visibility == Visibility.Visible) visibleCount++;
+                if (GrpDbInt != null && GrpDbInt.Visibility == Visibility.Visible) visibleCount++;
+                if (GrpDbPartNumber != null && GrpDbPartNumber.Visibility == Visibility.Visible) visibleCount++;
+                if (GrpDbStatus != null && GrpDbStatus.Visibility == Visibility.Visible) visibleCount++;
+                
+                if (visibleCount == 0) return;
+                
+                int cols = (int)(width / 140);
+                if (cols < 1) cols = 1;
+                if (cols > visibleCount) cols = visibleCount;
+                
+                grid.Columns = cols;
+            }
         }
 
         private void BtnAddConfig_Click(object sender, RoutedEventArgs e)

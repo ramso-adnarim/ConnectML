@@ -652,9 +652,9 @@
                                         </StackPanel>
                                     </Grid>
 
-                                    <WrapPanel x:Name="PnlSiemensDbConfig" Visibility="Collapsed" Margin="0,0,0,16" Orientation="Horizontal">
+                                    <UniformGrid x:Name="PnlSiemensDbConfig" Visibility="Collapsed" Margin="0,0,0,16" SizeChanged="PnlSiemensDbConfig_SizeChanged">
                                         <!-- DB (Booleana) -->
-                                        <StackPanel x:Name="GrpDbBool" Width="144" Margin="0,0,12,12">
+                                        <StackPanel x:Name="GrpDbBool" Margin="0,0,12,12">
                                             <TextBlock Text="DB (Booleana)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
@@ -671,7 +671,7 @@
                                         </StackPanel>
 
                                         <!-- DB (Inteira) -->
-                                        <StackPanel x:Name="GrpDbInt" Width="144" Margin="0,0,12,12">
+                                        <StackPanel x:Name="GrpDbInt" Margin="0,0,12,12">
                                             <TextBlock Text="DB (Inteira)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
@@ -688,7 +688,7 @@
                                         </StackPanel>
 
                                         <!-- DB (PartNumber) -->
-                                        <StackPanel x:Name="GrpDbPartNumber" Width="144" Margin="0,0,12,12">
+                                        <StackPanel x:Name="GrpDbPartNumber" Margin="0,0,12,12">
                                             <TextBlock Text="DB (PartNumber)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
@@ -705,7 +705,7 @@
                                         </StackPanel>
 
                                         <!-- DB (Status) -->
-                                        <StackPanel x:Name="GrpDbStatus" Width="144" Margin="0,0,12,12">
+                                        <StackPanel x:Name="GrpDbStatus" Margin="0,0,12,12">
                                             <TextBlock Text="DB (Status)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
                                             <Grid>
                                                 <Grid.ColumnDefinitions>
@@ -720,7 +720,7 @@
                                                 </Button>
                                             </Grid>
                                         </StackPanel>
-                                    </WrapPanel>
+                                    </UniformGrid>
 
                                     <!-- WEBHOOK REST Fields -->
                                     <StackPanel x:Name="PnlWebhookConfig">

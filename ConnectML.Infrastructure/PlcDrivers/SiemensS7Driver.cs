@@ -168,8 +168,27 @@ namespace ConnectML.Infrastructure.PlcDrivers
                     buffer[1] = (byte)stringBytes.Length;
                     Array.Copy(stringBytes, 0, buffer, 2, stringBytes.Length);
 
-                    // Escreve os bytes na DB no offset especificado
-                    await Task.Run(() => _plc.WriteBytes(DataType.DataBlock, dbNum, startByte, buffer));
+                    // Escreve os bytes na DB no offset especificado com proteção de exceção robusta
+                    try
+                    {
+                        await Task.Run(() =>
+                        {
+                            try
+                            {
+                                _plc.WriteBytes(DataType.DataBlock, dbNum, startByte, buffer);
+                            }
+                            catch (Exception innerEx)
+                            {
+                                throw new Exception($"Erro na escrita de bytes no CLP (DB{dbNum}, Offset {startByte}): {innerEx.Message}", innerEx);
+                            }
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"[S7 REAL] Falha ao escrever string em {dbAddress}");
+                        throw;
+                    }
+
                     _logger.LogInformation($"[S7 REAL] Write String {dbAddress}: \"{value}\" (Max: {maxLen}, Real: {stringBytes.Length})");
                 }
             }, "WriteString");
@@ -183,14 +202,54 @@ namespace ConnectML.Infrastructure.PlcDrivers
                 if (_plc != null)
                 {
                     // Lê o cabeçalho de 2 bytes para determinar os tamanhos
-                    byte[] header = await Task.Run(() => _plc.ReadBytes(DataType.DataBlock, dbNum, startByte, 2));
+                    byte[] header;
+                    try
+                    {
+                        header = await Task.Run(() =>
+                        {
+                            try
+                            {
+                                return _plc.ReadBytes(DataType.DataBlock, dbNum, startByte, 2);
+                            }
+                            catch (Exception innerEx)
+                            {
+                                throw new Exception($"Erro na leitura do cabeçalho da String (DB{dbNum}, Offset {startByte}): {innerEx.Message}", innerEx);
+                            }
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"[S7 REAL] Falha ao ler cabeçalho da string em {dbAddress}");
+                        throw;
+                    }
+
                     int maxLen = header[0];
                     int actualLen = header[1];
 
                     if (actualLen > 0)
                     {
                         // Lê a quantidade real de caracteres armazenados
-                        byte[] stringBytes = await Task.Run(() => _plc.ReadBytes(DataType.DataBlock, dbNum, startByte + 2, actualLen));
+                        byte[] stringBytes;
+                        try
+                        {
+                            stringBytes = await Task.Run(() =>
+                            {
+                                try
+                                {
+                                    return _plc.ReadBytes(DataType.DataBlock, dbNum, startByte + 2, actualLen);
+                                }
+                                catch (Exception innerEx)
+                                {
+                                    throw new Exception($"Erro na leitura do corpo da String (DB{dbNum}, Offset {startByte + 2}, Tamanho {actualLen}): {innerEx.Message}", innerEx);
+                                }
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, $"[S7 REAL] Falha ao ler corpo da string em {dbAddress}");
+                            throw;
+                        }
+
                         string result = System.Text.Encoding.ASCII.GetString(stringBytes);
                         _logger.LogInformation($"[S7 REAL] Read String {dbAddress}: \"{result}\"");
                         return result;
