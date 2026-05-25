@@ -1166,6 +1166,7 @@ namespace ConnectML.UI
                 // Abre popup de credenciais
                 var unlockWin = new SecurityUnlockWindow();
                 unlockWin.Owner = this;
+                unlockWin.Show();
 
                 // Mostra a janela e aguarda a resposta
                 bool success = await unlockWin.UnlockTask;
