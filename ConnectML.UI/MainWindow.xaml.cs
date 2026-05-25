@@ -718,6 +718,12 @@ namespace ConnectML.UI
                 // Customer clicou em "Cancelar" ou fechou a contagem regressiva ou clicou no "Parar" principal
                 Log.Information("[Auto-Start Retry] Retentativas de conexão canceladas pelo customer.");
                 await StopService();
+
+                // Garante que a interface principal reapareça se estivesse minimizada ou oculta na bandeja (ex: Auto-Start)
+                if (WindowState == WindowState.Minimized || !IsVisible)
+                {
+                    RestoreWindow();
+                }
                 return;
             }
 
