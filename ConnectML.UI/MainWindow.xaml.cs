@@ -53,6 +53,7 @@ namespace ConnectML.UI
 
         // Memória de Layout Responsivo
         private bool _isLogsCollapsed = false;
+        private bool _isConfigCollapsed = false;
         private bool _autoHiddenBySpace = false;
         private bool _testPartNumberToggle = false;
         private bool _isRetrying = false;
@@ -242,19 +243,40 @@ namespace ConnectML.UI
 
         private void RestoreWindow()
         {
-            Show();
-            WindowState = WindowState.Normal;
+            if (!IsVisible)
+            {
+                Show();
+            }
+            if (WindowState == WindowState.Minimized)
+            {
+                WindowState = WindowState.Normal;
+            }
             Activate();
+            Focus();
+            
+            // Força a janela a vir para o primeiro plano temporariamente
+            var wasTopmost = Topmost;
+            Topmost = true;
+            Topmost = wasTopmost;
         }
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
+            ApplyResponsiveLayout(e.NewSize.Width);
+        }
+
+        private void ApplyResponsiveLayout(double windowWidth)
+        {
+            if (_isConfigCollapsed)
+            {
+                return;
+            }
+
             // Estratégia de Lógica Responsiva V3.1:
             // 1. Priorizar o crescimento do Painel Direito (Logs) quando a janela for grande.
             // 2. Prevenir Sobreposição: Manter larguras mínimas (450 Esquerda, 390 Direita).
             // 3. Prioridade de Encolhimento: Logs até Mínimo -> Config até Mínimo -> Recolher Logs.
 
-            double windowWidth = e.NewSize.Width;
             double margins = 20;
             
             // Calcula espaço para logs mantendo Configuração no "Ideal" (564)
@@ -263,27 +285,27 @@ namespace ConnectML.UI
             // Se resultar em menos que o mínimo permitido para Logs, precisamos roubar espaço da Config ou Recolher
             if (targetLogsWidth < MinLogsWidth)
             {
-                 // Verifica se podemos apenas encolher a Configuração até seu mínimo (450)
-                 double spaceWithMinConfig = windowWidth - MinConfigWidth - margins;
-                 
-                 if (spaceWithMinConfig >= MinLogsWidth)
-                 {
-                     // Cenário: Janela cabe ambos nos mínimos.
-                     // Define Painel Direito para Mínimo explicitamente para prevenir sobreposição.
-                     // Painel Esquerdo tomará o resto (variável entre 450 e 564).
-                     targetLogsWidth = MinLogsWidth;
-                 }
-                 else
-                 {
-                     // Cenário: Janela muito pequena para ambos.
-                     // Hora de recolher (Collapse).
-                     if (!_isLogsCollapsed)
-                     {
-                         _autoHiddenBySpace = true;
-                         SetLogsState(true);
-                     }
-                     return; // Concluído
-                 }
+                  // Verifica se podemos apenas encolher a Configuração até seu mínimo (450)
+                  double spaceWithMinConfig = windowWidth - MinConfigWidth - margins;
+                  
+                  if (spaceWithMinConfig >= MinLogsWidth)
+                  {
+                      // Cenário: Janela cabe ambos nos mínimos.
+                      // Define Painel Direito para Mínimo explicitamente para prevenir sobreposição.
+                      // Painel Esquerdo tomará o resto (variável entre 450 e 564).
+                      targetLogsWidth = MinLogsWidth;
+                  }
+                  else
+                  {
+                      // Cenário: Janela muito pequena para ambos.
+                      // Hora de recolher (Collapse).
+                      if (!_isLogsCollapsed)
+                      {
+                          _autoHiddenBySpace = true;
+                          SetLogsState(true);
+                      }
+                      return; // Concluído
+                  }
             }
 
             // Aplicar restrições
@@ -719,19 +741,13 @@ namespace ConnectML.UI
                 Log.Information("[Auto-Start Retry] Retentativas de conexão canceladas pelo customer.");
                 await StopService();
 
-                // Garante que a interface principal reapareça se estivesse minimizada ou oculta na bandeja (ex: Auto-Start)
-                if (WindowState == WindowState.Minimized || !IsVisible)
-                {
-                    RestoreWindow();
-                }
+                // Garante que a interface principal reapareça (ex: Auto-Start cancelado)
+                RestoreWindow();
                 return;
             }
 
-            // Se a janela principal estiver minimizada na bandeja do sistema, traz de volta para o primeiro plano
-            if (WindowState == WindowState.Minimized || !IsVisible)
-            {
-                RestoreWindow();
-            }
+            // Garante que a janela principal reapareça no primeiro plano para mostrar o status de retentativa ativa
+            RestoreWindow();
 
             // Altera status visual para retentativa progressiva ativa
             TxtStatus.Text = "RETENTANDO CONEXÃO";
@@ -864,6 +880,7 @@ namespace ConnectML.UI
 
         private async Task ProcessFile(string filePath)
         {
+            bool isWebhookMode = false;
             try
             {
                 if (!await WaitForFileReady(filePath))
@@ -876,7 +893,6 @@ namespace ConnectML.UI
                 var result = QifParser.Parse(filePath);
 
                 // Resolve de forma thread-safe (STA) todos os valores que vêm dos elementos de UI
-                bool isWebhookMode = false;
                 string webhookUrl = string.Empty;
                 string webhookVerb = string.Empty;
                 string authType = string.Empty;
@@ -965,12 +981,20 @@ namespace ConnectML.UI
                 {
                     File.Delete(filePath);
                     Log.Information("Processado e removido.");
+                    
+                    // Notificação de balão no System Tray
+                    _notifyIcon?.ShowBalloonTip(3000, "Arquivo Processado", $"O arquivo foi processado com sucesso.\nPeça (Part Number): {result.Product}", WinForms.ToolTipIcon.Info);
                 }
                 catch (Exception ex) { Log.Error($"Erro ao deletar: {ex.Message}"); }
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Falha no processamento.");
+                
+                // Notificação de balão de erro crítico no System Tray
+                string errorMsg = isWebhookMode ? "Erro ao enviar Webhook." : "Erro de comunicação com o CLP.";
+                _notifyIcon?.ShowBalloonTip(4000, "Falha Crítica", $"{errorMsg} Detalhes: {ex.Message}", WinForms.ToolTipIcon.Error);
+
                 try
                 {
                     string dir = Path.GetDirectoryName(filePath)!;
@@ -1040,6 +1064,52 @@ namespace ConnectML.UI
             if (Directory.Exists(TxtSourcePath.Text)) dialog.DefaultDirectory = TxtSourcePath.Text;
 
             if (dialog.ShowDialog() == true) TxtSourcePath.Text = dialog.FolderName;
+        }
+
+        private void BtnHamburger_Click(object sender, RoutedEventArgs e)
+        {
+            _isConfigCollapsed = !_isConfigCollapsed;
+            
+            if (_isConfigCollapsed)
+            {
+                // Recolhe as configurações e permite logs ocuparem 100% da janela
+                ColConfig.MinWidth = 0;
+                ColConfig.Width = new GridLength(0);
+                
+                // Oculta o Splitter
+                LogsSplitter.Visibility = Visibility.Collapsed;
+                
+                // Permite que a coluna de logs se expanda flexivelmente
+                ColLogs.MinWidth = 0;
+                ColLogs.Width = new GridLength(1, GridUnitType.Star);
+                
+                // Garante que o painel de logs esteja visível se estivesse recolhido
+                if (_isLogsCollapsed)
+                {
+                    SetLogsState(false);
+                }
+            }
+            else
+            {
+                // Restaura o layout com largura mínima para configurações
+                ColConfig.MinWidth = MinConfigWidth;
+                ColConfig.Width = new GridLength(1, GridUnitType.Star);
+                
+                if (!_isLogsCollapsed)
+                {
+                    LogsSplitter.Visibility = Visibility.Visible;
+                    ColLogs.MinWidth = MinLogsWidth;
+                    ColLogs.Width = new GridLength(_userPreferredLogsWidth);
+                }
+                else
+                {
+                    ColLogs.MinWidth = 0;
+                    ColLogs.Width = GridLength.Auto;
+                }
+                
+                // Força a reavaliação responsiva forçando o evento SizeChanged
+                ApplyResponsiveLayout(this.ActualWidth);
+            }
         }
 
         private void BtnToggleLogs_Click(object sender, RoutedEventArgs e)

@@ -345,13 +345,22 @@
         <Border Grid.Row="0" Background="{StaticResource SurfaceDark}" BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1" Padding="18,5">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/> <!-- Menu Hamburger -->
+                    <ColumnDefinition Width="Auto"/> <!-- Icon & Title -->
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
+                <!-- Leftmost: Hamburger Menu -->
+                <Button x:Name="BtnHamburger" Grid.Column="0" Width="36" Height="36" Margin="0,0,12,0" 
+                        Click="BtnHamburger_Click" ToolTip="Alternar Painel de Configurações" Style="{StaticResource RoundedButtonStyle}">
+                    <Viewbox Width="18" Height="18">
+                        <Path Fill="#cbd5e1" Data="M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z" Stretch="Uniform"/>
+                    </Viewbox>
+                </Button>
+
                 <!-- Left: Icon & Title -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,0,0">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,0">
                     <Border Width="45" Height="45" CornerRadius="4" Background="Transparent" Margin="0,0,16,0">
                         <Image Source="/Assets/logo.png" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
                     </Border>
@@ -451,7 +460,7 @@
         <!-- MAIN LAYOUT -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="350"/>
+                <ColumnDefinition Width="*" MinWidth="350" x:Name="ColConfig"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="380" x:Name="ColLogs" MinWidth="390"/>
             </Grid.ColumnDefinitions>
