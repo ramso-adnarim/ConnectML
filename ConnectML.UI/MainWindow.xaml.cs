@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -54,6 +55,8 @@ namespace ConnectML.UI
         private bool _isLogsCollapsed = false;
         private bool _autoHiddenBySpace = false;
         private bool _testPartNumberToggle = false;
+        private bool _isRetrying = false;
+        private CancellationTokenSource? _retryCts;
         private double _userPreferredLogsWidth = 380; // Largura preferida padrão
         private const double MinConfigWidth = 350; 
         private const double IdealConfigWidth = 564;
@@ -314,6 +317,14 @@ namespace ConnectML.UI
         {
             _notifyIcon?.Dispose();
             _trayAnimationTimer?.Stop();
+
+            if (_retryCts != null)
+            {
+                _retryCts.Cancel();
+                _retryCts.Dispose();
+                _retryCts = null;
+            }
+
             base.OnClosed(e);
         }
 
@@ -376,7 +387,7 @@ namespace ConnectML.UI
 
         private async void BtnStartStop_Click(object sender, RoutedEventArgs e)
         {
-            if (_isRunning)
+            if (_isRunning || _isRetrying)
                 await StopService();
             else
                 await StartService();
@@ -530,11 +541,12 @@ namespace ConnectML.UI
             }
             else // Siemens S7
             {
+                string ip = TxtIp.Text;
+                if (!int.TryParse(TxtRack.Text, out int rack)) rack = 0;
+                if (!int.TryParse(TxtSlot.Text, out int slot)) slot = 1;
+
                 try
                 {
-                    string ip = TxtIp.Text;
-                    if (!int.TryParse(TxtRack.Text, out int rack)) rack = 0;
-                    if (!int.TryParse(TxtSlot.Text, out int slot)) slot = 1;
 
                     bool hasBool = _configFields.Any(f => f.FieldType == "Boolean");
                     bool hasNumeric = _configFields.Any(f => f.FieldType == "Numeric");
@@ -556,7 +568,8 @@ namespace ConnectML.UI
                 }
                 catch (Exception ex)
                 {
-                     MessageBox.Show($"Erro ao conectar PLC: {ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                     Log.Warning(ex, $"[Startup] Falha na conexão inicial com o CLP no IP {ip}. Iniciando fluxo de retentativa regressiva...");
+                     _ = HandlePlcConnectionFailureAsync(ip, rack, slot, path);
                      return;
                 }
             }
@@ -584,19 +597,23 @@ namespace ConnectML.UI
             _watcher.NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite;
             _watcher.Created += OnFileCreated;
             _watcher.EnableRaisingEvents = true;
-
             _isRunning = true;
             _lastRunSuccessful = true;
             SaveSettings();
             Log.Information("Serviço Iniciado. Monitorando: " + path);
-
-            // Inicia a animação do ícone na bandeja
-            StartTrayAnimation();
         }
 
         private async Task StopService()
         {
             _isRunning = false;
+            _isRetrying = false;
+
+            if (_retryCts != null)
+            {
+                _retryCts.Cancel();
+                _retryCts.Dispose();
+                _retryCts = null;
+            }
 
             if (_watcher != null)
             {
@@ -642,6 +659,142 @@ namespace ConnectML.UI
             Log.Information("Serviço Parado.");
 
             StopTrayAnimation();
+        }
+
+        private async Task HandlePlcConnectionFailureAsync(string ip, int rack, int slot, string path)
+        {
+            // Desabilita as configurações pois iniciou o processo de ativação/retentativa
+            PnlConfiguration.IsEnabled = false;
+
+            // Configura o visual do botão StartStop para "Parar" (permitir cancelar)
+            TxtStartStop.Text = "Parar";
+            IconStartStop.Data = Geometry.Parse("M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M16,16H8V8h8V16z");
+            BtnStartStop.Background = (Brush)FindResource("StopRedBg");
+            BtnStartStop.BorderBrush = (Brush)FindResource("StopRedBorder");
+            TxtStartStop.Foreground = (Brush)FindResource("StopRed");
+            IconStartStop.Fill = (Brush)FindResource("StopRed");
+
+            // Exibe status temporário de aguardando
+            TxtStatus.Text = "AGUARDANDO RETRY";
+            TxtStatus.Foreground = (Brush)FindResource("AmberColor");
+            StatusIndicator.Fill = (Brush)FindResource("AmberColor");
+            TxtFooterStatus.Text = "Falha na conexão inicial...";
+            StatusDot.Fill = (Brush)FindResource("AmberColor");
+
+            // Abre a janela de alerta customizada de contagem regressiva de 6 segundos de forma NÃO-BLOQUEANTE
+            var countdownWin = new AlertCountdownWindow();
+            countdownWin.Owner = this;
+            countdownWin.Show();
+
+            bool shouldRetry = await countdownWin.CountdownTask;
+
+            if (!shouldRetry)
+            {
+                // Customer clicou em "Cancelar" ou fechou a contagem regressiva
+                Log.Information("[Auto-Start Retry] Retentativas de conexão canceladas pelo customer.");
+                await StopService();
+                return;
+            }
+
+            // Expiraram os 6 segundos! Inicia a rotina de retentativas
+            _isRetrying = true;
+
+            // Se a janela principal estiver minimizada na bandeja do sistema, traz de volta para o primeiro plano
+            if (WindowState == WindowState.Minimized || !IsVisible)
+            {
+                RestoreWindow();
+            }
+
+            // Altera status visual para retentativa progressiva ativa
+            TxtStatus.Text = "RETENTANDO CONEXÃO";
+            TxtStatus.Foreground = (Brush)FindResource("AmberColor");
+            StatusIndicator.Fill = (Brush)FindResource("AmberColor");
+            TxtFooterStatus.Text = "Conectando ao CLP a cada 5s...";
+            StatusDot.Fill = (Brush)FindResource("AmberColor");
+
+            var sb = (Storyboard)FindResource("BlinkAnimation");
+            sb.Begin(StatusIndicator);
+
+            _retryCts = new CancellationTokenSource();
+            var token = _retryCts.Token;
+
+            // Executa o loop de retentativas em segundo plano para não congelar a interface
+            _ = Task.Run(async () => await RunProgressiveRetryLoopAsync(ip, rack, slot, path, token), token);
+        }
+
+        private async Task RunProgressiveRetryLoopAsync(string ip, int rack, int slot, string path, CancellationToken token)
+        {
+            int attempts = 0;
+            while (!token.IsCancellationRequested)
+            {
+                attempts++;
+                Log.Information($"[Auto-Start Retry] Tentativa de conexão #{attempts} com o CLP em {ip}...");
+
+                try
+                {
+                    // Tenta conectar ao CLP
+                    await _plcDriver!.ConnectAsync(ip, rack, slot);
+
+                    // Conexão bem-sucedida! Finaliza o retry com sucesso
+                    if (token.IsCancellationRequested) return;
+
+                    await Dispatcher.InvokeAsync(async () =>
+                    {
+                        _isRetrying = false;
+                        if (_retryCts != null)
+                        {
+                            _retryCts.Dispose();
+                            _retryCts = null;
+                        }
+
+                        // Configura o Watcher para monitorar a pasta
+                        _watcher = new FileSystemWatcher(path);
+                        _watcher.Filter = "*.*";
+                        _watcher.NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite;
+                        _watcher.Created += OnFileCreated;
+                        _watcher.EnableRaisingEvents = true;
+
+                        _isRunning = true;
+                        _lastRunSuccessful = true;
+                        SaveSettings();
+
+                        // Atualiza UI para executando (Verde)
+                        TxtStatus.Text = "EM EXECUÇÃO";
+                        TxtStatus.Foreground = (Brush)FindResource("SuccessGreen");
+                        StatusIndicator.Fill = (Brush)FindResource("SuccessGreen");
+                        TxtFooterStatus.Text = "Monitorando...";
+                        StatusDot.Fill = (Brush)FindResource("SuccessGreen");
+
+                        var sb = (Storyboard)FindResource("BlinkAnimation");
+                        sb.Begin(StatusIndicator);
+
+                        Log.Information($"[Auto-Start Retry] Conexão com o CLP reestabelecida com sucesso na tentativa #{attempts}! Monitoramento ativado: {path}");
+
+                        StartTrayAnimation();
+
+                        // Auto-minimiza para a bandeja do sistema silenciosamente
+                        BtnMinimize_Click(this, new RoutedEventArgs());
+                    });
+
+                    return; // Sai do loop
+                }
+                catch (Exception ex)
+                {
+                    // Falhou, loga apenas no Serilog/UI log block sem popup!
+                    Log.Warning($"[Auto-Start Retry] Tentativa #{attempts} de conexão falhou. Nova retentativa em 5s. Detalhes: {ex.Message}");
+                }
+
+                try
+                {
+                    // Aguarda 5 segundos antes da próxima tentativa
+                    await Task.Delay(5000, token);
+                }
+                catch (TaskCanceledException)
+                {
+                    // Cancelamento acionado durante o delay
+                    break;
+                }
+            }
         }
 
         private void StartTrayAnimation()
