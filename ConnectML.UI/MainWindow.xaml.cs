@@ -55,6 +55,7 @@ namespace ConnectML.UI
         private bool _isLogsCollapsed = false;
         private bool _isConfigCollapsed = false;
         private bool _autoHiddenBySpace = false;
+        private bool _isLocked = false;
         private bool _testPartNumberToggle = false;
         private bool _isRetrying = false;
         private CancellationTokenSource? _retryCts;
@@ -155,6 +156,8 @@ namespace ConnectML.UI
                    }
                }
             };
+
+            ApplySecurityState();
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -395,7 +398,7 @@ namespace ConnectML.UI
 
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (e.ChangedButton == MouseButton.Left)
+            if (!_isLocked && e.ChangedButton == MouseButton.Left)
                 this.DragMove();
         }
 
@@ -1147,6 +1150,78 @@ namespace ConnectML.UI
 
             // Garante que a coluna de logs continue sendo Star (*) para preenchimento fluído
             ColLogs.Width = new GridLength(1, GridUnitType.Star);
+        }
+
+        private async void BtnSecurityLock_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_isLocked)
+            {
+                // Bloqueia imediatamente
+                _isLocked = true;
+                ApplySecurityState();
+                Log.Information("[Segurança] Aplicativo bloqueado pelo customer.");
+            }
+            else
+            {
+                // Abre popup de credenciais
+                var unlockWin = new SecurityUnlockWindow();
+                unlockWin.Owner = this;
+
+                // Mostra a janela e aguarda a resposta
+                bool success = await unlockWin.UnlockTask;
+                if (success)
+                {
+                    _isLocked = false;
+                    ApplySecurityState();
+                    Log.Information("[Segurança] Aplicativo desbloqueado com sucesso com credenciais administrativas.");
+                }
+            }
+        }
+
+        private void ApplySecurityState()
+        {
+            // Ativa ou desativa elementos baseado no status de bloqueio
+            bool isEnabled = !_isLocked;
+
+            // 1. Cadeado Visual
+            if (_isLocked)
+            {
+                // Ícone fechado, cor Amber
+                PathPadlock.Fill = (Brush)FindResource("AmberColor");
+                PathPadlock.Data = Geometry.Parse("M18,8H17V6A5,5 0 0,0 12,1A5,5 0 0,0 7,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M12,17C10.89,17 10,16.1 10,15C10,13.89 10.89,13 12,13C13.11,13 14,13.89 14,15C14,16.1 13.11,17 12,17M15,8H9V6A3,3 0 0,1 12,3A3,3 0 0,1 15,6V8Z");
+                BtnSecurityLock.ToolTip = "Segurança da Aplicação (Bloqueado - Clique para Desbloquear)";
+            }
+            else
+            {
+                // Ícone aberto, cor TextSecondary
+                PathPadlock.Fill = (Brush)FindResource("TextSecondary");
+                PathPadlock.Data = Geometry.Parse("M18,8H10V6A2,2 0 0,1 12,4C13.1,4 14,4.9 14,6H16A4,4 0 0,0 12,2A4,4 0 0,0 8,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M12,17A2,2 0 1,1 14,15A2,2 0 0,1 12,17Z");
+                BtnSecurityLock.ToolTip = "Segurança da Aplicação (Desbloqueado - Clique para Bloquear)";
+            }
+
+            // 2. Bloqueio de Inputs e Painéis de Configurações
+            if (_isLocked)
+            {
+                PnlConfiguration.IsEnabled = false;
+            }
+            else
+            {
+                PnlConfiguration.IsEnabled = !_isRunning;
+            }
+
+            // 3. Bloqueio de Botões de Ação
+            BtnHamburger.IsEnabled = isEnabled;
+            BtnStartStop.IsEnabled = isEnabled;
+            BtnClearLogs.IsEnabled = isEnabled;
+            BtnClose.IsEnabled = isEnabled;
+            ChkAutoStart.IsEnabled = isEnabled;
+            BtnToggleLogs.IsEnabled = isEnabled;
+
+            // 4. Bloqueio de Divisor (Thumb)
+            LogsSplitter.IsEnabled = isEnabled;
+
+            // 5. Bloqueio de Redimensionamento da Janela
+            this.ResizeMode = _isLocked ? ResizeMode.NoResize : ResizeMode.CanResize;
         }
 
         private void BtnToggleLogs_Click(object sender, RoutedEventArgs e)

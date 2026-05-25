@@ -366,7 +366,17 @@
                     </Border>
 
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="ConnectML" FontSize="18" FontWeight="Bold" Foreground="{StaticResource TextPrimary}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="ConnectML" FontSize="18" FontWeight="Bold" Foreground="{StaticResource TextPrimary}"/>
+                            <Button x:Name="BtnSecurityLock" Width="22" Height="22" Margin="8,0,0,0" VerticalAlignment="Center"
+                                    Click="BtnSecurityLock_Click" ToolTip="Segurança da Aplicação (Desbloqueado)" Style="{StaticResource RoundedButtonStyle}" Background="Transparent">
+                                <Viewbox Width="12" Height="12">
+                                    <Path x:Name="PathPadlock" Fill="{StaticResource TextSecondary}" 
+                                          Data="M18,8H10V6A2,2 0 0,1 12,4C13.1,4 14,4.9 14,6H16A4,4 0 0,0 12,2A4,4 0 0,0 8,6V8H6A2,2 0 0,0 4,10V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V10A2,2 0 0,0 18,8M12,17A2,2 0 1,1 14,15A2,2 0 0,1 12,17Z" 
+                                          Stretch="Uniform"/>
+                                </Viewbox>
+                            </Button>
+                        </StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                             <Grid Width="12" Height="12" Margin="0,0,6,0">
                                 <Ellipse x:Name="StatusIndicator" Width="8" Height="8" Fill="{StaticResource TextSecondary}" Opacity="1" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
@@ -902,7 +912,7 @@
                                             <TextBlock Text="Copiar" FontSize="10" Foreground="{StaticResource TextSecondary}"/>
                                         </StackPanel>
                                     </Button>
-                                    <Button Click="BtnClearLogs_Click" ToolTip="Limpar registros" Style="{StaticResource RoundedButtonStyle}" Background="Transparent" Height="Auto" Margin="0,6,0,0"  Padding="6,2">
+                                    <Button x:Name="BtnClearLogs" Click="BtnClearLogs_Click" ToolTip="Limpar registros" Style="{StaticResource RoundedButtonStyle}" Background="Transparent" Height="Auto" Margin="0,6,0,0"  Padding="6,2">
                                         <TextBlock Text="Limpar" FontSize="10" Foreground="{StaticResource TextSecondary}"/>
                                     </Button>
                                 </StackPanel>
