@@ -52,7 +52,7 @@ namespace ConnectML.Infrastructure.Dispatchers
             {
                 if (string.IsNullOrWhiteSpace(_webhookUrl))
                 {
-                    Log.Warning("[Webhook Outbound] Requisição abortada: URL de destino não configurada.");
+                    Log.Warning("[WEBHOOK-OUT] Requisição abortada: URL de destino não configurada.");
                     return;
                 }
 
@@ -89,7 +89,7 @@ namespace ConnectML.Infrastructure.Dispatchers
                 }
                 else if (_authType == "Basic" && !string.IsNullOrWhiteSpace(_authToken))
                 {
-                    // Consideramos que o customer inseriu "usuario:senha" na UI
+                    // Consideramos que o usuãrio inseriu "usuario:senha" na UI
                     var bytes = Encoding.UTF8.GetBytes(_authToken);
                     var encoded = Convert.ToBase64String(bytes);
                     request.Headers.Authorization = new AuthenticationHeaderValue("Basic", encoded);
@@ -105,7 +105,7 @@ namespace ConnectML.Infrastructure.Dispatchers
                     request.Headers.TryAddWithoutValidation(_hmacHeaderName, "sha256=" + hashHex);
                 }
 
-                Log.Information($"[Webhook Outbound] Disparando {method.ToString()} para {_webhookUrl}...");
+                Log.Information($"[WEBHOOK-OUT] Disparando {method.ToString()} para {_webhookUrl}...");
 
                 // 4. Envio HTTP na nuvem com Polly (Exponential Backoff de 3 tentativas: 2s, 4s, 8s)
                 var retryPolicy = Policy
@@ -116,7 +116,7 @@ namespace ConnectML.Infrastructure.Dispatchers
                         sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), // 2s, 4s, 8s
                         onRetry: (outcome, timespan, retryAttempt, context) =>
                         {
-                            Log.Warning($"[Webhook Outbound] Falha no disparo. Tentativa {retryAttempt} de 3. Aguardando {timespan.TotalSeconds} segundos para re-tentativa...");
+                            Log.Warning($"[WEBHOOK-OUT] Falha no disparo. Tentativa {retryAttempt} de 3. Aguardando {timespan.TotalSeconds} segundos para nova tentativa...");
                         }
                     );
 
@@ -151,17 +151,17 @@ namespace ConnectML.Infrastructure.Dispatchers
 
                 if (response.IsSuccessStatusCode)
                 {
-                    Log.Information($"[Webhook Outbound] Resposta de sucesso recebida (StatusCode: {response.StatusCode}).");
+                    Log.Information($"[WEBHOOK-OUT] Resposta de sucesso recebida (StatusCode: {response.StatusCode}).");
                 }
                 else
                 {
                     string errorMsg = await response.Content.ReadAsStringAsync();
-                    Log.Error($"[Webhook Outbound] Falha definitiva no envio do Webhook após 3 tentativas. (StatusCode: {response.StatusCode}): {errorMsg}");
+                    Log.Error($"[WEBHOOK-OUT] Falha definitiva no envio após 3 tentativas. (StatusCode: {response.StatusCode}): {errorMsg}");
                 }
             }
             catch (Exception ex)
             {
-                Log.Error($"[Webhook Outbound] Falha definitiva no envio do Webhook após 3 tentativas. Erro crítico: {ex.Message}");
+                Log.Error($"[WEBHOOK-OUT] Falha definitiva no envio após 3 tentativas. Erro crítico: {ex.Message}");
             }
         }
     }

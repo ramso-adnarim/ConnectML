@@ -48,7 +48,7 @@ namespace ConnectML.Core
                 // Verifica se encontrou medições
                 if (!statusElements.Any())
                 {
-                    Log.Warning($"[QIF PARSER] Nenhuma característica encontrada na medição ID {latestId}");
+                    Log.Warning($"[QIF PARSER] Nenhuma característica encontrada em ID {latestId}");
                     return (false, 0, "Desconhecido");
                 }
 

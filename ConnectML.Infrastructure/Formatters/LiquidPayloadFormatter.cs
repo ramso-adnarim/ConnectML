@@ -17,7 +17,7 @@ namespace ConnectML.Infrastructure.Formatters
         {
             if (string.IsNullOrWhiteSpace(templateSource))
             {
-                Log.Warning("[Liquid Formatter] O template de Payload está vazio. Retornando JSON padrão.");
+                Log.Warning("[TEMPLATE] O template de Payload está vazio. Retornando JSON padrão.");
                 return $"{{\"IsOk\": {isOk.ToString().ToLower()}, \"FailCount\": {failCount}, \"Product\": \"{product}\"}}";
             }
 
@@ -43,13 +43,13 @@ namespace ConnectML.Infrastructure.Formatters
                 }
                 else
                 {
-                    Log.Error($"[Liquid Formatter] Erro de sintaxe no template fornecido pela UI: {error}");
+                    Log.Error($"[TEMPLATE] Erro de sintaxe no template fornecido pela UI: {error}");
                     throw new Exception("Falha ao compilar Template Liquid: " + error);
                 }
             }
             catch (Exception ex)
             {
-                Log.Error($"[Liquid Formatter] Falha crítica na formatação do payload: {ex.Message}");
+                Log.Error($"[TEMPLATE] Falha crítica na formatação do payload: {ex.Message}");
                 throw;
             }
         }

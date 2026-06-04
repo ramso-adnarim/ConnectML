@@ -18,7 +18,7 @@ namespace ConnectML.UI.Endpoints
         {
             endpoints.MapPost("/api/webhooks/incoming", async (HttpContext context, IInboundDispatcher dispatcher, WebhookInboundConfig config) =>
             {
-                Log.Information("[Webhook Inbound] Requisição recebida em /api/webhooks/incoming.");
+                Log.Information("[WEBHOOK-IN] Requisição recebida em /api/webhooks/incoming.");
                 
                 // Allow reading body multiple times (just in case)
                 context.Request.EnableBuffering();
@@ -31,7 +31,7 @@ namespace ConnectML.UI.Endpoints
                 
                 if (string.IsNullOrWhiteSpace(payload))
                 {
-                    Log.Warning("[Webhook Inbound] Requisição ignorada: Payload vazio.");
+                    Log.Warning("[WEBHOOK-IN] Requisição ignorada: Payload vazio.");
                     return Results.BadRequest(new { error = "Payload vazio." });
                 }
 
@@ -40,7 +40,7 @@ namespace ConnectML.UI.Endpoints
                 {
                     if (!context.Request.Headers.TryGetValue(config.HmacHeaderName, out var signatureHeader) || string.IsNullOrWhiteSpace(signatureHeader))
                     {
-                        Log.Warning($"[Webhook Inbound] Falha: Cabeçalho HMAC '{config.HmacHeaderName}' ausente.");
+                        Log.Warning($"[WEBHOOK-IN] Falha: Cabeçalho HMAC '{config.HmacHeaderName}' ausente.");
                         return Results.Unauthorized();
                     }
 
@@ -54,18 +54,18 @@ namespace ConnectML.UI.Endpoints
 
                         if (!string.Equals(hashHex, signatureHeader.ToString(), System.StringComparison.OrdinalIgnoreCase))
                         {
-                            Log.Warning("[Webhook Inbound] Tentativa de injeção bloqueada: Assinatura HMAC inválida.");
+                            Log.Warning("[WEBHOOK-IN] Tentativa de injeção bloqueada: Assinatura HMAC inválida.");
                             return Results.Unauthorized();
                         }
                     }
                     catch (System.Exception ex)
                     {
-                        Log.Error($"[Webhook Inbound] Falha ao processar HMAC: {ex.Message}");
+                        Log.Error($"[WEBHOOK-IN] Falha ao processar HMAC: {ex.Message}");
                         return Results.Unauthorized();
                     }
                 }
 
-                Log.Information($"[Webhook Inbound] Payload recebido ({payload.Length} bytes). Despachando...");
+                Log.Information($"[WEBHOOK-IN] Payload recebido ({payload.Length} bytes). Despachando...");
 
                 // Repassa assincronamente para a serial local
                 await dispatcher.DispatchIncomingPayloadAsync(payload);

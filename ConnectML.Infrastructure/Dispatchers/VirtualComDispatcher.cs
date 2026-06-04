@@ -22,11 +22,11 @@ namespace ConnectML.Infrastructure.Dispatchers
             {
                 try
                 {
-                    Log.Information($"[VirtualComDispatcher] Enviando pacote via porta {_comPort}...");
+                    Log.Information($"[VCOM] Enviando pacote via porta {_comPort}...");
                     
                     if (string.IsNullOrEmpty(_comPort) || _comPort == "OFF")
                     {
-                        Log.Warning("[VirtualComDispatcher] Nenhuma porta COM configurada para o repasse.");
+                        Log.Warning("[VCOM] Nenhuma porta COM configurada para o repasse.");
                         return;
                     }
 
@@ -37,11 +37,11 @@ namespace ConnectML.Infrastructure.Dispatchers
                         serialPort.WriteLine(payload); // Despacho via porta serial
                     }
                     
-                    Log.Information($"[VirtualComDispatcher] Sucesso ao enviar para a {_comPort}.");
+                    Log.Information($"[VCOM] Sucesso ao enviar para a {_comPort}.");
                 }
                 catch (Exception ex)
                 {
-                    Log.Error($"[VirtualComDispatcher] Falha de comunicação na porta {_comPort}: {ex.Message}");
+                    Log.Error($"[VCOM] Falha de comunicação na porta {_comPort}: {ex.Message}");
                 }
             });
         }

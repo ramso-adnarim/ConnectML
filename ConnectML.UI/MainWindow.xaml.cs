@@ -731,7 +731,7 @@ namespace ConnectML.UI
 
             if (!shouldRetry)
             {
-                // Customer clicou em "Cancelar" ou fechou a contagem regressiva ou clicou no "Parar" principal
+                // Usuãrio clicou em "Cancelar" ou fechou a contagem regressiva ou clicou no "Parar" principal
                 Log.Information("[Auto-Start Retry] Tentativas de conexão canceladas pelo usuário.");
                 await StopService();
 
@@ -1159,7 +1159,7 @@ namespace ConnectML.UI
                 // Bloqueia imediatamente
                 _isLocked = true;
                 ApplySecurityState();
-                Log.Information("[Segurança] Aplicativo bloqueado pelo customer.");
+                Log.Information("[Segurança] Aplicação bloqueada.");
             }
             else
             {
@@ -1174,7 +1174,7 @@ namespace ConnectML.UI
                 {
                     _isLocked = false;
                     ApplySecurityState();
-                    Log.Information("[Segurança] Aplicativo desbloqueado com sucesso com credenciais administrativas.");
+                    Log.Information("[Segurança] Aplicação desbloqueada com sucesso.");
                 }
             }
         }
