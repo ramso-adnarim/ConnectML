@@ -642,7 +642,7 @@
                                              </ComboBox>
                                          </StackPanel>
                                          <StackPanel x:Name="PnlS7CpuTypeConfig" Grid.Column="2" Visibility="Collapsed">
-                                             <TextBlock Text="Tipo de CPU" FontSize="14" FontWeight="Medium" Foreground="#cbd5e1" Margin="0,0,0,6"/>
+                                            <TextBlock Text="Tipo de CPU" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,6"/>
                                              <ComboBox x:Name="CmbS7CpuType" 
                                                        Height="28" 
                                                        VerticalAlignment="Center">
