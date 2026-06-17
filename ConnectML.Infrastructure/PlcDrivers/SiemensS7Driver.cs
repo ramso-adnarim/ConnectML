@@ -17,6 +17,7 @@ namespace ConnectML.Infrastructure.PlcDrivers
         private string? _lastIp;
         private int _lastRack;
         private int _lastSlot;
+        private string _lastCpuType = "S71500";
 
         public string ProtocolName => "Siemens S7 (Profinet/ISO-on-TCP)";
         public bool IsConnected => _plc != null && _plc.IsConnected;
@@ -26,21 +27,30 @@ namespace ConnectML.Infrastructure.PlcDrivers
             _logger = logger;
         }
 
-        public async Task ConnectAsync(string ip, int rack, int slot)
+        public async Task ConnectAsync(string ip, int rack, int slot, string cpuType = "S71500")
         {
             try
             {
-                // Configuração padrão
-                var cpuType = CpuType.S71500; // Compatível com S7-1500/1200
+                // Mapeia string para o enum CpuType do S7.Net
+                var parsedCpuType = cpuType switch
+                {
+                    "S7200" => CpuType.S7200,
+                    "S7300" => CpuType.S7300,
+                    "S7400" => CpuType.S7400,
+                    "S71200" => CpuType.S71200,
+                    "S71500" => CpuType.S71500,
+                    _ => CpuType.S71500
+                };
 
-                _logger.LogInformation($"[S7 REAL] Tentando conectar ao CLP em {ip} (Rack: {rack}, Slot: {slot})...");
+                _logger.LogInformation($"[S7 REAL] Tentando conectar ao CLP em {ip} (CPU: {parsedCpuType}, Rack: {rack}, Slot: {slot})...");
 
                 _lastIp = ip;
                 _lastRack = rack;
                 _lastSlot = slot;
+                _lastCpuType = cpuType;
 
                 // Inicializa a conexão
-                _plc = new Plc(cpuType, ip, (short)rack, (short)slot);
+                _plc = new Plc(parsedCpuType, ip, (short)rack, (short)slot);
                 _plc.ReadTimeout = 3000;
                 _plc.WriteTimeout = 3000;
 
@@ -358,9 +368,17 @@ namespace ConnectML.Infrastructure.PlcDrivers
         {
              if (_plc == null && _lastIp != null)
              {
-                 // Re-create instance if missing (unlikely if constructor called, but safe)
-                 var cpuType = CpuType.S71500;
-                 _plc = new Plc(cpuType, _lastIp, (short)_lastRack, (short)_lastSlot);
+                  // Re-create instance if missing (unlikely if constructor called, but safe)
+                  var cpuType = _lastCpuType switch
+                  {
+                      "S7200" => CpuType.S7200,
+                      "S7300" => CpuType.S7300,
+                      "S7400" => CpuType.S7400,
+                      "S71200" => CpuType.S71200,
+                      "S71500" => CpuType.S71500,
+                      _ => CpuType.S71500
+                  };
+                  _plc = new Plc(cpuType, _lastIp, (short)_lastRack, (short)_lastSlot);
              }
 
              if (_plc != null)

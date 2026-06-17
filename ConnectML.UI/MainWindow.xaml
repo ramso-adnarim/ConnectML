@@ -624,17 +624,36 @@
                                 </Border>
 
                                 <StackPanel x:Name="PnlIntegrationBody" Margin="24,12">
-                                    <StackPanel Margin="0,0,0,16" HorizontalAlignment="Stretch">
-                                        <TextBlock Text="Protocolo de Comunicação" FontSize="14" FontWeight="Medium" Foreground="#cbd5e1" Margin="0,0,0,6"/>
-                                        <ComboBox x:Name="CmbProtocol" 
-                                                  SelectedIndex="1"
-                                                  Height="28" 
-                                                  VerticalAlignment="Center"
-                                                  SelectionChanged="CmbProtocol_SelectionChanged">
-                                            <ComboBoxItem Content="Siemens S7 (Profinet)"/>
-                                            <ComboBoxItem Content="Webhook REST Genérico"/>
-                                        </ComboBox>
-                                    </StackPanel>
+                                     <Grid Margin="0,0,0,16" HorizontalAlignment="Stretch">
+                                         <Grid.ColumnDefinitions>
+                                             <ColumnDefinition Width="2*"/>
+                                             <ColumnDefinition Width="16"/>
+                                             <ColumnDefinition Width="*"/>
+                                         </Grid.ColumnDefinitions>
+                                         <StackPanel Grid.Column="0">
+                                             <TextBlock Text="Protocolo de Comunicação" FontSize="14" FontWeight="Medium" Foreground="#cbd5e1" Margin="0,0,0,6"/>
+                                             <ComboBox x:Name="CmbProtocol" 
+                                                       SelectedIndex="1" 
+                                                       Height="28" 
+                                                       VerticalAlignment="Center"
+                                                       SelectionChanged="CmbProtocol_SelectionChanged">
+                                                 <ComboBoxItem Content="Siemens S7 (Profinet)"/>
+                                                 <ComboBoxItem Content="Webhook REST Genérico"/>
+                                             </ComboBox>
+                                         </StackPanel>
+                                         <StackPanel x:Name="PnlS7CpuTypeConfig" Grid.Column="2" Visibility="Collapsed">
+                                             <TextBlock Text="Tipo de CPU" FontSize="14" FontWeight="Medium" Foreground="#cbd5e1" Margin="0,0,0,6"/>
+                                             <ComboBox x:Name="CmbS7CpuType" 
+                                                       Height="28" 
+                                                       VerticalAlignment="Center">
+                                                 <ComboBoxItem Content="S7-1500" Tag="S71500"/>
+                                                 <ComboBoxItem Content="S7-1200" Tag="S71200"/>
+                                                 <ComboBoxItem Content="S7-400" Tag="S7400"/>
+                                                 <ComboBoxItem Content="S7-300" Tag="S7300"/>
+                                                 <ComboBoxItem Content="S7-200" Tag="S7200"/>
+                                             </ComboBox>
+                                         </StackPanel>
+                                     </Grid>
 
                                     <!-- SIEMENS S7 Fields -->
                                     <Grid Margin="0,0,0,16" x:Name="PnlSiemensConfig" Visibility="Collapsed">

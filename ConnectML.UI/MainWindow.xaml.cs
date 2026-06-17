@@ -581,12 +581,14 @@ namespace ConnectML.UI
                     var logger = new ConnectML.UI.Utils.SerilogLoggerAdapter<ConnectML.Infrastructure.PlcDrivers.SiemensS7Driver>();
                     _plcDriver = new ConnectML.Infrastructure.PlcDrivers.SiemensS7Driver(logger);
 
-                    await _plcDriver.ConnectAsync(ip, rack, slot);
+                    string cpuType = (CmbS7CpuType.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "S71500";
+                    await _plcDriver.ConnectAsync(ip, rack, slot, cpuType);
                 }
                 catch (Exception ex)
                 {
+                     string cpuType = (CmbS7CpuType.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "S71500";
                      Log.Warning(ex, $"[Startup] Falha na conexão com o CLP no IP {ip}. Iniciando tentativa regressiva...");
-                     _ = HandlePlcConnectionFailureAsync(ip, rack, slot, path);
+                     _ = HandlePlcConnectionFailureAsync(ip, rack, slot, cpuType, path);
                      return;
                 }
             }
@@ -689,7 +691,7 @@ namespace ConnectML.UI
             StopTrayAnimation();
         }
 
-        private async Task HandlePlcConnectionFailureAsync(string ip, int rack, int slot, string path)
+        private async Task HandlePlcConnectionFailureAsync(string ip, int rack, int slot, string cpuType, string path)
         {
             // Evita disparar multiplas retentativas concorrentes
             if (_isRetrying) return;
@@ -757,10 +759,10 @@ namespace ConnectML.UI
             var token = _retryCts.Token;
 
             // Executa o loop de retentativas em segundo plano para não congelar a interface
-            _ = Task.Run(async () => await RunProgressiveRetryLoopAsync(ip, rack, slot, path, token), token);
+            _ = Task.Run(async () => await RunProgressiveRetryLoopAsync(ip, rack, slot, cpuType, path, token), token);
         }
 
-        private async Task RunProgressiveRetryLoopAsync(string ip, int rack, int slot, string path, CancellationToken token)
+        private async Task RunProgressiveRetryLoopAsync(string ip, int rack, int slot, string cpuType, string path, CancellationToken token)
         {
             int attempts = 0;
             while (!token.IsCancellationRequested)
@@ -771,7 +773,7 @@ namespace ConnectML.UI
                 try
                 {
                     // Tenta conectar ao CLP
-                    await _plcDriver!.ConnectAsync(ip, rack, slot);
+                    await _plcDriver!.ConnectAsync(ip, rack, slot, cpuType);
 
                     // Conexão bem-sucedida! Finaliza o retry com sucesso
                     if (token.IsCancellationRequested) return;
@@ -1332,6 +1334,7 @@ namespace ConnectML.UI
                         TxtIp.Text = config.IpAddress;
                         TxtRack.Text = config.Rack;
                         TxtSlot.Text = config.Slot;
+                        SelectComboBoxItemByTag(CmbS7CpuType, config.S7CpuType ?? "S71500");
                         TxtDbBool.Text = config.DbAddressBool;
                         TxtDbInt.Text = config.DbAddressInt;
                         TxtDbPartNumber.Text = config.DbAddressPartNumber ?? "DB10.6";
@@ -1389,6 +1392,19 @@ namespace ConnectML.UI
             }
         }
 
+        private void SelectComboBoxItemByTag(ComboBox cb, string? targetTag)
+        {
+            if (string.IsNullOrEmpty(targetTag)) return;
+            foreach (var item in cb.Items)
+            {
+                if (item is ComboBoxItem cbi && cbi.Tag?.ToString() == targetTag)
+                {
+                    cb.SelectedItem = cbi;
+                    return;
+                }
+            }
+        }
+
         private void SaveSettings()
         {
             try
@@ -1407,6 +1423,7 @@ namespace ConnectML.UI
                     IpAddress = TxtIp.Text,
                     Rack = TxtRack.Text,
                     Slot = TxtSlot.Text,
+                    S7CpuType = (CmbS7CpuType.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "S71500",
                     DbAddressBool = TxtDbBool.Text,
                     DbAddressInt = TxtDbInt.Text,
                     DbAddressPartNumber = TxtDbPartNumber.Text,
@@ -1438,12 +1455,13 @@ namespace ConnectML.UI
                 TxtInlineWarning.Text = "";
                 TxtInlineWarning.Visibility = Visibility.Collapsed;
             }
-            if (PnlSiemensConfig == null || PnlWebhookConfig == null) return;
+            if (PnlSiemensConfig == null || PnlWebhookConfig == null || PnlS7CpuTypeConfig == null) return;
             
             if (CmbProtocol.SelectedIndex == 0) // Siemens
             {
                 PnlSiemensConfig.Visibility = Visibility.Visible;
                 PnlSiemensDbConfig.Visibility = Visibility.Visible;
+                PnlS7CpuTypeConfig.Visibility = Visibility.Visible;
                 
                 PnlWebhookConfig.Visibility = Visibility.Collapsed;
             }
@@ -1451,6 +1469,7 @@ namespace ConnectML.UI
             {
                 PnlSiemensConfig.Visibility = Visibility.Collapsed;
                 PnlSiemensDbConfig.Visibility = Visibility.Collapsed;
+                PnlS7CpuTypeConfig.Visibility = Visibility.Collapsed;
                 
                 PnlWebhookConfig.Visibility = Visibility.Visible;
             }
@@ -1624,7 +1643,8 @@ namespace ConnectML.UI
 
             try
             {
-                await driver.ConnectAsync(ip, rack, slot);
+                string cpuType = (CmbS7CpuType.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "S71500";
+                await driver.ConnectAsync(ip, rack, slot, cpuType);
                 await testAction(driver);
             }
             catch (Exception ex)

@@ -14,6 +14,7 @@ namespace ConnectML.UI.Models
         public string IpAddress { get; set; } = "192.168.0.1";
         public string Rack { get; set; } = "0";
         public string Slot { get; set; } = "1";
+        public string S7CpuType { get; set; } = "S71500";
         public string DbAddressBool { get; set; } = "DB10.0";
         public string DbAddressInt { get; set; } = "DB10.2";
         public string DbAddressPartNumber { get; set; } = "DB10.6";

@@ -8,11 +8,11 @@ namespace ConnectML.Core
     {
         public bool IsConnected { get; private set; }
 
-        public async Task ConnectAsync(string ip, int rack, int slot)
+        public async Task ConnectAsync(string ip, int rack, int slot, string cpuType = "S71500")
         {
             await Task.Delay(100); // Simula conexão
             IsConnected = true;
-            Log.Information($"[PLC MOCK] Conectado ao PLC Siemens S7 em {ip} (Rack: {rack}, Slot: {slot})");
+            Log.Information($"[PLC MOCK] Conectado ao PLC Siemens S7 ({cpuType}) em {ip} (Rack: {rack}, Slot: {slot})");
         }
 
         public async Task DisconnectAsync()
