@@ -1878,7 +1878,27 @@ namespace ConnectML.UI
 
         private void TxtIp_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
-            e.Handled = !System.Text.RegularExpressions.Regex.IsMatch(e.Text, @"^[0-9.]+$");
+            var textBox = sender as TextBox;
+            if (textBox == null) return;
+
+            // Only allow digits and dots
+            if (!System.Text.RegularExpressions.Regex.IsMatch(e.Text, @"^[0-9.]+$"))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            // Block consecutive dots
+            if (e.Text == ".")
+            {
+                int caret = textBox.CaretIndex;
+                string text = textBox.Text;
+                if (caret > 0 && text[caret - 1] == '.')
+                {
+                    e.Handled = true;
+                    return;
+                }
+            }
         }
 
         private string _prevIpText = "";
@@ -1897,7 +1917,12 @@ namespace ConnectML.UI
             textBox.TextChanged -= TxtIp_TextChanged;
             try
             {
-                string clean = new string(currentText.Where(c => char.IsDigit(c) || c == '.').ToArray());
+                string cleanText = currentText;
+                while (cleanText.Contains(".."))
+                {
+                    cleanText = cleanText.Replace("..", ".");
+                }
+                string clean = new string(cleanText.Where(c => char.IsDigit(c) || c == '.').ToArray());
                 string[] parts = clean.Split('.');
                 List<string> validatedParts = new List<string>();
                 bool changed = false;
@@ -2074,46 +2099,135 @@ namespace ConnectML.UI
             }
         }
 
-        private void TxtDb_LostFocus(object sender, RoutedEventArgs e)
+        private void TxtDbBool_LostFocus(object sender, RoutedEventArgs e)
         {
-            var textBox = sender as TextBox;
-            if (textBox == null) return;
+            ValidateAndFormatDbAddress(sender as TextBox, "bool");
+        }
 
+        private void TxtDbInt_LostFocus(object sender, RoutedEventArgs e)
+        {
+            ValidateAndFormatDbAddress(sender as TextBox, "int");
+        }
+
+        private void TxtDbPartNumber_LostFocus(object sender, RoutedEventArgs e)
+        {
+            ValidateAndFormatDbAddress(sender as TextBox, "string");
+        }
+
+        private void TxtDbStatus_LostFocus(object sender, RoutedEventArgs e)
+        {
+            ValidateAndFormatDbAddress(sender as TextBox, "bool");
+        }
+
+        private void ValidateAndFormatDbAddress(TextBox? textBox, string dbType)
+        {
+            if (textBox == null) return;
             string text = textBox.Text.Trim().ToUpper();
 
             if (text == "DB" || string.IsNullOrEmpty(text))
             {
-                textBox.Text = "DB10.0";
+                if (dbType == "bool") textBox.Text = "DB10.DBX0.0";
+                else if (dbType == "int") textBox.Text = "DB10.DBW2";
+                else textBox.Text = "DB10.DBB6";
                 return;
             }
 
-            if (System.Text.RegularExpressions.Regex.IsMatch(text, @"^DB\d+$"))
+            try
             {
-                text += ".0";
-            }
-            else if (System.Text.RegularExpressions.Regex.IsMatch(text, @"^DB\d+\.$"))
-            {
-                text += "0";
-            }
-
-            var match = System.Text.RegularExpressions.Regex.Match(text, @"^DB(\d+)\.(DB[XWBD])?(\d+)(?:\.(\d+))?$");
-            if (match.Success)
-            {
-                string dbNumStr = match.Groups[1].Value;
-                string typeStr = match.Groups[2].Value;
-                string offsetStr = match.Groups[3].Value;
-                string bitStr = match.Groups[4].Value;
-
-                int dbNum = int.Parse(dbNumStr);
-                int offset = int.Parse(offsetStr);
-
-                string normalized = $"DB{dbNum}.{typeStr}{offset}";
-                if (!string.IsNullOrEmpty(bitStr))
+                if (text.StartsWith("DB"))
                 {
-                    int bit = int.Parse(bitStr);
-                    normalized += $".{bit}";
+                    string rest = text.Substring(2);
+                    if (rest.Contains("DB"))
+                    {
+                        var parts = rest.Split('.');
+                        for (int i = 0; i < parts.Length; i++)
+                        {
+                            if (parts[i].StartsWith("DB") && parts[i].Length > 2 && char.IsDigit(parts[i][2]))
+                            {
+                                parts[i] = parts[i].Substring(2);
+                            }
+                        }
+                        text = "DB" + string.Join(".", parts);
+                    }
                 }
-                textBox.Text = normalized;
+
+                var match = System.Text.RegularExpressions.Regex.Match(text, @"^DB(\d+)\.([A-Z]+)?(\d+)(?:\.(\d+))?$");
+                if (match.Success)
+                {
+                    string dbNumStr = match.Groups[1].Value;
+                    string typePrefix = match.Groups[2].Value;
+                    string offsetStr = match.Groups[3].Value;
+                    string bitStr = match.Groups[4].Value;
+
+                    double dbNumVal = double.Parse(dbNumStr);
+                    double offsetVal = double.Parse(offsetStr);
+                    double bitVal = string.IsNullOrEmpty(bitStr) ? 0 : double.Parse(bitStr);
+
+                    if (dbNumVal > 65535) dbNumVal = 65535;
+                    if (offsetVal > 65534) offsetVal = 65534;
+                    if (bitVal > 7) bitVal = 7;
+
+                    int dbNum = (int)dbNumVal;
+                    int offset = (int)offsetVal;
+                    int bit = (int)bitVal;
+
+                    if (dbType == "bool")
+                    {
+                        textBox.Text = $"DB{dbNum}.DBX{offset}.{bit}";
+                    }
+                    else if (dbType == "int")
+                    {
+                        textBox.Text = $"DB{dbNum}.DBW{offset}";
+                    }
+                    else
+                    {
+                        textBox.Text = $"DB{dbNum}.DBB{offset}";
+                    }
+                }
+                else
+                {
+                    var matches = System.Text.RegularExpressions.Regex.Matches(text, @"\d+");
+                    if (matches.Count >= 2)
+                    {
+                        double dbNumVal = double.Parse(matches[0].Value);
+                        double offsetVal = double.Parse(matches[1].Value);
+                        double bitVal = matches.Count > 2 ? double.Parse(matches[2].Value) : 0;
+
+                        if (dbNumVal > 65535) dbNumVal = 65535;
+                        if (offsetVal > 65534) offsetVal = 65534;
+                        if (bitVal > 7) bitVal = 7;
+
+                        int dbNum = (int)dbNumVal;
+                        int offset = (int)offsetVal;
+                        int bit = (int)bitVal;
+
+                        if (dbType == "bool")
+                        {
+                            textBox.Text = $"DB{dbNum}.DBX{offset}.{bit}";
+                        }
+                        else if (dbType == "int")
+                        {
+                            textBox.Text = $"DB{dbNum}.DBW{offset}";
+                        }
+                        else
+                        {
+                            textBox.Text = $"DB{dbNum}.DBB{offset}";
+                        }
+                    }
+                    else
+                    {
+                        if (dbType == "bool") textBox.Text = "DB10.DBX0.0";
+                        else if (dbType == "int") textBox.Text = "DB10.DBW2";
+                        else textBox.Text = "DB10.DBB6";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, $"Erro ao formatar endereço de DB: {text}. Revertendo para padrão.");
+                if (dbType == "bool") textBox.Text = "DB10.DBX0.0";
+                else if (dbType == "int") textBox.Text = "DB10.DBW2";
+                else textBox.Text = "DB10.DBB6";
             }
         }
 
