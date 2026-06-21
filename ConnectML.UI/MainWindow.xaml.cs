@@ -56,6 +56,7 @@ namespace ConnectML.UI
         private bool _isConfigCollapsed = false;
         private bool _autoHiddenBySpace = false;
         private bool _isLocked = false;
+        private string _lastValidIp = "192.168.0.1";
         private bool _testPartNumberToggle = false;
         private bool _isRetrying = false;
         private CancellationTokenSource? _retryCts;
@@ -593,7 +594,7 @@ namespace ConnectML.UI
                 }
             }
 
-            PnlConfiguration.IsEnabled = false;
+            SetConfigurationEditState(false);
 
             TxtStartStop.Text = "Parar";
             IconStartStop.Data = Geometry.Parse("M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10s10-4.48,10-10S17.52,2,12,2z M16,16H8V8h8V16z");
@@ -664,7 +665,7 @@ namespace ConnectML.UI
                 _host = null;
             }
 
-            PnlConfiguration.IsEnabled = true;
+            SetConfigurationEditState(!_isLocked);
 
             TxtStartStop.Text = "Iniciar";
             IconStartStop.Data = Geometry.Parse("M8,5.14V19.14L19,12.14L8,5.14Z");
@@ -700,7 +701,7 @@ namespace ConnectML.UI
             _isRetrying = true;
 
             // Desabilita as configurações pois iniciou o processo de ativação/retentativa
-            PnlConfiguration.IsEnabled = false;
+            SetConfigurationEditState(false);
 
             // Configura o visual do botão StartStop para "Parar" (permitir cancelar)
             TxtStartStop.Text = "Parar";
@@ -1161,6 +1162,7 @@ namespace ConnectML.UI
                 // Bloqueia imediatamente
                 _isLocked = true;
                 ApplySecurityState();
+                SaveSettings();
                 Log.Information("[Segurança] Aplicação bloqueada.");
             }
             else
@@ -1176,6 +1178,7 @@ namespace ConnectML.UI
                 {
                     _isLocked = false;
                     ApplySecurityState();
+                    SaveSettings();
                     Log.Information("[Segurança] Aplicação desbloqueada com sucesso.");
                 }
             }
@@ -1203,14 +1206,8 @@ namespace ConnectML.UI
             }
 
             // 2. Bloqueio de Inputs e Painéis de Configurações
-            if (_isLocked)
-            {
-                PnlConfiguration.IsEnabled = false;
-            }
-            else
-            {
-                PnlConfiguration.IsEnabled = !_isRunning;
-            }
+            bool isEditable = !_isLocked && !_isRunning;
+            SetConfigurationEditState(isEditable);
 
             // 3. Bloqueio de Botões de Ação
             BtnHamburger.IsEnabled = isEnabled;
@@ -1225,6 +1222,13 @@ namespace ConnectML.UI
 
             // 5. Bloqueio de Redimensionamento da Janela
             this.ResizeMode = _isLocked ? ResizeMode.NoResize : ResizeMode.CanResize;
+        }
+
+        private void SetConfigurationEditState(bool isEditable)
+        {
+            if (PnlSourceBody != null) PnlSourceBody.IsEnabled = isEditable;
+            if (PnlLogicBody != null) PnlLogicBody.IsEnabled = isEditable;
+            if (PnlIntegrationBody != null) PnlIntegrationBody.IsEnabled = isEditable;
         }
 
         private void BtnToggleLogs_Click(object sender, RoutedEventArgs e)
@@ -1327,6 +1331,9 @@ namespace ConnectML.UI
                         
                         ChkAutoStart.IsChecked = config.AutoStartEnabled;
                         _lastRunSuccessful = config.LastRunSuccessful;
+                        _isLocked = config.IsLocked;
+                        _lastValidIp = config.IpAddress ?? "192.168.0.1";
+                        ApplySecurityState();
                         
                         SelectComboBoxItemByContent(CmbProtocol, config.Protocol);
                         
@@ -1418,6 +1425,7 @@ namespace ConnectML.UI
                     Protocol = CmbProtocol.Text,
                     AutoStartEnabled = ChkAutoStart.IsChecked == true,
                     LastRunSuccessful = _lastRunSuccessful,
+                    IsLocked = _isLocked,
                     
                     // Siemens
                     IpAddress = TxtIp.Text,
@@ -1444,6 +1452,7 @@ namespace ConnectML.UI
                 };
                 string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(ConfigFile, json);
+                _lastValidIp = TxtIp.Text;
             }
             catch (Exception ex) { Log.Error($"Erro salvar: {ex.Message}"); }
         }
@@ -1860,6 +1869,252 @@ namespace ConnectML.UI
             if (string.IsNullOrEmpty(template)) return false;
             string pattern = @"\{\{\s*" + Regex.Escape(tagName) + @"\s*\}\}";
             return Regex.IsMatch(template, pattern, RegexOptions.IgnoreCase);
+        }
+
+        private void TxtNumericOnly_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            e.Handled = !System.Text.RegularExpressions.Regex.IsMatch(e.Text, @"^[0-9]+$");
+        }
+
+        private void TxtIp_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            e.Handled = !System.Text.RegularExpressions.Regex.IsMatch(e.Text, @"^[0-9.]+$");
+        }
+
+        private string _prevIpText = "";
+        private void TxtIp_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            var textBox = sender as TextBox;
+            if (textBox == null) return;
+
+            string currentText = textBox.Text;
+            if (string.IsNullOrEmpty(currentText))
+            {
+                _prevIpText = "";
+                return;
+            }
+
+            textBox.TextChanged -= TxtIp_TextChanged;
+            try
+            {
+                string clean = new string(currentText.Where(c => char.IsDigit(c) || c == '.').ToArray());
+                string[] parts = clean.Split('.');
+                List<string> validatedParts = new List<string>();
+                bool changed = false;
+
+                for (int i = 0; i < parts.Length && i < 4; i++)
+                {
+                    string part = parts[i];
+                    string digitsOnly = new string(part.Where(char.IsDigit).ToArray());
+
+                    if (digitsOnly.Length > 3)
+                    {
+                        digitsOnly = digitsOnly.Substring(0, 3);
+                        changed = true;
+                    }
+
+                    if (int.TryParse(digitsOnly, out int val))
+                    {
+                        if (val > 255)
+                        {
+                            digitsOnly = "255";
+                            changed = true;
+                        }
+                    }
+
+                    validatedParts.Add(digitsOnly);
+                }
+
+                string formatted = string.Join(".", validatedParts);
+
+                if (currentText.Length > _prevIpText.Length)
+                {
+                    string lastPart = validatedParts.LastOrDefault() ?? "";
+                    if (lastPart.Length == 3 && validatedParts.Count < 4 && !clean.EndsWith("."))
+                    {
+                        formatted += ".";
+                        changed = true;
+                    }
+                }
+
+                if (formatted != currentText || changed)
+                {
+                    int caretIndex = textBox.CaretIndex;
+                    int diff = formatted.Length - currentText.Length;
+                    textBox.Text = formatted;
+                    int newCaret = caretIndex + diff;
+                    textBox.CaretIndex = Math.Max(0, Math.Min(newCaret, formatted.Length));
+                }
+
+                _prevIpText = formatted;
+            }
+            finally
+            {
+                textBox.TextChanged += TxtIp_TextChanged;
+            }
+        }
+
+        private void TxtIp_LostFocus(object sender, RoutedEventArgs e)
+        {
+            var textBox = sender as TextBox;
+            if (textBox == null) return;
+
+            string text = textBox.Text;
+            if (System.Net.IPAddress.TryParse(text, out var ip) && ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+            {
+                string[] parts = text.Split('.');
+                if (parts.Length == 4 && parts.All(p => !string.IsNullOrEmpty(p)))
+                {
+                    _lastValidIp = text;
+                    return;
+                }
+            }
+
+            textBox.Text = _lastValidIp;
+        }
+
+        private void TxtRackSlot_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            var textBox = sender as TextBox;
+            if (textBox == null) return;
+
+            string currentText = textBox.Text;
+            if (string.IsNullOrEmpty(currentText)) return;
+
+            textBox.TextChanged -= TxtRackSlot_TextChanged;
+            try
+            {
+                string clean = new string(currentText.Where(char.IsDigit).ToArray());
+
+                if (clean.Length > 3)
+                {
+                    clean = clean.Substring(0, 3);
+                }
+
+                if (clean.Length > 1 && clean.StartsWith("0"))
+                {
+                    clean = clean.TrimStart('0');
+                    if (clean.Length == 0)
+                    {
+                        clean = "0";
+                    }
+                }
+
+                if (clean != currentText)
+                {
+                    int caretIndex = textBox.CaretIndex;
+                    int diff = clean.Length - currentText.Length;
+                    textBox.Text = clean;
+                    int newCaret = caretIndex + diff;
+                    textBox.CaretIndex = Math.Max(0, Math.Min(newCaret, clean.Length));
+                }
+            }
+            finally
+            {
+                textBox.TextChanged += TxtRackSlot_TextChanged;
+            }
+        }
+
+        private void TxtRack_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(TxtRack.Text))
+            {
+                TxtRack.Text = "0";
+            }
+        }
+
+        private void TxtSlot_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(TxtSlot.Text))
+            {
+                TxtSlot.Text = "1";
+            }
+        }
+
+        private void TxtDb_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            var textBox = sender as TextBox;
+            if (textBox == null) return;
+
+            string currentText = textBox.Text;
+            textBox.TextChanged -= TxtDb_TextChanged;
+            try
+            {
+                string text = currentText.ToUpper();
+
+                if (!text.StartsWith("DB"))
+                {
+                    string rest = new string(text.Where(c => char.IsDigit(c) || c == '.' || char.IsLetter(c)).ToArray());
+                    rest = rest.Replace("D", "").Replace("B", "");
+                    text = "DB" + rest;
+                }
+                else
+                {
+                    string rest = text.Substring(2);
+                    string cleanRest = new string(rest.Where(c => char.IsDigit(c) || c == '.' || char.IsLetter(c)).ToArray());
+                    text = "DB" + cleanRest;
+                }
+
+                if (text != currentText)
+                {
+                    int caretIndex = textBox.CaretIndex;
+                    if (caretIndex < 2)
+                    {
+                        caretIndex = 2;
+                    }
+                    int diff = text.Length - currentText.Length;
+                    textBox.Text = text;
+                    int newCaret = caretIndex + diff;
+                    textBox.CaretIndex = Math.Max(2, Math.Min(newCaret, text.Length));
+                }
+            }
+            finally
+            {
+                textBox.TextChanged += TxtDb_TextChanged;
+            }
+        }
+
+        private void TxtDb_LostFocus(object sender, RoutedEventArgs e)
+        {
+            var textBox = sender as TextBox;
+            if (textBox == null) return;
+
+            string text = textBox.Text.Trim().ToUpper();
+
+            if (text == "DB" || string.IsNullOrEmpty(text))
+            {
+                textBox.Text = "DB10.0";
+                return;
+            }
+
+            if (System.Text.RegularExpressions.Regex.IsMatch(text, @"^DB\d+$"))
+            {
+                text += ".0";
+            }
+            else if (System.Text.RegularExpressions.Regex.IsMatch(text, @"^DB\d+\.$"))
+            {
+                text += "0";
+            }
+
+            var match = System.Text.RegularExpressions.Regex.Match(text, @"^DB(\d+)\.(DB[XWBD])?(\d+)(?:\.(\d+))?$");
+            if (match.Success)
+            {
+                string dbNumStr = match.Groups[1].Value;
+                string typeStr = match.Groups[2].Value;
+                string offsetStr = match.Groups[3].Value;
+                string bitStr = match.Groups[4].Value;
+
+                int dbNum = int.Parse(dbNumStr);
+                int offset = int.Parse(offsetStr);
+
+                string normalized = $"DB{dbNum}.{typeStr}{offset}";
+                if (!string.IsNullOrEmpty(bitStr))
+                {
+                    int bit = int.Parse(bitStr);
+                    normalized += $".{bit}";
+                }
+                textBox.Text = normalized;
+            }
         }
 
         public class ConfigFieldItem : System.ComponentModel.INotifyPropertyChanged

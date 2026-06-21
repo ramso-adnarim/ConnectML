@@ -33,5 +33,6 @@ namespace ConnectML.UI.Models
         public List<Models.CustomHeader> CustomHeaders { get; set; } = new List<Models.CustomHeader>();
         public string PayloadTemplate { get; set; } = "{\n  \"status\": \"{{Status}}\",\n  \"routine\": \"{{Routine}}\",\n  \"part\": \"{{Run}}\"\n}";
         public List<string> ConfigFields { get; set; } = new List<string> { "Boolean" };
+        public bool IsLocked { get; set; } = false;
     }
 }
