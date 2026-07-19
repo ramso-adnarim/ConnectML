@@ -108,3 +108,7 @@ ipch/
 # Local History for Visual Studio
 .localhistory/
 /publish
+
+# Playbook and Roadmap
+docs/METHODOLOGY_TRANSFER.md
+docs/CONNECTML_IMPLEMENTATION_ROADMAP.md

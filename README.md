@@ -7,10 +7,9 @@ ConnectML é um middleware industrial desenvolvido para integrar dados de qualid
 
 Os arquivos de documentação do projeto podem ser encontrados na pasta `docs`. O sumário inclui:
 * [ARCHITECTURE.md](docs/ARCHITECTURE.md): Visão geral da arquitetura, fluxo de dados e decisões técnicas da aplicação.
-* [EGA_API_REQUIREMENTS.md](docs/EGA_API_REQUIREMENTS.md): Requisitos de integração e payload das APIs para o sistema EGA.
-* [PHASE2_IMPLEMENTATION_PLAN.md](docs/PHASE2_IMPLEMENTATION_PLAN.md): Plano de implementação da fase 2, estruturação e tarefas focadas na expansão.
-* [MOCKUP_GOOGLE_STITCH / CODE.html](docs/MOCKUP_GOOGLE_STITCH/CODE.html): Interface gráfica de configuração e testes interativos (Mockup HTML).
-* [QIF / QIF_SAMPLE_2_MEASUREMENTS.QIF](docs/QIF/QIF_SAMPLE_2_MEASUREMENTS.QIF): Amostra de arquivo QIF processado pelo sistema.
+* [AI_CODEBASE_MAP.md](docs/AI_CODEBASE_MAP.md): Mapa da codebase, glossário de domínio e regras vitais de negócio e estrutura.
+* [DEPLOYMENT_VELOPACK.md](docs/DEPLOYMENT_VELOPACK.md): Guia de empacotamento e distribuição utilizando Velopack.
+* Documentação de desenvolvimento e ciclo de vida: Os planejamentos e histórico estão localizados em `docs/implementations/`.
 
 ## Áreas do Projeto
 
@@ -20,17 +19,6 @@ A solução segue uma arquitetura modular em camadas (.NET 8):
 * **ConnectML.Infrastructure:** A camada de "peso pesado". Implementa os drivers de comunicação (S7NetPlus, API HTTP, etc), logs (Serilog) e acesso a arquivos.
 * **ConnectML.UI:** Aplicação Desktop WPF moderna, focada em simplicidade operacional.
 * **ConnectML.Simulator:** (Opcional) Ferramentas para simular os dispositivos de integração.
-
-## Resumo do Plano de Implementação (Fase 2)
-
-A Fase 2 foca na expansão das integrações, transformando o ConnectML em um sistema bidirecional:
-1. **Integração EGA (API):**
-   - Recebimento de comandos via API (JSON) - Ex: Comando "GO" para iniciar inspeção.
-   - Envio de dados processados para a EGA (Status, Nome da Rotina, Nome da Corrida, Evento Estatístico).
-2. **Comunicação MeasurLink:**
-   - Envio de gatilhos para o MeasurLink via portas seriais virtuais.
-3. **Mockup UI (Configuração):**
-   - Adição do protocolo EGA (API) e parametrizações bidirecionais.
 
 ## Funcionalidade Principal (Status Atual)
 
@@ -45,7 +33,7 @@ A Fase 2 foca na expansão das integrações, transformando o ConnectML em um si
 * **Logging:** Serilog
 * **Drivers e Integrações:**
   * Siemens S7: Implementado (via S7NetPlus)
-  * EGA (API REST): *Em Desenvolvimento (Fase 2)*
+  * EGA (API REST): *Em Desenvolvimento*
   * OPC UA: (Roadmap)
   * MQTT: (Roadmap)
 
