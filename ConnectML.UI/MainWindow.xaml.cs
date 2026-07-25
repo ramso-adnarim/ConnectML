@@ -1400,28 +1400,81 @@ namespace ConnectML.UI
              }
         }
 
+        private static void EnsureSettingsMigrated()
+        {
+            try
+            {
+                string targetConfig = GetConfigFilePath();
+                string currentBaseDir = AppDomain.CurrentDomain.BaseDirectory;
+                DirectoryInfo? parentDir = Directory.GetParent(currentBaseDir.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar));
+
+                FileInfo? bestLegacyFile = null;
+
+                if (parentDir != null && parentDir.Exists)
+                {
+                    var appDirs = parentDir.GetDirectories("app-*");
+                    foreach (var dir in appDirs)
+                    {
+                        if (string.Equals(dir.FullName.TrimEnd('\\'), currentBaseDir.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        string candidatePath = System.IO.Path.Combine(dir.FullName, LegacyConfigFile);
+                        if (File.Exists(candidatePath))
+                        {
+                            var fi = new FileInfo(candidatePath);
+                            if (bestLegacyFile == null || fi.LastWriteTime > bestLegacyFile.LastWriteTime)
+                            {
+                                bestLegacyFile = fi;
+                            }
+                        }
+                    }
+                }
+
+                if (bestLegacyFile == null)
+                {
+                    string fallbackPath = System.IO.Path.Combine(currentBaseDir, LegacyConfigFile);
+                    if (File.Exists(fallbackPath))
+                    {
+                        bestLegacyFile = new FileInfo(fallbackPath);
+                    }
+                }
+
+                if (bestLegacyFile != null)
+                {
+                    bool shouldCopy = false;
+                    if (!File.Exists(targetConfig))
+                    {
+                        shouldCopy = true;
+                    }
+                    else
+                    {
+                        var targetFi = new FileInfo(targetConfig);
+                        if (bestLegacyFile.LastWriteTime > targetFi.LastWriteTime)
+                        {
+                            shouldCopy = true;
+                        }
+                    }
+
+                    if (shouldCopy)
+                    {
+                        File.Copy(bestLegacyFile.FullName, targetConfig, overwrite: true);
+                        Log.Information($"Configurações migradas de '{bestLegacyFile.FullName}' para '{targetConfig}'");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Erro durante a migração de configurações legadas.");
+            }
+        }
+
         private void LoadSettings()
         {
             try
             {
+                EnsureSettingsMigrated();
+
                 string configFile = GetConfigFilePath();
-                if (!File.Exists(configFile))
-                {
-                    // Migração transparente do arquivo legado na pasta da aplicação
-                    string legacyPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, LegacyConfigFile);
-                    if (File.Exists(legacyPath))
-                    {
-                        try
-                        {
-                            File.Copy(legacyPath, configFile, overwrite: true);
-                            Log.Information($"Configurações migradas para {configFile}");
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Warning(ex, "Falha ao migrar arquivo de configuração legado.");
-                        }
-                    }
-                }
 
                 if (File.Exists(configFile))
                 {
