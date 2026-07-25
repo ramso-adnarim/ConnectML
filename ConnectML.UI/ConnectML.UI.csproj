@@ -9,7 +9,7 @@
     <RootNamespace>ConnectML.UI</RootNamespace>
     <ApplicationIcon>ConnectML-logo-ico.ico</ApplicationIcon>
     <StartupObject>ConnectML.UI.Program</StartupObject>
-    <Version>1.1.0</Version>
+    <Version>1.2.2</Version>
     <RollForward>LatestMajor</RollForward>
   </PropertyGroup>
 

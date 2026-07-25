@@ -9,6 +9,7 @@ namespace ConnectML.UI.Models
         public string Protocol { get; set; } = "Siemens S7 (Profinet)";
         public bool AutoStartEnabled { get; set; } = false;
         public bool LastRunSuccessful { get; set; } = false;
+        public bool WasServiceRunning { get; set; } = false;
         
         // Siemens S7
         public string IpAddress { get; set; } = "192.168.0.1";

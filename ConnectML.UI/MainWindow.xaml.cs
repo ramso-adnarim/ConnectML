@@ -31,6 +31,8 @@ using System.Text.Json;
 using System.Windows.Interop;
 using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
+using Velopack;
+using Velopack.Sources;
 
 namespace ConnectML.UI
 {
@@ -41,7 +43,21 @@ namespace ConnectML.UI
         private FileSystemWatcher? _watcher;
         private IPlcDriver? _plcDriver;
         private IHost? _host;
-        private const string ConfigFile = "appsettings.json";
+        private const string LegacyConfigFile = "appsettings.json";
+        private bool _wasServiceRunning = false;
+        
+        private static string GetConfigFilePath()
+        {
+            string appDataFolder = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "ConnectML"
+            );
+            if (!Directory.Exists(appDataFolder))
+            {
+                Directory.CreateDirectory(appDataFolder);
+            }
+            return System.IO.Path.Combine(appDataFolder, "appsettings.json");
+        }
         private ObservableCollection<ConfigFieldItem> _configFields = null!;
 
         // System Tray (Ícone na bandeja do sistema)
@@ -65,6 +81,11 @@ namespace ConnectML.UI
         private const double MinConfigWidth = 350; 
         private const double IdealConfigWidth = 564;
         private const double MinLogsWidth = 300;
+
+        // Velopack Auto-Update
+        private UpdateManager? _updateManager;
+        private DispatcherTimer? _updatePollingTimer;
+        private UpdateInfo? _pendingUpdate;
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         extern static bool DestroyIcon(IntPtr handle);
@@ -163,13 +184,86 @@ namespace ConnectML.UI
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            if (ChkAutoStart.IsChecked == true && _lastRunSuccessful)
+            if ((ChkAutoStart.IsChecked == true && _lastRunSuccessful) || _wasServiceRunning)
             {
                 Log.Information("Iniciando serviço e minimizando automaticamente...");
                 // Dispara o evento de start
                 BtnStartStop_Click(this, new RoutedEventArgs());
                 // Esconde a janela para a bandeja
                 BtnMinimize_Click(this, new RoutedEventArgs());
+            }
+
+            SetupAutoUpdate();
+        }
+
+        private void SetupAutoUpdate()
+        {
+            try
+            {
+                _updateManager = new UpdateManager(new GithubSource("https://github.com/ramso-adnarim/ConnectML", null, false));
+                
+                // Dispara a checagem imediatamente no startup de forma assíncrona
+                _ = CheckForUpdatesAsync(silentlyDownload: true);
+
+                // Configura o timer para checagem periódica a cada 2 horas
+                _updatePollingTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromHours(2)
+                };
+                _updatePollingTimer.Tick += (s, ev) => _ = CheckForUpdatesAsync(silentlyDownload: true);
+                _updatePollingTimer.Start();
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Erro ao configurar Velopack UpdateManager.");
+            }
+        }
+
+        private async Task CheckForUpdatesAsync(bool silentlyDownload)
+        {
+            if (_updateManager == null) return;
+
+            try
+            {
+                var newVersion = await _updateManager.CheckForUpdatesAsync();
+                if (newVersion != null)
+                {
+                    if (silentlyDownload)
+                    {
+                        // Baixa silenciosamente
+                        await _updateManager.DownloadUpdatesAsync(newVersion, (progress) => { });
+                        _pendingUpdate = newVersion;
+                        
+                        // Atualiza UI na Thread Principal
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            IconUpdateCheck.Visibility = Visibility.Collapsed;
+                            IconUpdateWarning.Visibility = Visibility.Visible;
+                            TxtUpdateStatus.Text = "Reiniciar (v" + newVersion.TargetFullRelease.Version + ")";
+                            TxtUpdateStatus.Visibility = Visibility.Visible;
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Debug(ex, "Falha silenciosa ao checar/baixar atualizações via Velopack.");
+            }
+        }
+
+        private void BtnUpdate_Click(object sender, RoutedEventArgs e)
+        {
+            if (_pendingUpdate != null && _updateManager != null)
+            {
+                // Salva o estado atual (incluindo se o serviço estava rodando) antes de reiniciar
+                SaveSettings();
+                // Se já baixou, aplica e reinicia
+                _updateManager.ApplyUpdatesAndRestart(_pendingUpdate);
+            }
+            else
+            {
+                // Verifica manualmente
+                _ = CheckForUpdatesAsync(silentlyDownload: true);
             }
         }
 
@@ -333,6 +427,7 @@ namespace ConnectML.UI
 
         protected override void OnClosed(EventArgs e)
         {
+            SaveSettings();
             _notifyIcon?.Dispose();
             _trayAnimationTimer?.Stop();
 
@@ -1309,9 +1404,28 @@ namespace ConnectML.UI
         {
             try
             {
-                if (File.Exists(ConfigFile))
+                string configFile = GetConfigFilePath();
+                if (!File.Exists(configFile))
                 {
-                    string json = File.ReadAllText(ConfigFile);
+                    // Migração transparente do arquivo legado na pasta da aplicação
+                    string legacyPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, LegacyConfigFile);
+                    if (File.Exists(legacyPath))
+                    {
+                        try
+                        {
+                            File.Copy(legacyPath, configFile, overwrite: true);
+                            Log.Information($"Configurações migradas para {configFile}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Warning(ex, "Falha ao migrar arquivo de configuração legado.");
+                        }
+                    }
+                }
+
+                if (File.Exists(configFile))
+                {
+                    string json = File.ReadAllText(configFile);
                     var config = JsonSerializer.Deserialize<AppConfig>(json);
                     if (config != null)
                     {
@@ -1331,6 +1445,7 @@ namespace ConnectML.UI
                         
                         ChkAutoStart.IsChecked = config.AutoStartEnabled;
                         _lastRunSuccessful = config.LastRunSuccessful;
+                        _wasServiceRunning = config.WasServiceRunning;
                         _isLocked = config.IsLocked;
                         _lastValidIp = config.IpAddress ?? "192.168.0.1";
                         ApplySecurityState();
@@ -1425,6 +1540,7 @@ namespace ConnectML.UI
                     Protocol = CmbProtocol.Text,
                     AutoStartEnabled = ChkAutoStart.IsChecked == true,
                     LastRunSuccessful = _lastRunSuccessful,
+                    WasServiceRunning = _isRunning,
                     IsLocked = _isLocked,
                     
                     // Siemens
@@ -1451,7 +1567,7 @@ namespace ConnectML.UI
                     CustomHeaders = headers != null ? new System.Collections.Generic.List<CustomHeader>(headers) : new System.Collections.Generic.List<CustomHeader>()
                 };
                 string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(ConfigFile, json);
+                File.WriteAllText(GetConfigFilePath(), json);
                 _lastValidIp = TxtIp.Text;
             }
             catch (Exception ex) { Log.Error($"Erro salvar: {ex.Message}"); }
