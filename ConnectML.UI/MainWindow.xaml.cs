@@ -118,6 +118,8 @@ namespace ConnectML.UI
             SetupLogging();
             InitializeTrayIcon();
             
+            AppDomain.CurrentDomain.ProcessExit += (s, e) => SaveSettings();
+
             _configFields = new ObservableCollection<ConfigFieldItem>();
             ItemsConfigList.ItemsSource = _configFields;
             
