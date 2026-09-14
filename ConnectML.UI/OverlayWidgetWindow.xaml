@@ -13,6 +13,26 @@
         Focusable="False"
         Background="{x:Null}"
         ShowActivated="False">
+
+    <Window.Resources>
+        <!-- Storyboard de Pulso GPU em Amarelo para Estado 'Aguardando Medição' -->
+        <Storyboard x:Key="PulseStoryboard" RepeatBehavior="Forever" AutoReverse="True">
+            <DoubleAnimation Storyboard.TargetName="OverlayBorder"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0.30" To="1.0" Duration="0:0:1.2">
+                <DoubleAnimation.EasingFunction>
+                    <QuadraticEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="StateDot"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0.35" To="1.0" Duration="0:0:1.2">
+                <DoubleAnimation.EasingFunction>
+                    <QuadraticEase EasingMode="EaseInOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+    </Window.Resources>
     
     <Grid x:Name="RootOverlayGrid" Background="{x:Null}">
         <!-- Borda Perimetral (IsHitTestVisible="False" garante 100% de passagem de cliques ao fundo) -->
@@ -35,12 +55,18 @@
                     HorizontalAlignment="Center"
                     VerticalAlignment="Top"
                     Padding="14,6,12,6"
-                    Cursor="Hand">
+                    Cursor="Hand"
+                    MouseLeftButtonDown="OverlayTabContainer_MouseLeftButtonDown"
+                    MouseMove="OverlayTabContainer_MouseMove"
+                    MouseLeftButtonUp="OverlayTabContainer_MouseLeftButtonUp">
+                <Border.RenderTransform>
+                    <TranslateTransform x:Name="TabTranslateTransform" X="0" Y="0"/>
+                </Border.RenderTransform>
                 <Border.Effect>
                     <DropShadowEffect Color="#000000" BlurRadius="12" ShadowDepth="3" Opacity="0.45"/>
                 </Border.Effect>
 
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel x:Name="TabContentPanel" Orientation="Horizontal" VerticalAlignment="Center">
                     <!-- Indicador Circular de Estado -->
                     <Ellipse x:Name="StateDot" Width="8" Height="8" Fill="#F59E0B" Margin="0,0,8,0" VerticalAlignment="Center"/>
                     
@@ -52,8 +78,8 @@
                                Foreground="#F8FAFC"
                                VerticalAlignment="Center"/>
 
-                    <!-- Separador Vertical Sutil -->
-                    <Rectangle Width="1" Height="14" Fill="#475569" Margin="10,0,8,0" VerticalAlignment="Center"/>
+                    <!-- Separador Sutil (Horizontal ou Vertical conforme orientação) -->
+                    <Rectangle x:Name="TabSeparator" Width="1" Height="14" Fill="#475569" Margin="10,0,8,0" VerticalAlignment="Center"/>
 
                     <!-- Botão Abrir Janela Principal -->
                     <Button x:Name="BtnRestoreMainWindow"
@@ -63,12 +89,13 @@
                             Cursor="Hand"
                             ToolTip="Abrir janela principal"
                             Click="BtnRestoreMainWindow_Click"
+                            PreviewMouseLeftButtonDown="BtnRestoreMainWindow_PreviewMouseLeftButtonDown"
                             VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal">
+                        <StackPanel x:Name="BtnContentPanel" Orientation="Horizontal" VerticalAlignment="Center">
                             <Viewbox Width="12" Height="12" Margin="0,0,4,0" VerticalAlignment="Center">
                                 <Path Fill="#94A3B8" Data="M19,19H5V5h7V3H5A2,2 0 0,0 3,5v14a2,2 0 0,0 2,2h14a2,2 0 0,0 2-2v-7h-2V19z M14,3v2h3.59l-9.83,9.83l1.41,1.41L19,6.41V10h2V3H14z"/>
                             </Viewbox>
-                            <TextBlock Text="Abrir" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtBtnRestore" Text="Abrir" FontSize="11" Foreground="#94A3B8" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
