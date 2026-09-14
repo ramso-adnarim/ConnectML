@@ -24,9 +24,21 @@ namespace ConnectML.UI
         // Evento disparado quando a posição de acoplamento da aba é alterada
         public event EventHandler<string>? SnapPositionChanged;
 
+        // Evento disparado quando as configurações do HUD são alteradas ou salvas pela janela de configurações
+        public event EventHandler<OverlaySettingsChangedEventArgs>? OverlaySettingsPersisted;
+
         public string CurrentSnapPosition => _currentSnapPosition;
+        public int BorderThicknessValue => _borderThickness;
+        public double FontSizeValue => _fontSize;
+        public int HoldSecondsValue => _holdSeconds;
+        public bool EnableOverlayValue => _enableOverlay;
 
         private string _currentSnapPosition = "Top";
+        private int _borderThickness = 3;
+        private double _fontSize = 13;
+        private int _holdSeconds = 10;
+        private bool _enableOverlay = true;
+        private OverlaySettingsWindow? _settingsDialog;
         private Storyboard? _pulseStoryboard;
 
         // Dwell Timer Conjugado (v1.3.0)
@@ -214,15 +226,90 @@ namespace ConnectML.UI
 
         #endregion
 
-        #region Configurações de Borda e Snap
+        #region Configurações de Borda, Escala e Snap
 
         /// <summary>
-        /// Atualiza dinamicamente a espessura da borda perimetral luminosa.
+        /// Aplica todas as configurações carregadas do AppConfig.
+        /// </summary>
+        public void ApplySettings(int borderThickness, double fontSize, int holdSeconds, string snapPosition, bool enableOverlay)
+        {
+            _holdSeconds = Math.Clamp(holdSeconds, 1, 30);
+            _enableOverlay = enableOverlay;
+            SetBorderThickness(borderThickness);
+            SetFontSize(fontSize);
+            SetSnapPosition(snapPosition);
+        }
+
+        /// <summary>
+        /// Atualiza dinamicamente a espessura da borda perimetral luminosa e compensa a margem da aba.
         /// </summary>
         public void SetBorderThickness(int thickness)
         {
-            thickness = Math.Clamp(thickness, 1, 12);
-            OverlayBorder.BorderThickness = new Thickness(thickness);
+            _borderThickness = Math.Clamp(thickness, 1, 12);
+            OverlayBorder.BorderThickness = new Thickness(_borderThickness);
+            UpdateTabMargin();
+        }
+
+        /// <summary>
+        /// Atualiza dinamicamente a escala da fonte e o tamanho de todos os elementos da aba.
+        /// </summary>
+        public void SetFontSize(double size)
+        {
+            _fontSize = Math.Clamp(size, 11, 22);
+
+            Dispatcher.Invoke(() =>
+            {
+                TxtOverlayStatus.FontSize = _fontSize;
+
+                // Escala os elementos visuais de forma proporcional para visibilidade industrial à distância
+                double dotSize = Math.Round(_fontSize * 0.7);
+                StateDot.Width = dotSize;
+                StateDot.Height = dotSize;
+
+                double iconSize = Math.Max(12, Math.Round(_fontSize * 0.95));
+                IconSettingsViewbox.Width = iconSize;
+                IconSettingsViewbox.Height = iconSize;
+                IconRestoreViewbox.Width = iconSize;
+                IconRestoreViewbox.Height = iconSize;
+
+                double gripW = Math.Max(9, Math.Round(_fontSize * 0.75));
+                double gripH = Math.Max(13, Math.Round(_fontSize * 1.05));
+                GripViewbox.Width = gripW;
+                GripViewbox.Height = gripH;
+
+                TxtBtnRestore.FontSize = Math.Max(10, _fontSize - 2);
+
+                // Padding da aba cresce harmoniosamente com a fonte
+                double padH = Math.Round(_fontSize * 0.9);
+                double padV = Math.Round(_fontSize * 0.45);
+                OverlayTabContainer.Padding = new Thickness(padH, padV, padH, padV);
+            });
+        }
+
+        /// <summary>
+        /// Compensa a margem da aba com base na espessura da borda perimetral ativa.
+        /// </summary>
+        private void UpdateTabMargin()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                switch (_currentSnapPosition)
+                {
+                    case "BOTTOM":
+                        OverlayTabContainer.Margin = new Thickness(0, 0, 0, _borderThickness);
+                        break;
+                    case "LEFT":
+                        OverlayTabContainer.Margin = new Thickness(_borderThickness, 0, 0, 0);
+                        break;
+                    case "RIGHT":
+                        OverlayTabContainer.Margin = new Thickness(0, 0, _borderThickness, 0);
+                        break;
+                    case "TOP":
+                    default:
+                        OverlayTabContainer.Margin = new Thickness(0, _borderThickness, 0, 0);
+                        break;
+                }
+            });
         }
 
         /// <summary>
@@ -242,11 +329,19 @@ namespace ConnectML.UI
                         OverlayTabContainer.CornerRadius = new CornerRadius(8, 8, 0, 0);
                         OverlayTabContainer.BorderThickness = new Thickness(1, 1, 1, 0);
                         TabContentPanel.Orientation = Orientation.Horizontal;
-                        TabSeparator.Width = 1;
-                        TabSeparator.Height = 14;
-                        TabSeparator.Margin = new Thickness(10, 0, 8, 0);
-                        StateDot.Margin = new Thickness(0, 0, 8, 0);
+
+                        TextRotateTransform.Angle = 0;
+                        TxtOverlayStatus.Margin = new Thickness(0);
                         TxtOverlayStatus.TextAlignment = TextAlignment.Left;
+
+                        TabSeparator1.Width = 1; TabSeparator1.Height = 14;
+                        TabSeparator1.Margin = new Thickness(10, 0, 8, 0);
+                        TabSeparator2.Width = 1; TabSeparator2.Height = 14;
+                        TabSeparator2.Margin = new Thickness(6, 0, 8, 0);
+
+                        StateDot.Margin = new Thickness(0, 0, 8, 0);
+                        GripHandle.Margin = new Thickness(0, 0, 8, 0);
+                        TxtBtnRestore.Visibility = Visibility.Visible;
                         break;
 
                     case "LEFT":
@@ -255,11 +350,19 @@ namespace ConnectML.UI
                         OverlayTabContainer.CornerRadius = new CornerRadius(0, 8, 8, 0);
                         OverlayTabContainer.BorderThickness = new Thickness(0, 1, 1, 1);
                         TabContentPanel.Orientation = Orientation.Vertical;
-                        TabSeparator.Width = 24;
-                        TabSeparator.Height = 1;
-                        TabSeparator.Margin = new Thickness(0, 8, 0, 8);
-                        StateDot.Margin = new Thickness(0, 0, 0, 6);
+
+                        TextRotateTransform.Angle = 90;
+                        TxtOverlayStatus.Margin = new Thickness(0, 8, 0, 8);
                         TxtOverlayStatus.TextAlignment = TextAlignment.Center;
+
+                        TabSeparator1.Width = 18; TabSeparator1.Height = 1;
+                        TabSeparator1.Margin = new Thickness(0, 8, 0, 8);
+                        TabSeparator2.Width = 18; TabSeparator2.Height = 1;
+                        TabSeparator2.Margin = new Thickness(0, 6, 0, 8);
+
+                        StateDot.Margin = new Thickness(0, 0, 0, 6);
+                        GripHandle.Margin = new Thickness(0, 0, 0, 8);
+                        TxtBtnRestore.Visibility = Visibility.Collapsed;
                         break;
 
                     case "RIGHT":
@@ -268,11 +371,19 @@ namespace ConnectML.UI
                         OverlayTabContainer.CornerRadius = new CornerRadius(8, 0, 0, 8);
                         OverlayTabContainer.BorderThickness = new Thickness(1, 1, 0, 1);
                         TabContentPanel.Orientation = Orientation.Vertical;
-                        TabSeparator.Width = 24;
-                        TabSeparator.Height = 1;
-                        TabSeparator.Margin = new Thickness(0, 8, 0, 8);
-                        StateDot.Margin = new Thickness(0, 0, 0, 6);
+
+                        TextRotateTransform.Angle = -90;
+                        TxtOverlayStatus.Margin = new Thickness(0, 8, 0, 8);
                         TxtOverlayStatus.TextAlignment = TextAlignment.Center;
+
+                        TabSeparator1.Width = 18; TabSeparator1.Height = 1;
+                        TabSeparator1.Margin = new Thickness(0, 8, 0, 8);
+                        TabSeparator2.Width = 18; TabSeparator2.Height = 1;
+                        TabSeparator2.Margin = new Thickness(0, 6, 0, 8);
+
+                        StateDot.Margin = new Thickness(0, 0, 0, 6);
+                        GripHandle.Margin = new Thickness(0, 0, 0, 8);
+                        TxtBtnRestore.Visibility = Visibility.Collapsed;
                         break;
 
                     case "TOP":
@@ -283,14 +394,23 @@ namespace ConnectML.UI
                         OverlayTabContainer.CornerRadius = new CornerRadius(0, 0, 8, 8);
                         OverlayTabContainer.BorderThickness = new Thickness(1, 0, 1, 1);
                         TabContentPanel.Orientation = Orientation.Horizontal;
-                        TabSeparator.Width = 1;
-                        TabSeparator.Height = 14;
-                        TabSeparator.Margin = new Thickness(10, 0, 8, 0);
-                        StateDot.Margin = new Thickness(0, 0, 8, 0);
+
+                        TextRotateTransform.Angle = 0;
+                        TxtOverlayStatus.Margin = new Thickness(0);
                         TxtOverlayStatus.TextAlignment = TextAlignment.Left;
+
+                        TabSeparator1.Width = 1; TabSeparator1.Height = 14;
+                        TabSeparator1.Margin = new Thickness(10, 0, 8, 0);
+                        TabSeparator2.Width = 1; TabSeparator2.Height = 14;
+                        TabSeparator2.Margin = new Thickness(6, 0, 8, 0);
+
+                        StateDot.Margin = new Thickness(0, 0, 8, 0);
+                        GripHandle.Margin = new Thickness(0, 0, 8, 0);
+                        TxtBtnRestore.Visibility = Visibility.Visible;
                         break;
                 }
 
+                UpdateTabMargin();
                 SnapPositionChanged?.Invoke(this, _currentSnapPosition);
             });
         }
@@ -299,15 +419,15 @@ namespace ConnectML.UI
 
         #region Drag & Drop com Snap Magnético
 
-        private void BtnRestoreMainWindow_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void Btn_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            // Impede que o clique no botão inicie o arrasto da aba
+            // Impede que cliques nos botões internos disparem o arrasto da aba
             e.Handled = false;
         }
 
         private void OverlayTabContainer_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            // Se o clique foi no botão de restaurar, não inicia o arraste
+            // Se o clique foi em qualquer botão da aba, não inicia o arraste
             if (e.OriginalSource is DependencyObject dep && FindParent<Button>(dep) != null)
                 return;
 
@@ -393,7 +513,44 @@ namespace ConnectML.UI
 
         #endregion
 
-        #region Botão Restaurar Janela
+        #region Botões de Ação da Aba (Configurações e Restaurar)
+
+        private void BtnOverlaySettings_Click(object sender, RoutedEventArgs e)
+        {
+            if (_settingsDialog != null && _settingsDialog.IsVisible)
+            {
+                _settingsDialog.Activate();
+                return;
+            }
+
+            _settingsDialog = new OverlaySettingsWindow(this, 
+                                                        _borderThickness, 
+                                                        _fontSize, 
+                                                        _holdSeconds, 
+                                                        _currentSnapPosition, 
+                                                        _enableOverlay);
+
+            _settingsDialog.SettingsChanged += (s, args) =>
+            {
+                _borderThickness = args.BorderThickness;
+                _fontSize = args.FontSize;
+                _holdSeconds = args.HoldSeconds;
+                _enableOverlay = args.EnableOverlay;
+                OverlaySettingsPersisted?.Invoke(this, args);
+            };
+
+            _settingsDialog.SettingsSaved += (s, args) =>
+            {
+                _borderThickness = args.BorderThickness;
+                _fontSize = args.FontSize;
+                _holdSeconds = args.HoldSeconds;
+                _enableOverlay = args.EnableOverlay;
+                OverlaySettingsPersisted?.Invoke(this, args);
+            };
+
+            _settingsDialog.Closed += (s, args) => _settingsDialog = null;
+            _settingsDialog.Show();
+        }
 
         private void BtnRestoreMainWindow_Click(object sender, RoutedEventArgs e)
         {

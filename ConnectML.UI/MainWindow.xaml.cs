@@ -81,6 +81,10 @@ namespace ConnectML.UI
         private readonly object _statusMonitorLock = new object();
         private OverlayWidgetWindow? _overlayWindow;
         private string _overlaySnapPosition = "Top";
+        private int _overlayBorderThickness = 3;
+        private double _overlayFontSize = 13;
+        private int _overlayHoldSeconds = 10;
+        private bool _enableOverlayWidget = true;
         private double _userPreferredLogsWidth = 380; // Largura preferida padrão
         private const double MinConfigWidth = 350; 
         private const double IdealConfigWidth = 564;
@@ -431,7 +435,7 @@ namespace ConnectML.UI
             {
                 // Ocultar para a Bandeja (Tray)
                 Hide();
-                if (_isRunning && ChkEnableOverlay?.IsChecked == true && _overlayWindow != null)
+                if (_isRunning && _enableOverlayWidget && _overlayWindow != null)
                 {
                     _overlayWindow.Show();
                 }
@@ -1113,11 +1117,7 @@ namespace ConnectML.UI
                 }
 
                 // Notifica o Widget Overlay HUD sobre a conclusão da medição
-                int holdSec = 10;
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    holdSec = (int)(SliderOverlayHoldSeconds?.Value ?? 10);
-                });
+                int holdSec = _overlayWindow?.HoldSecondsValue ?? _overlayHoldSeconds;
                 _overlayWindow?.TriggerMeasurementCompleted(holdSec, $"Peça: {result.Product}");
 
                 if (isWebhookMode)
@@ -1427,7 +1427,6 @@ namespace ConnectML.UI
             if (PnlSourceBody != null) PnlSourceBody.IsEnabled = isEditable;
             if (PnlLogicBody != null) PnlLogicBody.IsEnabled = isEditable;
             if (PnlIntegrationBody != null) PnlIntegrationBody.IsEnabled = isEditable;
-            if (PnlOverlayConfigBody != null) PnlOverlayConfigBody.IsEnabled = isEditable;
         }
 
         private void BtnToggleLogs_Click(object sender, RoutedEventArgs e)
@@ -1647,14 +1646,13 @@ namespace ConnectML.UI
                         DgCustomHeaders.ItemsSource = headers;
 
                         // Overlay Widget (v1.3.0)
-                        ChkEnableOverlay.IsChecked = config.EnableOverlayWidget;
-                        SliderOverlayBorderThickness.Value = config.OverlayBorderThickness > 0 ? config.OverlayBorderThickness : 3;
-                        TxtBorderThicknessValue.Text = $"{(int)SliderOverlayBorderThickness.Value} px";
-                        SliderOverlayHoldSeconds.Value = config.OverlayHoldSeconds > 0 ? config.OverlayHoldSeconds : 10;
-                        TxtHoldSecondsValue.Text = $"{(int)SliderOverlayHoldSeconds.Value} seg";
+                        _enableOverlayWidget = config.EnableOverlayWidget;
+                        _overlayBorderThickness = config.OverlayBorderThickness > 0 ? config.OverlayBorderThickness : 3;
+                        _overlayFontSize = config.OverlayFontSize >= 11 ? config.OverlayFontSize : 13;
+                        _overlayHoldSeconds = config.OverlayHoldSeconds > 0 ? config.OverlayHoldSeconds : 10;
                         _overlaySnapPosition = !string.IsNullOrEmpty(config.OverlaySnapPosition) ? config.OverlaySnapPosition : "Top";
-                        _overlayWindow?.SetBorderThickness((int)SliderOverlayBorderThickness.Value);
-                        _overlayWindow?.SetSnapPosition(_overlaySnapPosition);
+
+                        _overlayWindow?.ApplySettings(_overlayBorderThickness, _overlayFontSize, _overlayHoldSeconds, _overlaySnapPosition, _enableOverlayWidget);
 
                         Log.Information("Configurações carregadas.");
                     }
@@ -1741,10 +1739,11 @@ namespace ConnectML.UI
                     CustomHeaders = headers != null ? new System.Collections.Generic.List<CustomHeader>(headers) : new System.Collections.Generic.List<CustomHeader>(),
                     
                     // Overlay Widget HUD (v1.3.0)
-                    EnableOverlayWidget = ChkEnableOverlay.IsChecked == true,
-                    OverlayBorderThickness = (int)SliderOverlayBorderThickness.Value,
+                    EnableOverlayWidget = _overlayWindow != null ? _overlayWindow.EnableOverlayValue : _enableOverlayWidget,
+                    OverlayBorderThickness = _overlayWindow != null ? _overlayWindow.BorderThicknessValue : _overlayBorderThickness,
+                    OverlayFontSize = _overlayWindow != null ? _overlayWindow.FontSizeValue : _overlayFontSize,
                     OverlaySnapPosition = _overlayWindow != null ? _overlayWindow.CurrentSnapPosition : _overlaySnapPosition,
-                    OverlayHoldSeconds = (int)SliderOverlayHoldSeconds.Value
+                    OverlayHoldSeconds = _overlayWindow != null ? _overlayWindow.HoldSecondsValue : _overlayHoldSeconds
                 };
                 string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(GetConfigFilePath(), json);
@@ -1841,50 +1840,6 @@ namespace ConnectML.UI
             }
         }
 
-        private void BtnToggleOverlayConfig_Click(object sender, RoutedEventArgs e)
-        {
-            if (PnlOverlayConfigBody.Visibility == Visibility.Visible)
-            {
-                PnlOverlayConfigBody.Visibility = Visibility.Collapsed;
-                ((System.Windows.Media.RotateTransform)IconToggleOverlayConfig.RenderTransform).Angle = -90;
-            }
-            else
-            {
-                PnlOverlayConfigBody.Visibility = Visibility.Visible;
-                ((System.Windows.Media.RotateTransform)IconToggleOverlayConfig.RenderTransform).Angle = 0;
-            }
-        }
-
-        private void ChkEnableOverlay_Changed(object sender, RoutedEventArgs e)
-        {
-            if (ChkEnableOverlay.IsChecked != true && _overlayWindow != null)
-            {
-                _overlayWindow.Hide();
-            }
-            else if (_isRunning && !IsVisible && _overlayWindow != null)
-            {
-                _overlayWindow.Show();
-            }
-            SaveSettings();
-        }
-
-        private void SliderOverlayBorderThickness_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        {
-            if (TxtBorderThicknessValue != null)
-            {
-                TxtBorderThicknessValue.Text = $"{(int)e.NewValue} px";
-            }
-            _overlayWindow?.SetBorderThickness((int)e.NewValue);
-        }
-
-        private void SliderOverlayHoldSeconds_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        {
-            if (TxtHoldSecondsValue != null)
-            {
-                TxtHoldSecondsValue.Text = $"{(int)e.NewValue} seg";
-            }
-        }
-
         private void InitializeOverlayWindow()
         {
             _overlayWindow = new OverlayWidgetWindow();
@@ -1894,11 +1849,17 @@ namespace ConnectML.UI
                 _overlaySnapPosition = pos;
                 SaveSettings();
             };
-            if (SliderOverlayBorderThickness != null)
+            _overlayWindow.OverlaySettingsPersisted += (s, args) =>
             {
-                _overlayWindow.SetBorderThickness((int)SliderOverlayBorderThickness.Value);
-            }
-            _overlayWindow.SetSnapPosition(_overlaySnapPosition);
+                _overlayBorderThickness = args.BorderThickness;
+                _overlayFontSize = args.FontSize;
+                _overlayHoldSeconds = args.HoldSeconds;
+                _overlaySnapPosition = args.SnapPosition;
+                _enableOverlayWidget = args.EnableOverlay;
+                SaveSettings();
+            };
+
+            _overlayWindow.ApplySettings(_overlayBorderThickness, _overlayFontSize, _overlayHoldSeconds, _overlaySnapPosition, _enableOverlayWidget);
         }
 
         private void BtnToggleWordWrap_Click(object sender, RoutedEventArgs e)

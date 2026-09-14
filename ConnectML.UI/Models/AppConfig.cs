@@ -41,5 +41,6 @@ namespace ConnectML.UI.Models
         public int OverlayBorderThickness { get; set; } = 3;
         public string OverlaySnapPosition { get; set; } = "Top";
         public int OverlayHoldSeconds { get; set; } = 10;
+        public double OverlayFontSize { get; set; } = 13; // 11 a 22 pt (padrão: 13)
     }
 }

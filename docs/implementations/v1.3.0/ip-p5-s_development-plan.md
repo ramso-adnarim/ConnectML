@@ -289,3 +289,45 @@ Atestar o uso em ambiente real de chão de fábrica, validar métricas de perfor
 ### ✅ Critérios de Sucesso
 1. Validação completa sem ocorrência de bugs visuais ou operacionais.
 2. Pacote `ConnectML-1.3.0-win-full.nupkg` e `RELEASES` gerados com êxito na pasta de distribuição.
+
+---
+
+## 📎 Apêndice: Refinamento de UX do Widget HUD (Pós-Sprint 5.4)
+
+Com base nos testes funcionais em ambiente de desenvolvimento e diretrizes operacionais de metrologia, foram consolidadas as seguintes melhorias na usabilidade do Overlay HUD antes da release final:
+
+### 1. Desacoplamento da Configuração (Aba do HUD vs MainWindow)
+- **Motivação:** A tela principal (`MainWindow`) do ConnectML permanece limpa e focada exclusivamente nas configurações de protocolo industrial (Siemens S7, Inbound, Webhook REST e Logs).
+- **Implementação:**
+  - Remoção completa do Card 4 ("Widget Overlay (HUD)") da interface principal `MainWindow.xaml`.
+  - Adição de um botão de Configurações com ícone de engrenagem (`BtnOverlaySettings`) diretamente na aba do HUD (`OverlayWidgetWindow.xaml`).
+  - Criação da janela flutuante especializada [OverlaySettingsWindow.xaml](file:///c:/Antigravity/ConnectML/ConnectML.UI/OverlaySettingsWindow.xaml), estilizada com identidade visual moderna Dark Slate (`#0F172A`/`#1E293B`), permitindo:
+    1. Ajuste fino de espessura de borda perimetral (1px a 12px) com preview instantâneo.
+    2. Ajuste dinâmico de escala de fonte/aba (11pt a 22pt) para visão de chão de fábrica a longa distância.
+    3. Ajuste do tempo mínimo de permanência em tela (Dwell Timer) de 1s a 30s.
+    4. Seletores segmentados de ancoragem rápida (Topo, Base, Esquerda, Direita).
+    5. Checkbox para habilitar/desabilitar exibição do Overlay ao minimizar.
+  - Persistência automática das preferências no arquivo `%AppData%\ConnectML\appsettings.json`.
+
+### 2. Manipulador de Arraste (Grip Handle) e Adaptação Vertical Ergonômica
+- **Manipulador Visual de Arraste:**
+  - Inserção de um ícone de pontos verticais (`GripHandle` com 6 pontos `⋮⋮`, cursor `SizeAll`) à esquerda da aba, servindo de indicação visual clara de que o componente é móvel.
+  - O operador pode clicar e arrastar o manipulador ou o corpo da aba livremente pela tela; ao soltar, o algoritmo de Snap Magnético calcula a proximidade euclidiana com as 4 bordas e acopla a aba no lado mais próximo.
+- **Adaptação Responsiva Vertical (Laterais Esquerda e Direita):**
+  - Quando a aba é acoplada nas bordas **Esquerda** (`LEFT`) ou **Direita** (`RIGHT`):
+    - A orientação do painel interno transiciona de horizontal para vertical (`Orientation="Vertical"`).
+    - O texto de status (*Aguardando Medição* / *Medição Concluída*) recebe `LayoutTransform` com `RotateTransform` (90° na esquerda para leitura descendente ergonômica; -90° na direita para leitura ascendente acompanhando a borda do monitor).
+    - Os separadores sutilmente alternam para barras horizontais compactas.
+    - O botão de restauração compacta-se para o modo de apenas ícone (com Tooltip explicativo), mantendo a aba com largura ultra-esbelta (~40px) e evitando qualquer intrusão visual na área útil do software MeasurLink.
+
+### 3. Ajuste Independente de Borda e Escala da Aba (Visibilidade à Longa Distância)
+- **Compensação Automática de Margem da Aba:**
+  - Ao alterar a espessura da borda (de 1px até 12px), o método `UpdateTabMargin()` calcula dinamicamente o deslocamento da aba em relação à borda perimetral ativa (`Margin = new Thickness(...)`), garantindo que a aba permaneça perfeitamente alinhada e tangencial à borda interna iluminada, sem sobreposições visuais ou cortes.
+- **Escala Proporcional da Aba e Tipografia:**
+  - Implementação do método `SetFontSize(double size)` (faixa de 11pt até 22pt, com padrão de 13pt).
+  - Ao aumentar o slider de tamanho:
+    - O texto cresce de forma nítida permitindo leitura confortável para operadores que estejam a metros de distância da máquina de medição.
+    - O indicador circular de pulso (`StateDot`), ícones de engrenagem, abertura e manipulador de arraste aumentam suas proporções milimétricas em conjunto.
+    - O preenchimento interno (`Padding`) da aba expande-se dinamicamente para preservar o respiro e impedir que qualquer texto fique comprimido ou truncado.
+  - Limites rígidos (mínimo de 11pt e máximo de 22pt para fonte; 1px e 12px para borda) evitam que valores extremos quebrem o design.
+
