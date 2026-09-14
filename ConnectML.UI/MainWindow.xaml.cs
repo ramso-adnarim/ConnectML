@@ -427,11 +427,18 @@ namespace ConnectML.UI
         
         private void BtnMinimize_Click(object sender, RoutedEventArgs e)
         {
-            // Ocultar para a Bandeja (Tray)
-            Hide();
-            if (_isRunning && ChkEnableOverlay?.IsChecked == true && _overlayWindow != null)
+            try
             {
-                _overlayWindow.Show();
+                // Ocultar para a Bandeja (Tray)
+                Hide();
+                if (_isRunning && ChkEnableOverlay?.IsChecked == true && _overlayWindow != null)
+                {
+                    _overlayWindow.Show();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Erro ao minimizar a janela / exibir o Widget Overlay: {Message}", ex.Message);
             }
         }
 
@@ -1689,6 +1696,13 @@ namespace ConnectML.UI
 
         private void SaveSettings()
         {
+            if (!Dispatcher.CheckAccess())
+            {
+                try { Dispatcher.Invoke(SaveSettings); }
+                catch { }
+                return;
+            }
+
             try
             {
                 var headers = DgCustomHeaders.ItemsSource as System.Collections.ObjectModel.ObservableCollection<CustomHeader>;

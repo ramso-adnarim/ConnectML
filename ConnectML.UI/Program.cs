@@ -18,9 +18,16 @@ namespace ConnectML.UI
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         private static extern bool PostMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool AttachConsole(int dwProcessId);
+        private const int ATTACH_PARENT_PROCESS = -1;
+
         [STAThread]
         public static void Main(string[] args)
         {
+            // Conecta ao terminal pai (PowerShell/CMD) se iniciado via linha de comando
+            AttachConsole(ATTACH_PARENT_PROCESS);
+
             // 1. Verificação de Instância Única (Single Instance) via Mutex antes de qualquer outra lógica
             bool createdNew;
             _mutex = new Mutex(true, "Global\\ConnectML_App_Mutex", out createdNew);

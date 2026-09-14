@@ -9,7 +9,9 @@
         AllowsTransparency="True"
         Topmost="True"
         ShowInTaskbar="False"
-        WindowState="Maximized"
+        WindowState="Normal"
+        ResizeMode="NoResize"
+        WindowStartupLocation="Manual"
         Focusable="False"
         Background="{x:Null}"
         ShowActivated="False">

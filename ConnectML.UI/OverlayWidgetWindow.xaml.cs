@@ -62,6 +62,10 @@ namespace ConnectML.UI
         public OverlayWidgetWindow()
         {
             InitializeComponent();
+            Left = 0;
+            Top = 0;
+            Width = SystemParameters.PrimaryScreenWidth;
+            Height = SystemParameters.PrimaryScreenHeight;
             Loaded += OverlayWidgetWindow_Loaded;
         }
 
@@ -79,11 +83,11 @@ namespace ConnectML.UI
 
         private void OverlayWidgetWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            // Garante que o Overlay preencha toda a área de trabalho do monitor
-            Left = SystemParameters.WorkArea.Left;
-            Top = SystemParameters.WorkArea.Top;
-            Width = SystemParameters.WorkArea.Width;
-            Height = SystemParameters.WorkArea.Height;
+            // Garante que o Overlay preencha toda a área da tela do monitor principal
+            Left = 0;
+            Top = 0;
+            Width = SystemParameters.PrimaryScreenWidth;
+            Height = SystemParameters.PrimaryScreenHeight;
 
             _pulseStoryboard = (Storyboard)FindResource("PulseStoryboard");
 
