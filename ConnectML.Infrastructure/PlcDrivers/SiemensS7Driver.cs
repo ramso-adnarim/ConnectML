@@ -131,7 +131,7 @@ namespace ConnectML.Infrastructure.PlcDrivers
                 {
                     var result = await _plc.ReadAsync(finalAddress);
                     bool bResult = result is bool b ? b : false;
-                    _logger.LogInformation($"[S7 REAL] Read Bit {finalAddress}: {bResult}");
+                    _logger.LogDebug($"[S7 REAL] Read Bit {finalAddress}: {bResult}");
                     return bResult;
                 }
                 return false;

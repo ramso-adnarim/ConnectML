@@ -77,6 +77,8 @@ namespace ConnectML.UI
         private bool _isRetrying = false;
         private CancellationTokenSource? _retryCts;
         private AlertCountdownWindow? _activeCountdownWindow;
+        private CancellationTokenSource? _statusMonitorCts;
+        private readonly object _statusMonitorLock = new object();
         private double _userPreferredLogsWidth = 380; // Largura preferida padrão
         private const double MinConfigWidth = 350; 
         private const double IdealConfigWidth = 564;
@@ -440,6 +442,16 @@ namespace ConnectML.UI
                 _retryCts = null;
             }
 
+            lock (_statusMonitorLock)
+            {
+                if (_statusMonitorCts != null)
+                {
+                    _statusMonitorCts.Cancel();
+                    _statusMonitorCts.Dispose();
+                    _statusMonitorCts = null;
+                }
+            }
+
             base.OnClosed(e);
         }
 
@@ -741,6 +753,16 @@ namespace ConnectML.UI
                 _retryCts.Cancel();
                 _retryCts.Dispose();
                 _retryCts = null;
+            }
+
+            lock (_statusMonitorLock)
+            {
+                if (_statusMonitorCts != null)
+                {
+                    _statusMonitorCts.Cancel();
+                    _statusMonitorCts.Dispose();
+                    _statusMonitorCts = null;
+                }
             }
 
             if (_watcher != null)
@@ -1067,6 +1089,7 @@ namespace ConnectML.UI
                         {
                             Log.Information($"Escrevendo Handshake Status 1 no endereço {txtDbStatus}...");
                             await _plcDriver.WriteBoolAsync(txtDbStatus, true);
+                            MonitorPlcStatusResetInBackground(txtDbStatus);
                         }
                     }
                 }
@@ -1132,6 +1155,52 @@ namespace ConnectML.UI
                 await Task.Delay(500);
             }
             return false;
+        }
+
+        private void MonitorPlcStatusResetInBackground(string statusAddress)
+        {
+            if (string.IsNullOrWhiteSpace(statusAddress)) return;
+
+            CancellationToken token;
+            lock (_statusMonitorLock)
+            {
+                if (_statusMonitorCts != null)
+                {
+                    _statusMonitorCts.Cancel();
+                    _statusMonitorCts.Dispose();
+                }
+                _statusMonitorCts = new CancellationTokenSource();
+                token = _statusMonitorCts.Token;
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    while (_isRunning && !token.IsCancellationRequested && _plcDriver != null && _plcDriver.IsConnected)
+                    {
+                        await Task.Delay(200, token);
+
+                        if (!_isRunning || token.IsCancellationRequested || _plcDriver == null || !_plcDriver.IsConnected)
+                            break;
+
+                        bool currentStatus = await _plcDriver.ReadBoolAsync(statusAddress);
+                        if (!currentStatus)
+                        {
+                            Log.Information($"[PLC] Confirmação recebida: variável de Status ({statusAddress}) resetada para FALSE pelo PLC.");
+                            break;
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // Cancelamento normal quando o serviço é interrompido ou um novo ciclo inicia
+                }
+                catch (Exception ex)
+                {
+                    Log.Debug(ex, $"[MonitorStatus] Exceção durante monitoramento de {statusAddress}: {ex.Message}");
+                }
+            }, token);
         }
 
         private void BtnClearLogs_Click(object sender, RoutedEventArgs e)

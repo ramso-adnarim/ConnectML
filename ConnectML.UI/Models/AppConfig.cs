@@ -35,5 +35,11 @@ namespace ConnectML.UI.Models
         public string PayloadTemplate { get; set; } = "{\n  \"status\": \"{{Status}}\",\n  \"routine\": \"{{Routine}}\",\n  \"part\": \"{{Run}}\"\n}";
         public List<string> ConfigFields { get; set; } = new List<string> { "Boolean" };
         public bool IsLocked { get; set; } = false;
+
+        // Widget Overlay HUD (v1.3.0)
+        public bool EnableOverlayWidget { get; set; } = true;
+        public int OverlayBorderThickness { get; set; } = 3;
+        public string OverlaySnapPosition { get; set; } = "Top";
+        public int OverlayHoldSeconds { get; set; } = 10;
     }
 }
