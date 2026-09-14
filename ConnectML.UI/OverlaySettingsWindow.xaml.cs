@@ -40,8 +40,8 @@ namespace ConnectML.UI
 
             // Atribuição dos valores iniciais
             ChkEnableOverlay.IsChecked = enableOverlay;
-            SliderBorderThickness.Value = Math.Clamp(borderThickness, 1, 12);
-            SliderFontSize.Value = Math.Clamp(fontSize, 11, 22);
+            SliderBorderThickness.Value = Math.Clamp(borderThickness, 1, 35);
+            SliderFontSize.Value = Math.Clamp(fontSize, 11, 40);
             SliderHoldSeconds.Value = Math.Clamp(holdSeconds, 1, 30);
 
             UpdateLabels();
@@ -121,9 +121,10 @@ namespace ConnectML.UI
                 string label = val switch
                 {
                     <= 12 => $"{val} pt (Compacto)",
-                    <= 15 => $"{val} pt (Padrão)",
-                    <= 18 => $"{val} pt (Grande)",
-                    _ => $"{val} pt (Máxima Visibilidade)"
+                    <= 16 => $"{val} pt (Padrão)",
+                    <= 22 => $"{val} pt (Grande)",
+                    <= 30 => $"{val} pt (Extra Grande)",
+                    _ => $"{val} pt (Ultra - Longa Distância)"
                 };
                 TxtFontSizeValue.Text = label;
             }

@@ -105,6 +105,7 @@ namespace ConnectML.UI
 
             // Inicia em modo de espera (Aguardando Medição)
             SetWaitingState();
+            UpdateBorderResizeStrips();
         }
 
         #region Máquina de Estados Visuais (UX)
@@ -241,41 +242,74 @@ namespace ConnectML.UI
         }
 
         /// <summary>
-        /// Atualiza dinamicamente a espessura da borda perimetral luminosa e compensa a margem da aba.
+        /// Atualiza dinamicamente a espessura da borda perimetral luminosa e compensa a margem da aba e das tiras de redimensionamento.
+        /// Limite expandido: 1 a 35 px para alta visibilidade industrial.
         /// </summary>
         public void SetBorderThickness(int thickness)
         {
-            _borderThickness = Math.Clamp(thickness, 1, 12);
+            _borderThickness = Math.Clamp(thickness, 1, 35);
             OverlayBorder.BorderThickness = new Thickness(_borderThickness);
             UpdateTabMargin();
+            UpdateBorderResizeStrips();
+        }
+
+        /// <summary>
+        /// Atualiza dinamicamente o posicionamento das tiras de redimensionamento da borda perimetral.
+        /// </summary>
+        private void UpdateBorderResizeStrips()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (BorderResizeTop == null || BorderResizeBottom == null || BorderResizeLeft == null || BorderResizeRight == null) return;
+
+                // A tira cobre a espessura da borda mais 8 pixels de tolerância interna para facilitar o clique
+                double stripThickness = Math.Max(14, _borderThickness + 8);
+                BorderResizeTop.Height = stripThickness;
+                BorderResizeBottom.Height = stripThickness;
+                BorderResizeLeft.Width = stripThickness;
+                BorderResizeRight.Width = stripThickness;
+
+                BorderResizeTop.Margin = new Thickness(0);
+                BorderResizeBottom.Margin = new Thickness(0);
+                BorderResizeLeft.Margin = new Thickness(0);
+                BorderResizeRight.Margin = new Thickness(0);
+            });
         }
 
         /// <summary>
         /// Atualiza dinamicamente a escala da fonte e o tamanho de todos os elementos da aba.
+        /// Limite expandido: 11 a 40 pt para conforto e legibilidade a longas distâncias da tela.
         /// </summary>
         public void SetFontSize(double size)
         {
-            _fontSize = Math.Clamp(size, 11, 22);
+            _fontSize = Math.Clamp(size, 11, 40);
 
             Dispatcher.Invoke(() =>
             {
                 TxtOverlayStatus.FontSize = _fontSize;
 
-                // Escala os elementos visuais de forma proporcional para visibilidade industrial à distância
-                double dotSize = Math.Round(_fontSize * 0.7);
+                // Escala os elementos visuais proporcionalmente para chão de fábrica a longa distância
+                double dotSize = Math.Round(_fontSize * 0.65);
                 StateDot.Width = dotSize;
                 StateDot.Height = dotSize;
 
-                double iconSize = Math.Max(12, Math.Round(_fontSize * 0.95));
+                double iconSize = Math.Max(12, Math.Round(_fontSize * 0.85));
                 IconSettingsViewbox.Width = iconSize;
                 IconSettingsViewbox.Height = iconSize;
                 IconRestoreViewbox.Width = iconSize;
                 IconRestoreViewbox.Height = iconSize;
 
-                double gripW = Math.Max(9, Math.Round(_fontSize * 0.75));
-                double gripH = Math.Max(13, Math.Round(_fontSize * 1.05));
+                double gripW = Math.Max(9, Math.Round(_fontSize * 0.65));
+                double gripH = Math.Max(13, Math.Round(_fontSize * 0.95));
                 GripViewbox.Width = gripW;
                 GripViewbox.Height = gripH;
+
+                double resizeGripSize = Math.Max(11, Math.Round(_fontSize * 0.75));
+                if (ResizeGripViewbox != null)
+                {
+                    ResizeGripViewbox.Width = resizeGripSize;
+                    ResizeGripViewbox.Height = resizeGripSize;
+                }
 
                 TxtBtnRestore.FontSize = Math.Max(10, _fontSize - 2);
 
@@ -283,6 +317,22 @@ namespace ConnectML.UI
                 double padH = Math.Round(_fontSize * 0.9);
                 double padV = Math.Round(_fontSize * 0.45);
                 OverlayTabContainer.Padding = new Thickness(padH, padV, padH, padV);
+
+                // Separadores
+                if (TabContentPanel.Orientation == Orientation.Horizontal)
+                {
+                    double sepHeight = Math.Round(_fontSize * 1.1);
+                    TabSeparator1.Height = sepHeight;
+                    TabSeparator2.Height = sepHeight;
+                    if (TabSeparator3 != null) TabSeparator3.Height = sepHeight;
+                }
+                else
+                {
+                    double sepWidth = Math.Round(_fontSize * 1.3);
+                    TabSeparator1.Width = sepWidth;
+                    TabSeparator2.Width = sepWidth;
+                    if (TabSeparator3 != null) TabSeparator3.Width = sepWidth;
+                }
             });
         }
 
@@ -321,6 +371,9 @@ namespace ConnectML.UI
 
             Dispatcher.Invoke(() =>
             {
+                double sepHeight = Math.Round(_fontSize * 1.1);
+                double sepWidth = Math.Round(_fontSize * 1.3);
+
                 switch (_currentSnapPosition)
                 {
                     case "BOTTOM":
@@ -334,13 +387,28 @@ namespace ConnectML.UI
                         TxtOverlayStatus.Margin = new Thickness(0);
                         TxtOverlayStatus.TextAlignment = TextAlignment.Left;
 
-                        TabSeparator1.Width = 1; TabSeparator1.Height = 14;
+                        TabSeparator1.Width = 1; TabSeparator1.Height = sepHeight;
                         TabSeparator1.Margin = new Thickness(10, 0, 8, 0);
-                        TabSeparator2.Width = 1; TabSeparator2.Height = 14;
+                        TabSeparator2.Width = 1; TabSeparator2.Height = sepHeight;
                         TabSeparator2.Margin = new Thickness(6, 0, 8, 0);
+                        if (TabSeparator3 != null)
+                        {
+                            TabSeparator3.Width = 1; TabSeparator3.Height = sepHeight;
+                            TabSeparator3.Margin = new Thickness(6, 0, 6, 0);
+                        }
 
                         StateDot.Margin = new Thickness(0, 0, 8, 0);
                         GripHandle.Margin = new Thickness(0, 0, 8, 0);
+                        if (TabResizeGrip != null) TabResizeGrip.Margin = new Thickness(4, 0, 0, 0);
+                        if (TabEdgeResizeStrip != null)
+                        {
+                            TabEdgeResizeStrip.VerticalAlignment = VerticalAlignment.Top;
+                            TabEdgeResizeStrip.HorizontalAlignment = HorizontalAlignment.Stretch;
+                            TabEdgeResizeStrip.Height = 10;
+                            TabEdgeResizeStrip.Width = double.NaN;
+                            TabEdgeResizeStrip.Cursor = Cursors.SizeNS;
+                            TabEdgeResizeStrip.Margin = new Thickness(-12, -6, -10, 0);
+                        }
                         TxtBtnRestore.Visibility = Visibility.Visible;
                         break;
 
@@ -355,13 +423,28 @@ namespace ConnectML.UI
                         TxtOverlayStatus.Margin = new Thickness(0, 8, 0, 8);
                         TxtOverlayStatus.TextAlignment = TextAlignment.Center;
 
-                        TabSeparator1.Width = 18; TabSeparator1.Height = 1;
+                        TabSeparator1.Width = sepWidth; TabSeparator1.Height = 1;
                         TabSeparator1.Margin = new Thickness(0, 8, 0, 8);
-                        TabSeparator2.Width = 18; TabSeparator2.Height = 1;
+                        TabSeparator2.Width = sepWidth; TabSeparator2.Height = 1;
                         TabSeparator2.Margin = new Thickness(0, 6, 0, 8);
+                        if (TabSeparator3 != null)
+                        {
+                            TabSeparator3.Width = sepWidth; TabSeparator3.Height = 1;
+                            TabSeparator3.Margin = new Thickness(0, 6, 0, 6);
+                        }
 
                         StateDot.Margin = new Thickness(0, 0, 0, 6);
                         GripHandle.Margin = new Thickness(0, 0, 0, 8);
+                        if (TabResizeGrip != null) TabResizeGrip.Margin = new Thickness(0, 4, 0, 0);
+                        if (TabEdgeResizeStrip != null)
+                        {
+                            TabEdgeResizeStrip.VerticalAlignment = VerticalAlignment.Stretch;
+                            TabEdgeResizeStrip.HorizontalAlignment = HorizontalAlignment.Right;
+                            TabEdgeResizeStrip.Width = 10;
+                            TabEdgeResizeStrip.Height = double.NaN;
+                            TabEdgeResizeStrip.Cursor = Cursors.SizeWE;
+                            TabEdgeResizeStrip.Margin = new Thickness(0, -6, -10, -6);
+                        }
                         TxtBtnRestore.Visibility = Visibility.Collapsed;
                         break;
 
@@ -376,13 +459,28 @@ namespace ConnectML.UI
                         TxtOverlayStatus.Margin = new Thickness(0, 8, 0, 8);
                         TxtOverlayStatus.TextAlignment = TextAlignment.Center;
 
-                        TabSeparator1.Width = 18; TabSeparator1.Height = 1;
+                        TabSeparator1.Width = sepWidth; TabSeparator1.Height = 1;
                         TabSeparator1.Margin = new Thickness(0, 8, 0, 8);
-                        TabSeparator2.Width = 18; TabSeparator2.Height = 1;
+                        TabSeparator2.Width = sepWidth; TabSeparator2.Height = 1;
                         TabSeparator2.Margin = new Thickness(0, 6, 0, 8);
+                        if (TabSeparator3 != null)
+                        {
+                            TabSeparator3.Width = sepWidth; TabSeparator3.Height = 1;
+                            TabSeparator3.Margin = new Thickness(0, 6, 0, 6);
+                        }
 
                         StateDot.Margin = new Thickness(0, 0, 0, 6);
                         GripHandle.Margin = new Thickness(0, 0, 0, 8);
+                        if (TabResizeGrip != null) TabResizeGrip.Margin = new Thickness(0, 4, 0, 0);
+                        if (TabEdgeResizeStrip != null)
+                        {
+                            TabEdgeResizeStrip.VerticalAlignment = VerticalAlignment.Stretch;
+                            TabEdgeResizeStrip.HorizontalAlignment = HorizontalAlignment.Left;
+                            TabEdgeResizeStrip.Width = 10;
+                            TabEdgeResizeStrip.Height = double.NaN;
+                            TabEdgeResizeStrip.Cursor = Cursors.SizeWE;
+                            TabEdgeResizeStrip.Margin = new Thickness(-12, -6, 0, -6);
+                        }
                         TxtBtnRestore.Visibility = Visibility.Collapsed;
                         break;
 
@@ -399,13 +497,28 @@ namespace ConnectML.UI
                         TxtOverlayStatus.Margin = new Thickness(0);
                         TxtOverlayStatus.TextAlignment = TextAlignment.Left;
 
-                        TabSeparator1.Width = 1; TabSeparator1.Height = 14;
+                        TabSeparator1.Width = 1; TabSeparator1.Height = sepHeight;
                         TabSeparator1.Margin = new Thickness(10, 0, 8, 0);
-                        TabSeparator2.Width = 1; TabSeparator2.Height = 14;
+                        TabSeparator2.Width = 1; TabSeparator2.Height = sepHeight;
                         TabSeparator2.Margin = new Thickness(6, 0, 8, 0);
+                        if (TabSeparator3 != null)
+                        {
+                            TabSeparator3.Width = 1; TabSeparator3.Height = sepHeight;
+                            TabSeparator3.Margin = new Thickness(6, 0, 6, 0);
+                        }
 
                         StateDot.Margin = new Thickness(0, 0, 8, 0);
                         GripHandle.Margin = new Thickness(0, 0, 8, 0);
+                        if (TabResizeGrip != null) TabResizeGrip.Margin = new Thickness(4, 0, 0, 0);
+                        if (TabEdgeResizeStrip != null)
+                        {
+                            TabEdgeResizeStrip.VerticalAlignment = VerticalAlignment.Bottom;
+                            TabEdgeResizeStrip.HorizontalAlignment = HorizontalAlignment.Stretch;
+                            TabEdgeResizeStrip.Height = 10;
+                            TabEdgeResizeStrip.Width = double.NaN;
+                            TabEdgeResizeStrip.Cursor = Cursors.SizeNS;
+                            TabEdgeResizeStrip.Margin = new Thickness(-12, 0, -10, -6);
+                        }
                         TxtBtnRestore.Visibility = Visibility.Visible;
                         break;
                 }
@@ -413,6 +526,157 @@ namespace ConnectML.UI
                 UpdateTabMargin();
                 SnapPositionChanged?.Invoke(this, _currentSnapPosition);
             });
+        }
+
+        #endregion
+
+        #region Redimensionamento da Borda via Mouse Drag
+
+        private bool _isResizingBorder = false;
+        private string _activeBorderSide = "TOP";
+        private Point _borderResizeStartPos;
+        private int _borderResizeStartThickness;
+
+        private void BorderResize_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement elem && elem.Tag is string side)
+            {
+                _isResizingBorder = true;
+                _activeBorderSide = side.ToUpperInvariant();
+                _borderResizeStartPos = e.GetPosition(this);
+                _borderResizeStartThickness = _borderThickness;
+                elem.CaptureMouse();
+                e.Handled = true;
+            }
+        }
+
+        private void BorderResize_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isResizingBorder) return;
+            Point currentPos = e.GetPosition(this);
+            int delta = 0;
+
+            switch (_activeBorderSide)
+            {
+                case "TOP":
+                    delta = (int)(currentPos.Y - _borderResizeStartPos.Y);
+                    break;
+                case "BOTTOM":
+                    delta = (int)(_borderResizeStartPos.Y - currentPos.Y);
+                    break;
+                case "LEFT":
+                    delta = (int)(currentPos.X - _borderResizeStartPos.X);
+                    break;
+                case "RIGHT":
+                    delta = (int)(_borderResizeStartPos.X - currentPos.X);
+                    break;
+            }
+
+            int newThickness = Math.Clamp(_borderResizeStartThickness + delta, 1, 35);
+            if (newThickness != _borderThickness)
+            {
+                SetBorderThickness(newThickness);
+            }
+        }
+
+        private void BorderResize_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isResizingBorder) return;
+            _isResizingBorder = false;
+            if (sender is FrameworkElement elem)
+            {
+                elem.ReleaseMouseCapture();
+            }
+            OverlaySettingsPersisted?.Invoke(this, GetCurrentSettings());
+            e.Handled = true;
+        }
+
+        #endregion
+
+        #region Redimensionamento da Aba via Mouse Drag
+
+        private bool _isResizingTab = false;
+        private Point _tabResizeStartPos;
+        private double _tabResizeStartFontSize;
+
+        private void TabResizeGrip_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _isResizingTab = true;
+            _tabResizeStartPos = e.GetPosition(this);
+            _tabResizeStartFontSize = _fontSize;
+            if (sender is FrameworkElement elem)
+            {
+                elem.CaptureMouse();
+            }
+            e.Handled = true;
+        }
+
+        private void TabResizeGrip_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isResizingTab) return;
+            Point currentPos = e.GetPosition(this);
+
+            double delta;
+            switch (_currentSnapPosition)
+            {
+                case "TOP":
+                    delta = (currentPos.Y - _tabResizeStartPos.Y) * 0.35 + (currentPos.X - _tabResizeStartPos.X) * 0.15;
+                    break;
+                case "BOTTOM":
+                    delta = (_tabResizeStartPos.Y - currentPos.Y) * 0.35 + (currentPos.X - _tabResizeStartPos.X) * 0.15;
+                    break;
+                case "LEFT":
+                    delta = (currentPos.X - _tabResizeStartPos.X) * 0.35 + (currentPos.Y - _tabResizeStartPos.Y) * 0.15;
+                    break;
+                case "RIGHT":
+                    delta = (_tabResizeStartPos.X - currentPos.X) * 0.35 + (currentPos.Y - _tabResizeStartPos.Y) * 0.15;
+                    break;
+                default:
+                    delta = (currentPos.Y - _tabResizeStartPos.Y) * 0.35;
+                    break;
+            }
+
+            double newSize = Math.Clamp(Math.Round(_tabResizeStartFontSize + delta), 11, 40);
+            if (Math.Abs(newSize - _fontSize) >= 1)
+            {
+                SetFontSize(newSize);
+            }
+        }
+
+        private void TabResizeGrip_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (!_isResizingTab) return;
+            _isResizingTab = false;
+            if (sender is FrameworkElement elem)
+            {
+                elem.ReleaseMouseCapture();
+            }
+            OverlaySettingsPersisted?.Invoke(this, GetCurrentSettings());
+            e.Handled = true;
+        }
+
+        private void TabResizeGrip_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (PathResizeGrip != null)
+                PathResizeGrip.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#38BDF8"));
+        }
+
+        private void TabResizeGrip_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (PathResizeGrip != null)
+                PathResizeGrip.Fill = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#64748B"));
+        }
+
+        public OverlaySettingsChangedEventArgs GetCurrentSettings()
+        {
+            return new OverlaySettingsChangedEventArgs
+            {
+                BorderThickness = _borderThickness,
+                FontSize = _fontSize,
+                HoldSeconds = _holdSeconds,
+                SnapPosition = _currentSnapPosition,
+                EnableOverlay = _enableOverlay
+            };
         }
 
         #endregion
@@ -427,9 +691,13 @@ namespace ConnectML.UI
 
         private void OverlayTabContainer_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            // Se o clique foi em qualquer botão da aba, não inicia o arraste
-            if (e.OriginalSource is DependencyObject dep && FindParent<Button>(dep) != null)
-                return;
+            // Se o clique foi em qualquer botão da aba ou em controles de redimensionamento, não inicia o arraste de reposicionamento
+            if (e.OriginalSource is DependencyObject dep)
+            {
+                if (FindParent<Button>(dep) != null) return;
+                if (dep == TabResizeGrip || FindParent<FrameworkElement>(dep) == TabResizeGrip) return;
+                if (dep == TabEdgeResizeStrip) return;
+            }
 
             _isDragging = true;
             _dragStartMousePos = e.GetPosition(this);

@@ -105,11 +105,11 @@
                         <Grid Margin="0,0,0,6">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="Espessura da Borda Perimetral" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC"/>
-                                <TextBlock Text=" (1 a 12 px)" FontSize="11" Foreground="#64748B" Margin="4,0,0,0"/>
+                                <TextBlock Text=" (1 a 35 px)" FontSize="11" Foreground="#64748B" Margin="4,0,0,0"/>
                             </StackPanel>
                             <TextBlock x:Name="TxtBorderThicknessValue" Text="3 px" FontSize="12" FontWeight="Bold" Foreground="#F59E0B" HorizontalAlignment="Right"/>
                         </Grid>
-                        <Slider x:Name="SliderBorderThickness" Minimum="1" Maximum="12" Value="3" 
+                        <Slider x:Name="SliderBorderThickness" Minimum="1" Maximum="35" Value="3" 
                                 IsSnapToTickEnabled="True" TickFrequency="1"
                                 ValueChanged="SliderBorderThickness_ValueChanged"/>
                     </StackPanel>
@@ -121,11 +121,11 @@
                         <Grid Margin="0,0,0,6">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="Tamanho do Texto e da Aba" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC"/>
-                                <TextBlock Text=" (11 a 22 pt)" FontSize="11" Foreground="#64748B" Margin="4,0,0,0"/>
+                                <TextBlock Text=" (11 a 40 pt - Alta Visibilidade)" FontSize="11" Foreground="#64748B" Margin="4,0,0,0"/>
                             </StackPanel>
                             <TextBlock x:Name="TxtFontSizeValue" Text="13 pt (Padrão)" FontSize="12" FontWeight="Bold" Foreground="#38BDF8" HorizontalAlignment="Right"/>
                         </Grid>
-                        <Slider x:Name="SliderFontSize" Minimum="11" Maximum="22" Value="13" 
+                        <Slider x:Name="SliderFontSize" Minimum="11" Maximum="40" Value="13" 
                                 IsSnapToTickEnabled="True" TickFrequency="1"
                                 ValueChanged="SliderFontSize_ValueChanged"/>
                     </StackPanel>

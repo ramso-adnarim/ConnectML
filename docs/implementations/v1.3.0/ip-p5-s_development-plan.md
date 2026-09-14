@@ -302,8 +302,8 @@ Com base nos testes funcionais em ambiente de desenvolvimento e diretrizes opera
   - Remoção completa do Card 4 ("Widget Overlay (HUD)") da interface principal `MainWindow.xaml`.
   - Adição de um botão de Configurações com ícone de engrenagem (`BtnOverlaySettings`) diretamente na aba do HUD (`OverlayWidgetWindow.xaml`).
   - Criação da janela flutuante especializada [OverlaySettingsWindow.xaml](file:///c:/Antigravity/ConnectML/ConnectML.UI/OverlaySettingsWindow.xaml), estilizada com identidade visual moderna Dark Slate (`#0F172A`/`#1E293B`), permitindo:
-    1. Ajuste fino de espessura de borda perimetral (1px a 12px) com preview instantâneo.
-    2. Ajuste dinâmico de escala de fonte/aba (11pt a 22pt) para visão de chão de fábrica a longa distância.
+    1. Ajuste fino de espessura de borda perimetral (1px a 35px) com preview instantâneo e alta visibilidade industrial.
+    2. Ajuste dinâmico de escala de fonte/aba (11pt a 40pt) para visão de chão de fábrica a longas distâncias (10 a 15 metros).
     3. Ajuste do tempo mínimo de permanência em tela (Dwell Timer) de 1s a 30s.
     4. Seletores segmentados de ancoragem rápida (Topo, Base, Esquerda, Direita).
     5. Checkbox para habilitar/desabilitar exibição do Overlay ao minimizar.
@@ -320,14 +320,18 @@ Com base nos testes funcionais em ambiente de desenvolvimento e diretrizes opera
     - Os separadores sutilmente alternam para barras horizontais compactas.
     - O botão de restauração compacta-se para o modo de apenas ícone (com Tooltip explicativo), mantendo a aba com largura ultra-esbelta (~40px) e evitando qualquer intrusão visual na área útil do software MeasurLink.
 
-### 3. Ajuste Independente de Borda e Escala da Aba (Visibilidade à Longa Distância)
-- **Compensação Automática de Margem da Aba:**
-  - Ao alterar a espessura da borda (de 1px até 12px), o método `UpdateTabMargin()` calcula dinamicamente o deslocamento da aba em relação à borda perimetral ativa (`Margin = new Thickness(...)`), garantindo que a aba permaneça perfeitamente alinhada e tangencial à borda interna iluminada, sem sobreposições visuais ou cortes.
-- **Escala Proporcional da Aba e Tipografia:**
-  - Implementação do método `SetFontSize(double size)` (faixa de 11pt até 22pt, com padrão de 13pt).
-  - Ao aumentar o slider de tamanho:
-    - O texto cresce de forma nítida permitindo leitura confortável para operadores que estejam a metros de distância da máquina de medição.
-    - O indicador circular de pulso (`StateDot`), ícones de engrenagem, abertura e manipulador de arraste aumentam suas proporções milimétricas em conjunto.
-    - O preenchimento interno (`Padding`) da aba expande-se dinamicamente para preservar o respiro e impedir que qualquer texto fique comprimido ou truncado.
-  - Limites rígidos (mínimo de 11pt e máximo de 22pt para fonte; 1px e 12px para borda) evitam que valores extremos quebrem o design.
+### 3. Redimensionamento Direto via Mouse Drag nas Extremidades e Limites Expandidos
+- **Mecanismo de Arraste nas Extremidades da Borda Perimetral:**
+  - Posicionamento de 4 tiras interativas de captura nas extremidades perimetrais do monitor (`BorderResizeTop`, `BorderResizeBottom`, `BorderResizeLeft`, `BorderResizeRight`).
+  - Ao posicionar o mouse nas bordas superior/inferior, o cursor altera-se automaticamente para `SizeNS` (redimensionamento vertical ⬍).
+  - Nas bordas esquerda/direita, o cursor altera-se para `SizeWE` (redimensionamento horizontal ⬄).
+  - O operador clica e arrasta para dentro ou para fora, alterando a espessura em tempo real de **1px até 35px**.
+  - A espessura ampliada para 35px atua como uma moldura de sinalização de alta intensidade visual no galpão, garantindo identificação imediata do status a mais de 10 metros de distância.
+- **Mecanismo de Arraste nas Extremidades da Aba:**
+  - Duplo ponto de apoio ergonômico para redimensionamento:
+    1. **Manipulador de Canto (`TabResizeGrip`):** Ícone diagonal com cursor `SizeNWSE` e efeito de destaque luminoso (hover em `#38BDF8`).
+    2. **Tira da Borda Externa (`TabEdgeResizeStrip`):** Borda externa da aba voltada para o centro da tela, permitindo que o operador apenas puxe ou empurre a borda da aba (cursor `SizeNS` ou `SizeWE`).
+  - O limite máximo de tamanho de texto/aba foi expandido de 22pt para **40pt**:
+    - À escala de 40pt, o indicador luminoso `StateDot` expande para 26px, ícones de ação para 34px, separadores para 44px e o padding atinge 36px, criando um HUD de altíssima legibilidade e impacto visual.
+  - Ao soltar o mouse após qualquer redimensionamento direto, a nova configuração é imediatamente persistida no banco SQLite/AppConfig sem requerer abertura de menus modais.
 
