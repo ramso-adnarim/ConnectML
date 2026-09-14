@@ -1,5 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -22,8 +24,16 @@ namespace ConnectML.UI
         // Evento disparado quando a posição de acoplamento da aba é alterada
         public event EventHandler<string>? SnapPositionChanged;
 
+        public string CurrentSnapPosition => _currentSnapPosition;
+
         private string _currentSnapPosition = "Top";
         private Storyboard? _pulseStoryboard;
+
+        // Dwell Timer Conjugado (v1.3.0)
+        private bool _plcResetReceived = false;
+        private bool _dwellTimeElapsed = false;
+        private readonly object _stateLock = new object();
+        private CancellationTokenSource? _dwellCts;
 
         // Controle de Arraste (Drag & Drop)
         private bool _isDragging = false;
@@ -120,6 +130,82 @@ namespace ConnectML.UI
 
                 TxtOverlayStatus.Text = !string.IsNullOrWhiteSpace(message) ? message : "Medição Concluída";
             });
+        }
+
+        /// <summary>
+        /// Disparado quando um arquivo de medição é processado e despachado.
+        /// Fixa o estado em 'Medição Concluída' e inicia a contagem do tempo mínimo de tela (holdSeconds).
+        /// </summary>
+        public void TriggerMeasurementCompleted(int holdSeconds, string? message = null)
+        {
+            lock (_stateLock)
+            {
+                _plcResetReceived = false;
+                _dwellTimeElapsed = false;
+
+                SetCompletedState(message);
+
+                _dwellCts?.Cancel();
+                _dwellCts?.Dispose();
+                _dwellCts = new CancellationTokenSource();
+                var token = _dwellCts.Token;
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        int delayMs = Math.Clamp(holdSeconds, 1, 30) * 1000;
+                        await Task.Delay(delayMs, token);
+
+                        lock (_stateLock)
+                        {
+                            _dwellTimeElapsed = true;
+                            EvaluateTransitionToWaiting();
+                        }
+                    }
+                    catch (OperationCanceledException) { }
+                    catch (Exception) { }
+                }, token);
+            }
+        }
+
+        /// <summary>
+        /// Notifica que o PLC confirmou o recebimento e resetou a variável de status para FALSE.
+        /// </summary>
+        public void NotifyPlcResetConfirmed()
+        {
+            lock (_stateLock)
+            {
+                _plcResetReceived = true;
+                EvaluateTransitionToWaiting();
+            }
+        }
+
+        private void EvaluateTransitionToWaiting()
+        {
+            // Regra Conjugada: Só retorna para 'Aguardando Medição' se:
+            // 1. O PLC resetou para FALSE (_plcResetReceived) E
+            // 2. O tempo mínimo de tela já passou (_dwellTimeElapsed)
+            if (_plcResetReceived && _dwellTimeElapsed)
+            {
+                SetWaitingState();
+            }
+        }
+
+        /// <summary>
+        /// Reseta o ciclo de vida do overlay para 'Aguardando' limpo (ex: ao parar o serviço).
+        /// </summary>
+        public void ResetLifecycleState()
+        {
+            lock (_stateLock)
+            {
+                _dwellCts?.Cancel();
+                _dwellCts?.Dispose();
+                _dwellCts = null;
+                _plcResetReceived = false;
+                _dwellTimeElapsed = false;
+                SetWaitingState();
+            }
         }
 
         #endregion

@@ -874,6 +874,65 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- CARD 4: HUD OVERLAY (WIDGET) -->
+                        <Border Style="{StaticResource CardStyle}" Margin="0,12,0,0">
+                            <StackPanel>
+                                <Border BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1">
+                                    <Button x:Name="BtnToggleOverlayConfig" Click="BtnToggleOverlayConfig_Click" Style="{StaticResource DarkExpanderButtonStyle}" Padding="20,5" Height="40">
+                                        <Grid>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                                <Viewbox Width="22" Height="22" Margin="0,0,8,0">
+                                                    <Path Fill="#F59E0B" Stretch="Uniform" Data="M20,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6A2,2 0 0,0 20,4M20,18H4V6H20V18M6,10H18V12H6V10M6,14H14V16H6V14Z"/>
+                                                </Viewbox>
+                                                <TextBlock Text="Widget Overlay (HUD)" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Foreground="{StaticResource TextPrimary}"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                <Path x:Name="IconToggleOverlayConfig" Fill="{StaticResource TextSecondary}" Data="M7,10L12,15L17,10H7Z" Stretch="Uniform" Width="12" Height="12" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                                    <Path.RenderTransform>
+                                                        <RotateTransform Angle="0"/>
+                                                    </Path.RenderTransform>
+                                                </Path>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+                                </Border>
+
+                                <StackPanel x:Name="PnlOverlayConfigBody" Margin="24,12">
+                                    <CheckBox x:Name="ChkEnableOverlay" Content="Exibir Widget Overlay ao minimizar para a bandeja" 
+                                              FontSize="13" Foreground="#F8FAFC" Margin="0,0,0,16"
+                                              IsChecked="True" Checked="ChkEnableOverlay_Changed" Unchecked="ChkEnableOverlay_Changed"/>
+
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="24"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Espessura da Borda -->
+                                        <StackPanel Grid.Column="0">
+                                            <Grid Margin="0,0,0,6">
+                                                <TextBlock Text="Espessura da Borda Luminosa:" FontSize="12" Foreground="{StaticResource TextSecondary}"/>
+                                                <TextBlock x:Name="TxtBorderThicknessValue" Text="3 px" FontSize="12" FontWeight="SemiBold" Foreground="#F59E0B" HorizontalAlignment="Right"/>
+                                            </Grid>
+                                            <Slider x:Name="SliderOverlayBorderThickness" Minimum="1" Maximum="8" Value="3" IsSnapToTickEnabled="True" TickFrequency="1"
+                                                    ValueChanged="SliderOverlayBorderThickness_ValueChanged"/>
+                                        </StackPanel>
+
+                                        <!-- Tempo de Permanência (Dwell Time) -->
+                                        <StackPanel Grid.Column="2">
+                                            <Grid Margin="0,0,0,6">
+                                                <TextBlock Text="Tempo Mínimo em Tela:" FontSize="12" Foreground="{StaticResource TextSecondary}" ToolTip="Tempo mínimo em que o estado 'Medição Concluída' permanece visível."/>
+                                                <TextBlock x:Name="TxtHoldSecondsValue" Text="10 seg" FontSize="12" FontWeight="SemiBold" Foreground="#10B981" HorizontalAlignment="Right"/>
+                                            </Grid>
+                                            <Slider x:Name="SliderOverlayHoldSeconds" Minimum="1" Maximum="30" Value="10" IsSnapToTickEnabled="True" TickFrequency="1"
+                                                    ValueChanged="SliderOverlayHoldSeconds_ValueChanged"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
                         <Border Height="24"/>
                     </StackPanel>
                 </StackPanel>
