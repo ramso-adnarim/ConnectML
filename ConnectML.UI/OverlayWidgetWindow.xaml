@@ -45,11 +45,10 @@
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"/>
 
-        <!-- Contêiner da Aba (IsHitTestVisible="False" para a área vazia) -->
-        <Grid x:Name="DockContainer" Background="{x:Null}" IsHitTestVisible="False">
-            <!-- Aba Flutuante do Widget (IsHitTestVisible="True" apenas na aba) -->
+        <!-- Contêiner da Aba (Background="{x:Null}" permite passagem de cliques na área vazia, enquanto os filhos sólidos recebem cliques) -->
+        <Grid x:Name="DockContainer" Background="{x:Null}">
+            <!-- Aba Flutuante do Widget -->
             <Border x:Name="OverlayTabContainer"
-                    IsHitTestVisible="True"
                     Background="#1E293B"
                     BorderBrush="#F59E0B"
                     BorderThickness="1,0,1,1"

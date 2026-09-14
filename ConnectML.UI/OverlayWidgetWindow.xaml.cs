@@ -529,6 +529,7 @@ namespace ConnectML.UI
                                                         _holdSeconds, 
                                                         _currentSnapPosition, 
                                                         _enableOverlay);
+            _settingsDialog.Owner = this;
 
             _settingsDialog.SettingsChanged += (s, args) =>
             {
