@@ -53,8 +53,8 @@ namespace ConnectML.Infrastructure.Commands
                 _commands.Add(new BarcodeCommandDefinition
                 {
                     Id = "undo",
-                    Name = "Desfazer (Alt + Q + O)",
-                    KeySequence = "%{q}{o}",
+                    Name = "Desfazer (Alt + F + O)",
+                    KeySequence = "%{f}{o}",
                     TargetWindowTitle = "MeasurLink",
                     PreDelayMs = 150
                 });
@@ -128,24 +128,11 @@ namespace ConnectML.Infrastructure.Commands
 
             string normalized = keySequence.Trim();
 
-            // Caso 1: Atalho mnemônico Alt + Q + O (Desfazer no MeasurLink)
-            if (IsAltQO(normalized))
+            // Caso 1: Sequência mnemônica com Alt (ex: "Alt + F + O", "Alt + Q + O", "%{f}{o}", "%fo")
+            if (TryParseAltMnemonic(normalized, out byte firstKey, out byte[] subKeys))
             {
-                await SendMnemonicSequenceAsync((byte)'Q', new[] { (byte)'O' });
+                await SendMnemonicSequenceAsync(firstKey, subKeys);
                 return;
-            }
-
-            // Caso 2: Notação SendKeys com prefixo de Alt (%) ex: "%{q}{o}" ou "%qo"
-            if (normalized.StartsWith("%"))
-            {
-                var subKeys = ExtractSubKeys(normalized.Substring(1));
-                if (subKeys.Length > 0)
-                {
-                    byte first = subKeys[0];
-                    byte[] rest = subKeys.Skip(1).ToArray();
-                    await SendMnemonicSequenceAsync(first, rest);
-                    return;
-                }
             }
 
             // Caso 3: Toques sequenciais separados por vírgula (ex: "Alt, Q, O")
@@ -216,10 +203,43 @@ namespace ConnectML.Infrastructure.Commands
             }
         }
 
-        private static bool IsAltQO(string seq)
+        private static bool TryParseAltMnemonic(string seq, out byte firstKey, out byte[] subsequentKeys)
         {
+            firstKey = 0;
+            subsequentKeys = Array.Empty<byte>();
+
             string clean = seq.Replace(" ", "").ToUpperInvariant();
-            return clean == "ALT+Q+O" || clean == "%{Q}{O}" || clean == "%QO" || clean == "ALT,Q,O";
+
+            // Formato com '+' ou ',' iniciando com ALT (ex: "ALT+F+O", "ALT+Q+O", "ALT,F,O")
+            if (clean.StartsWith("ALT+") || clean.StartsWith("ALT,"))
+            {
+                var parts = clean.Split(new[] { '+', ',' }, StringSplitOptions.RemoveEmptyEntries)
+                                 .Skip(1) // Pula a palavra ALT
+                                 .Select(ResolveVirtualKey)
+                                 .Where(vk => vk != 0)
+                                 .ToArray();
+
+                if (parts.Length >= 2)
+                {
+                    firstKey = parts[0];
+                    subsequentKeys = parts.Skip(1).ToArray();
+                    return true;
+                }
+            }
+
+            // Formato SendKeys com prefixo '%' (ex: "%{F}{O}", "%FO", "%{Q}{O}")
+            if (clean.StartsWith("%"))
+            {
+                var subKeys = ExtractSubKeys(clean.Substring(1));
+                if (subKeys.Length >= 2)
+                {
+                    firstKey = subKeys[0];
+                    subsequentKeys = subKeys.Skip(1).ToArray();
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

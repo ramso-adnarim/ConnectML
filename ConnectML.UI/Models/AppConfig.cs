@@ -54,10 +54,10 @@ namespace ConnectML.UI.Models
             new ConnectML.Core.Models.BarcodeCommandDefinition
             {
                 Id = "undo",
-                Name = "Desfazer (Alt + Q + O)",
-                KeySequence = "%{q}{o}",
+                Name = "Desfazer (Alt + F + O)",
+                KeySequence = "%{f}{o}",
                 TargetWindowTitle = "MeasurLink",
-                PreDelayMs = 80
+                PreDelayMs = 150
             }
         };
     }
