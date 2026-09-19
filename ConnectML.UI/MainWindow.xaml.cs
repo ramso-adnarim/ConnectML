@@ -201,6 +201,8 @@ namespace ConnectML.UI
                }
             };
 
+            Activated += (s, e) => ReloadBarcodeCommandsFromDisk();
+
             ApplySecurityState();
         }
 
@@ -1962,6 +1964,42 @@ namespace ConnectML.UI
                         await StopBarcodeServiceAsync();
                     });
                 }
+            }
+        }
+
+        private void BtnOpenConfigJson_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                SaveSettings();
+
+                string configPath = GetConfigFilePath();
+
+                if (!File.Exists(configPath))
+                {
+                    SaveSettings();
+                }
+
+                if (File.Exists(configPath))
+                {
+                    Log.Information("[Config] Abrindo arquivo de configuração ativo: {Path}", configPath);
+
+                    var psi = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = configPath,
+                        UseShellExecute = true
+                    };
+                    System.Diagnostics.Process.Start(psi);
+                }
+                else
+                {
+                    MessageBox.Show($"O arquivo de configuração não foi encontrado em:\n{configPath}", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[Config] Falha ao abrir o arquivo appsettings.json");
+                MessageBox.Show($"Não foi possível abrir o arquivo de configuração:\n{ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
