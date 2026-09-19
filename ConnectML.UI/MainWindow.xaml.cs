@@ -77,6 +77,13 @@ namespace ConnectML.UI
         private bool _isRetrying = false;
         private CancellationTokenSource? _retryCts;
         private AlertCountdownWindow? _activeCountdownWindow;
+        private CancellationTokenSource? _statusMonitorCts;
+        private readonly object _statusMonitorLock = new object();
+        private OverlayWidgetWindow? _overlayWindow;
+        private string _overlaySnapPosition = "Top";
+        private int _overlayBorderThickness = 3;
+        private double _overlayFontSize = 13;
+        private int _overlayHoldSeconds = 10;
         private double _userPreferredLogsWidth = 380; // Largura preferida padrão
         private const double MinConfigWidth = 350; 
         private const double IdealConfigWidth = 564;
@@ -124,6 +131,7 @@ namespace ConnectML.UI
             ItemsConfigList.ItemsSource = _configFields;
             
             LoadSettings();
+            InitializeOverlayWindow();
 
             if (_configFields.Count == 0)
             {
@@ -344,6 +352,7 @@ namespace ConnectML.UI
 
         private void RestoreWindow()
         {
+            _overlayWindow?.Hide();
             if (!IsVisible)
             {
                 Show();
@@ -421,10 +430,19 @@ namespace ConnectML.UI
         
         private void BtnMinimize_Click(object sender, RoutedEventArgs e)
         {
-            // Ocultar para a Bandeja (Tray)
-            Hide();
-            // Exibir uma dica de balão na primeira vez?
-            // _notifyIcon?.ShowBalloonTip(3000, "ConnectML", "Aplicação rodando em segundo plano.", WinForms.ToolTipIcon.Info);
+            try
+            {
+                // Ocultar para a Bandeja (Tray)
+                Hide();
+                if (_isRunning && _overlayWindow != null)
+                {
+                    _overlayWindow.Show();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Erro ao minimizar a janela / exibir o Widget Overlay: {Message}", ex.Message);
+            }
         }
 
         protected override void OnClosed(EventArgs e)
@@ -439,6 +457,19 @@ namespace ConnectML.UI
                 _retryCts.Dispose();
                 _retryCts = null;
             }
+
+            lock (_statusMonitorLock)
+            {
+                if (_statusMonitorCts != null)
+                {
+                    _statusMonitorCts.Cancel();
+                    _statusMonitorCts.Dispose();
+                    _statusMonitorCts = null;
+                }
+            }
+
+            _overlayWindow?.Close();
+            _overlayWindow = null;
 
             base.OnClosed(e);
         }
@@ -743,6 +774,16 @@ namespace ConnectML.UI
                 _retryCts = null;
             }
 
+            lock (_statusMonitorLock)
+            {
+                if (_statusMonitorCts != null)
+                {
+                    _statusMonitorCts.Cancel();
+                    _statusMonitorCts.Dispose();
+                    _statusMonitorCts = null;
+                }
+            }
+
             if (_watcher != null)
             {
                 _watcher.EnableRaisingEvents = false;
@@ -783,6 +824,8 @@ namespace ConnectML.UI
             StatusIndicator.RenderTransform = new ScaleTransform(1, 1);
 
             _lastRunSuccessful = false;
+            _overlayWindow?.Hide();
+            _overlayWindow?.ResetLifecycleState();
             SaveSettings();
             Log.Information("Serviço Parado.");
 
@@ -1067,8 +1110,18 @@ namespace ConnectML.UI
                         {
                             Log.Information($"Escrevendo Handshake Status 1 no endereço {txtDbStatus}...");
                             await _plcDriver.WriteBoolAsync(txtDbStatus, true);
+                            MonitorPlcStatusResetInBackground(txtDbStatus);
                         }
                     }
+                }
+
+                // Notifica o Widget Overlay HUD sobre a conclusão da medição
+                int holdSec = _overlayWindow?.HoldSecondsValue ?? _overlayHoldSeconds;
+                _overlayWindow?.TriggerMeasurementCompleted(holdSec, $"Peça: {result.Product}");
+
+                if (isWebhookMode)
+                {
+                    _overlayWindow?.NotifyPlcResetConfirmed();
                 }
 
                 try
@@ -1132,6 +1185,53 @@ namespace ConnectML.UI
                 await Task.Delay(500);
             }
             return false;
+        }
+
+        private void MonitorPlcStatusResetInBackground(string statusAddress)
+        {
+            if (string.IsNullOrWhiteSpace(statusAddress)) return;
+
+            CancellationToken token;
+            lock (_statusMonitorLock)
+            {
+                if (_statusMonitorCts != null)
+                {
+                    _statusMonitorCts.Cancel();
+                    _statusMonitorCts.Dispose();
+                }
+                _statusMonitorCts = new CancellationTokenSource();
+                token = _statusMonitorCts.Token;
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    while (_isRunning && !token.IsCancellationRequested && _plcDriver != null && _plcDriver.IsConnected)
+                    {
+                        await Task.Delay(200, token);
+
+                        if (!_isRunning || token.IsCancellationRequested || _plcDriver == null || !_plcDriver.IsConnected)
+                            break;
+
+                        bool currentStatus = await _plcDriver.ReadBoolAsync(statusAddress);
+                        if (!currentStatus)
+                        {
+                            Log.Information($"[PLC] Confirmação recebida: variável de Status ({statusAddress}) resetada para FALSE pelo PLC.");
+                            _overlayWindow?.NotifyPlcResetConfirmed();
+                            break;
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // Cancelamento normal quando o serviço é interrompido ou um novo ciclo inicia
+                }
+                catch (Exception ex)
+                {
+                    Log.Debug(ex, $"[MonitorStatus] Exceção durante monitoramento de {statusAddress}: {ex.Message}");
+                }
+            }, token);
         }
 
         private void BtnClearLogs_Click(object sender, RoutedEventArgs e)
@@ -1544,6 +1644,14 @@ namespace ConnectML.UI
                         var headers = new System.Collections.ObjectModel.ObservableCollection<CustomHeader>(config.CustomHeaders ?? new System.Collections.Generic.List<CustomHeader>());
                         DgCustomHeaders.ItemsSource = headers;
 
+                        // Overlay Widget (v1.3.0)
+                        _overlayBorderThickness = config.OverlayBorderThickness > 0 ? config.OverlayBorderThickness : 3;
+                        _overlayFontSize = config.OverlayFontSize >= 11 ? config.OverlayFontSize : 13;
+                        _overlayHoldSeconds = config.OverlayHoldSeconds > 0 ? config.OverlayHoldSeconds : 10;
+                        _overlaySnapPosition = !string.IsNullOrEmpty(config.OverlaySnapPosition) ? config.OverlaySnapPosition : "Top";
+
+                        _overlayWindow?.ApplySettings(_overlayBorderThickness, _overlayFontSize, _overlayHoldSeconds, _overlaySnapPosition);
+
                         Log.Information("Configurações carregadas.");
                     }
                 }
@@ -1584,6 +1692,13 @@ namespace ConnectML.UI
 
         private void SaveSettings()
         {
+            if (!Dispatcher.CheckAccess())
+            {
+                try { Dispatcher.Invoke(SaveSettings); }
+                catch { }
+                return;
+            }
+
             try
             {
                 var headers = DgCustomHeaders.ItemsSource as System.Collections.ObjectModel.ObservableCollection<CustomHeader>;
@@ -1619,7 +1734,13 @@ namespace ConnectML.UI
                     AuthToken = TxtAuthToken.Text,
                     HmacHeaderName = string.IsNullOrWhiteSpace(TxtHmacHeaderName.Text) ? "X-Hub-Signature-256" : TxtHmacHeaderName.Text,
                     PayloadTemplate = TxtPayloadTemplate.Text,
-                    CustomHeaders = headers != null ? new System.Collections.Generic.List<CustomHeader>(headers) : new System.Collections.Generic.List<CustomHeader>()
+                    CustomHeaders = headers != null ? new System.Collections.Generic.List<CustomHeader>(headers) : new System.Collections.Generic.List<CustomHeader>(),
+                    
+                    // Overlay Widget HUD (v1.3.0)
+                    OverlayBorderThickness = _overlayWindow != null ? _overlayWindow.BorderThicknessValue : _overlayBorderThickness,
+                    OverlayFontSize = _overlayWindow != null ? _overlayWindow.FontSizeValue : _overlayFontSize,
+                    OverlaySnapPosition = _overlayWindow != null ? _overlayWindow.CurrentSnapPosition : _overlaySnapPosition,
+                    OverlayHoldSeconds = _overlayWindow != null ? _overlayWindow.HoldSecondsValue : _overlayHoldSeconds
                 };
                 string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(GetConfigFilePath(), json);
@@ -1714,6 +1835,27 @@ namespace ConnectML.UI
                 PnlIntegrationBody.Visibility = Visibility.Visible;
                 ((System.Windows.Media.RotateTransform)IconToggleIntegration.RenderTransform).Angle = 0;
             }
+        }
+
+        private void InitializeOverlayWindow()
+        {
+            _overlayWindow = new OverlayWidgetWindow();
+            _overlayWindow.RequestRestoreMainWindow += (s, e) => RestoreWindow();
+            _overlayWindow.SnapPositionChanged += (s, pos) =>
+            {
+                _overlaySnapPosition = pos;
+                SaveSettings();
+            };
+            _overlayWindow.OverlaySettingsPersisted += (s, args) =>
+            {
+                _overlayBorderThickness = args.BorderThickness;
+                _overlayFontSize = args.FontSize;
+                _overlayHoldSeconds = args.HoldSeconds;
+                _overlaySnapPosition = args.SnapPosition;
+                SaveSettings();
+            };
+
+            _overlayWindow.ApplySettings(_overlayBorderThickness, _overlayFontSize, _overlayHoldSeconds, _overlaySnapPosition);
         }
 
         private void BtnToggleWordWrap_Click(object sender, RoutedEventArgs e)

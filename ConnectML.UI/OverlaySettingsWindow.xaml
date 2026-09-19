@@ -1,0 +1,180 @@
+<Window x:Class="ConnectML.UI.OverlaySettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Configurações do Widget HUD"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <!-- Estilo base para botões de ação -->
+        <Style x:Key="SegmentButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#1E293B"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6" SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#334155"/>
+                                <Setter Property="Foreground" Value="#F8FAFC"/>
+                                <Setter Property="BorderBrush" Value="#64748B"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#0EA5E9"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border Background="#0F172A" BorderBrush="#334155" BorderThickness="1.5" CornerRadius="12" Margin="16" Width="440">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" BlurRadius="24" ShadowDepth="8" Opacity="0.65"/>
+        </Border.Effect>
+
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Header -->
+                <RowDefinition Height="Auto"/> <!-- Separator -->
+                <RowDefinition Height="Auto"/> <!-- Settings Body -->
+                <RowDefinition Height="Auto"/> <!-- Footer Actions -->
+            </Grid.RowDefinitions>
+
+            <!-- 1. Header com DragMove e botão Fechar -->
+            <Grid Grid.Row="0" MouseLeftButtonDown="Header_MouseLeftButtonDown" Background="Transparent" Margin="0,0,0,12" Cursor="SizeAll">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Ícone Engrenagem -->
+                <Viewbox Grid.Column="0" Width="24" Height="24" Margin="0,0,10,0" VerticalAlignment="Center">
+                    <Path Fill="#FFCC00" Stretch="Uniform" Data="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
+                </Viewbox>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="Configurações do Widget HUD" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC"/>
+                    <TextBlock Text="Personalize borda, escala da aba e visibilidade" FontSize="11" Foreground="#94A3B8"/>
+                </StackPanel>
+
+                <!-- Botão Fechar 'X' -->
+                <Button Grid.Column="2" Width="28" Height="28" Background="Transparent" BorderThickness="0"
+                        Cursor="Hand" ToolTip="Fechar configurações" Click="BtnClose_Click" VerticalAlignment="Center">
+                    <Viewbox Width="12" Height="12">
+                        <Path Fill="#94A3B8" Data="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/>
+                    </Viewbox>
+                </Button>
+            </Grid>
+
+            <!-- Separador -->
+            <Rectangle Grid.Row="1" Height="1" Fill="#334155" Margin="0,0,0,16"/>
+
+            <!-- 2. Settings Body -->
+            <StackPanel Grid.Row="2">
+
+                <!-- Config 1: Espessura da Borda -->
+                <Border Background="#1E293B" CornerRadius="8" Padding="14,10" Margin="0,0,0,12" BorderBrush="#334155" BorderThickness="1">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,6">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Espessura da Borda Perimetral" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC"/>
+                                <TextBlock Text=" (1 a 60 px)" FontSize="11" Foreground="#64748B" Margin="4,0,0,0"/>
+                            </StackPanel>
+                            <TextBlock x:Name="TxtBorderThicknessValue" Text="3 px" FontSize="12" FontWeight="Bold" Foreground="#FFCC00" HorizontalAlignment="Right"/>
+                        </Grid>
+                        <Slider x:Name="SliderBorderThickness" Minimum="1" Maximum="60" Value="3" 
+                                IsSnapToTickEnabled="True" TickFrequency="1"
+                                ValueChanged="SliderBorderThickness_ValueChanged"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Config 2: Tamanho da Aba e Fonte (Visibilidade à Distância) -->
+                <Border Background="#1E293B" CornerRadius="8" Padding="14,10" Margin="0,0,0,12" BorderBrush="#334155" BorderThickness="1">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,6">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Tamanho do Texto e da Aba" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC"/>
+                                <TextBlock Text=" (11 a 60 pt - Ultra Visibilidade)" FontSize="11" Foreground="#64748B" Margin="4,0,0,0"/>
+                            </StackPanel>
+                            <TextBlock x:Name="TxtFontSizeValue" Text="13 pt (Padrão)" FontSize="12" FontWeight="Bold" Foreground="#38BDF8" HorizontalAlignment="Right"/>
+                        </Grid>
+                        <Slider x:Name="SliderFontSize" Minimum="11" Maximum="60" Value="13" 
+                                IsSnapToTickEnabled="True" TickFrequency="1"
+                                ValueChanged="SliderFontSize_ValueChanged"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Config 3: Tempo Mínimo de Exibição (Dwell Timer) -->
+                <Border Background="#1E293B" CornerRadius="8" Padding="14,10" Margin="0,0,0,12" BorderBrush="#334155" BorderThickness="1">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,6">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Tempo em Tela ('Concluído')" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC"/>
+                                <TextBlock Text=" (1 a 30 seg)" FontSize="11" Foreground="#64748B" Margin="4,0,0,0"/>
+                            </StackPanel>
+                            <TextBlock x:Name="TxtHoldSecondsValue" Text="10 seg" FontSize="12" FontWeight="Bold" Foreground="#10B981" HorizontalAlignment="Right"/>
+                        </Grid>
+                        <Slider x:Name="SliderHoldSeconds" Minimum="1" Maximum="30" Value="10" 
+                                IsSnapToTickEnabled="True" TickFrequency="1"
+                                ValueChanged="SliderHoldSeconds_ValueChanged"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Config 4: Ancoragem Manual da Aba -->
+                <Border Background="#1E293B" CornerRadius="8" Padding="14,10" Margin="0,0,0,8" BorderBrush="#334155" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Posição de Ancoragem da Aba" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC" Margin="0,0,0,8"/>
+                        <UniformGrid Columns="4">
+                            <Button x:Name="BtnSnapTop" Content="⬆ Topo" Style="{StaticResource SegmentButtonStyle}" Margin="0,0,4,0" Click="BtnSnap_Click" Tag="TOP"/>
+                            <Button x:Name="BtnSnapBottom" Content="⬇ Base" Style="{StaticResource SegmentButtonStyle}" Margin="2,0,2,0" Click="BtnSnap_Click" Tag="BOTTOM"/>
+                            <Button x:Name="BtnSnapLeft" Content="⬅ Esquerda" Style="{StaticResource SegmentButtonStyle}" Margin="2,0,2,0" Click="BtnSnap_Click" Tag="LEFT"/>
+                            <Button x:Name="BtnSnapRight" Content="➡ Direita" Style="{StaticResource SegmentButtonStyle}" Margin="4,0,0,0" Click="BtnSnap_Click" Tag="RIGHT"/>
+                        </UniformGrid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- 3. Footer Actions -->
+            <Grid Grid.Row="3" Margin="0,12,0,0">
+                <Button x:Name="BtnSaveAndClose" Content="Salvar e Fechar" Height="36"
+                        Background="#0EA5E9" Foreground="#FFFFFF" FontWeight="Bold" FontSize="13"
+                        BorderThickness="0" Cursor="Hand" Click="BtnSaveAndClose_Click">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="btnBorder" Background="{TemplateBinding Background}" CornerRadius="8">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="btnBorder" Property="Background" Value="#0284C7"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
