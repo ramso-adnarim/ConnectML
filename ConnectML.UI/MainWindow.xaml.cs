@@ -208,9 +208,10 @@ namespace ConnectML.UI
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            if ((ChkAutoStart.IsChecked == true && _lastRunSuccessful) || _wasServiceRunning)
+            // O serviço SÓ reinicia automaticamente se a opção estiver explicitamente marcada pelo usuário
+            if (ChkAutoStart.IsChecked == true && (_lastRunSuccessful || _wasServiceRunning))
             {
-                Log.Information("Iniciando serviço e minimizando automaticamente...");
+                Log.Information("Iniciando serviço e minimizando automaticamente conforme configuração do usuário...");
                 // Dispara o evento de start
                 BtnStartStop_Click(this, new RoutedEventArgs());
                 // Esconde a janela para a bandeja
@@ -218,6 +219,12 @@ namespace ConnectML.UI
             }
 
             SetupAutoUpdate();
+        }
+
+        private void ChkAutoStart_Click(object sender, RoutedEventArgs e)
+        {
+            SaveSettings();
+            Log.Information("Preferência de reinício automático alterada para: {Enabled}", ChkAutoStart.IsChecked == true);
         }
 
         private void SetupAutoUpdate()
