@@ -1,6 +1,6 @@
 # ![ConnectML Logo](/ConnectML-logo-ico.ico) ConnectML
 
-[![Release](https://img.shields.io/github/v/release/ramso-adnarim/ConnectML?color=0078D4&label=Vers%C3%A3o%20Atual)](https://github.com/ramso-adnarim/ConnectML/releases/tag/1.3.0)
+[![Release](https://img.shields.io/github/v/release/ramso-adnarim/ConnectML?color=0078D4&label=Vers%C3%A3o%20Atual)](https://github.com/ramso-adnarim/ConnectML/releases/tag/1.3.1)
 [![Target](https://img.shields.io/badge/.NET-8.0%20LTS-purple.svg)](https://dotnet.microsoft.com/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20x64-blue.svg)](https://microsoft.com/windows)
 [![Velopack](https://img.shields.io/badge/Updates-Velopack-success.svg)](https://velopack.io/)
@@ -11,17 +11,30 @@ O sistema monitora a geração de arquivos de inspeção **QIF (Quality Informat
 
 ---
 
-## 📥 Download da Versão Mais Recente (v1.3.0)
+## 🌟 Novidades da Versão 1.3.1: Ponte Serial para Leitor de Código de Barras e Automação MeasurLink
 
-A versão **1.3.0** já está disponível com suporte a instalação limpa e atualizações automáticas silenciosas:
+Na versão **1.3.1**, o ConnectML introduz uma nova seção de **Utilidades** voltada à integração de leitores de código de barras:
 
-* 🚀 **[Baixar Instalador Windows (ConnectML-win-Setup.exe)](https://github.com/ramso-adnarim/ConnectML/releases/download/1.3.0/ConnectML-win-Setup.exe)** — *Instalação completa com atalhos no Desktop e Menu Iniciar*
-* 📦 **[Baixar Pacote Portátil (ConnectML-win-Portable.zip)](https://github.com/ramso-adnarim/ConnectML/releases/download/1.3.0/ConnectML-win-Portable.zip)** — *Execução direta sem necessidade de instalação*
-* 📋 **[Ver Notas da Release v1.3.0 no GitHub](https://github.com/ramso-adnarim/ConnectML/releases/tag/1.3.0)**
+* **Ponte Serial Transparente (com0com)**: Monitora a porta COM serial onde o leitor físico ou virtual está conectado e transporta as leituras automaticamente para uma porta serial de saída virtual (conectada ao MeasurLink) sem latência.
+* **Intercepção Condicional de Comandos**: Permite cadastrar palavras-chave que não serão enviadas via serial para a medição, mas sim convertidas em comandos de automação.
+* **Foco Win32 & Simulação de Teclas no MeasurLink**: Ao interceptar uma palavra-chave, o ConnectML localiza a janela do MeasurLink (`EnumWindows`), restaura-a e coloca-a em primeiro plano (`SetForegroundWindow`), simulando atalhos físicos de teclado como **`Alt + Q + O`** para o comando **Desfazer**.
+* **Comandos Customizáveis via JSON (`appsettings.json`)**: Novos comandos e combinações de teclas podem ser definidos ou personalizados diretamente no arquivo de configuração do usuário, sendo carregados dinamicamente pela interface.
+* **Execução Paralela Não-Bloqueante**: O monitoramento das portas COM e os disparos de teclado operam 100% em tarefas assíncronas em segundo plano, garantindo zero interferência na esteira principal de arquivos QIF e na comunicação com PLCs.
+* **Logs Objetivos**: Registro conciso no Serilog e exibição imediata na aba visual LOG informando o sucesso do transporte ou da execução do atalho.
 
 ---
 
-## 🌟 Novidades da Versão 1.3.0: Widget Overlay HUD Industrial
+## 📥 Download da Versão Mais Recente (v1.3.1)
+
+A versão **1.3.1** está disponível com suporte a instalação limpa e atualizações automáticas silenciosas:
+
+* 🚀 **[Baixar Instalador Windows (ConnectML-win-Setup.exe)](https://github.com/ramso-adnarim/ConnectML/releases/download/1.3.1/ConnectML-win-Setup.exe)** — *Instalação completa com atalhos no Desktop e Menu Iniciar*
+* 📦 **[Baixar Pacote Portátil (ConnectML-win-Portable.zip)](https://github.com/ramso-adnarim/ConnectML/releases/download/1.3.1/ConnectML-win-Portable.zip)** — *Execução direta sem necessidade de instalação*
+* 📋 **[Ver Notas da Release v1.3.1 no GitHub](https://github.com/ramso-adnarim/ConnectML/releases/tag/1.3.1)**
+
+---
+
+## 🌟 Versão 1.3.0: Widget Overlay HUD Industrial
 
 Na versão 1.3.0, o ConnectML introduz o subsistema **Widget Overlay HUD (Heads-Up Display)**, projetado especificamente para operadores de chão de fábrica:
 

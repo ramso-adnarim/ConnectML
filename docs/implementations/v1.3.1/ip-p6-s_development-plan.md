@@ -13,15 +13,15 @@ gantt
     dateFormat  X
     axisFormat %s
     section Sprint 6.1
-    Branching, Bump v1.3.1 & Config JSON Extensível   :active, s1, 0, 1
+    Branching, Bump v1.3.1 & Config JSON Extensível   :done, s1, 0, 1
     section Sprint 6.2
-    Core, Foco Win32 & Simulador Teclas MeasurLink    :s2, 1, 2
+    Core, Foco Win32 & Simulador Teclas MeasurLink    :done, s2, 1, 2
     section Sprint 6.3
-    UI Utilidades, Regras & Carga Dinâmica de Comandos:s3, 2, 3
+    UI Utilidades, Regras & Carga Dinâmica de Comandos:done, s3, 2, 3
     section Sprint 6.4
-    Ciclo de Vida, Concorrência & Logs Objetivos       :s4, 3, 4
+    Ciclo de Vida, Concorrência & Logs Objetivos       :done, s4, 3, 4
     section Sprint 6.5
-    Validação com0com, Teste Alt+Q+O & Documentação   :s5, 4, 5
+    Validação com0com, Teste Alt+Q+O & Documentação   :done, s5, 4, 5
 ```
 
 ---
