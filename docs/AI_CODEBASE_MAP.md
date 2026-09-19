@@ -1,4 +1,4 @@
-# AI Codebase Map: ConnectML (Versão 1.3.1)
+# AI Codebase Map: ConnectML (Versão 1.3.2)
 
 Este documento serve como um mapa de arquitetura e glossário de domínio projetado especificamente para agentes de IA que farão manutenção, refatoração ou extensão do **ConnectML**. O objetivo é prover contexto imediato sobre as regras de negócio essenciais, convenções de engenharia e as armadilhas (gotchas) arquiteturais da base de código.
 
@@ -86,9 +86,11 @@ Para evitar quebras de regressão, falhas de concorrência ou comportamentos ind
 - **O Problema**: Após uma medição, a aplicação retorna imediatamente para o modo de espera, o que pode fazer com que o operador perca o piscar de veredito da peça.
 - **A Regra**: Todo evento de medição concluída deve congelar a tela pelo intervalo exato de **0.5 segundos** (Dwell Timer) no estado `PASS` (Verde) ou `FAIL` (Vermelho) antes de acionar a transição de volta ao modo `Aguardando Medição` com a cor **Safety Yellow** (`#FFCC00`) e animação rápida de pulso (0.5s / 1 Hz).
 
-### 3.7. Persistência Isolada em `%LocalAppData%`
-- **O Problema**: Ao aplicar uma atualização via Velopack, a pasta de execução (`app-1.x.x`) é recriada do zero. Se as configurações forem gravadas localmente no diretório do executável, os dados do usuário serão apagados no update.
-- **A Regra**: As configurações de tempo de execução são armazenadas e lidas exclusivamente em `%LocalAppData%\ConnectML\user_settings.json`. O `appsettings.json` na pasta do executável atua apenas como fallback inicial para valores padrão.
+### 3.7. Persistência Isolada em `%AppData%\ConnectML\appsettings.json`
+- **O Problema**: Ao aplicar uma atualização via Velopack, a pasta de execução (`app-1.x.x`) é recriada do zero com os binários de release e um `appsettings.json` padrão de fábrica. Se a aplicação lesse ou gravasse configurações localmente no diretório do executável, ou se a rotina de migração aceitasse o template padrão recente de novas pastas `app-*`, os dados customizados do cliente seriam destruídos no update.
+- **A Regra**: As configurações de tempo de execução são armazenadas e lidas exclusivamente em `%AppData%\ConnectML\appsettings.json`. O método `EnsureSettingsMigrated()` implementa duas salvaguardas invioláveis:
+  1. Se `%AppData%\ConnectML\appsettings.json` já existir e for customizado (`!IsDefaultTemplateConfig`), ele **nunca** é sobrescrito.
+  2. Ao migrar de instalações legadas (ex: v1.2.0), pastas de versões iguais ou superiores à atual são ignoradas e templates de instalação são discriminados para recuperar as credenciais reais do cliente.
 
 ### 3.8. Normalização de Endereços Siemens S7
 - **O Problema**: Operadores digitam na interface notações encurtadas como `DB10.0` ou `DB20.2`. A biblioteca `S7NetPlus` exige notações formais do protocolo sob pena de `ArgumentOutOfRangeException`.
@@ -113,4 +115,8 @@ Para evitar quebras de regressão, falhas de concorrência ou comportamentos ind
 ### 3.12. Sincronização e Hot-Reload de Configurações (`appsettings.json`)
 - **O Problema**: Edições manuais no arquivo de configuração do usuário (`%AppData%\ConnectML\appsettings.json`) ou via botão da interface (`BtnOpenConfigJson`) poderiam não surtir efeito imediato se a aplicação mantivesse uma cópia estática em memória.
 - **A Regra**: A aplicação deve recarregar a lista `BarcodeCommands` do disco através de `ReloadBarcodeCommandsFromDisk()` sempre que o serviço for iniciado, parado, o switch do leitor for alternado, uma nova regra for adicionada ou a janela recuperar o foco do sistema operacional (`Window.Activated`).
+
+### 3.13. Inicialização Assíncrona e Ativação Universal do HUD no Startup
+- **O Problema**: No startup automático do Windows, a chamada de inicialização do serviço (`StartService`) é assíncrona devido ao handshake de rede TCP com o CLP (`await _plcDriver.ConnectAsync`). Se a minimização para a bandeja verificar `if (_isRunning)`, a flag ainda estará como `false` no exato instante do minimize, fazendo com que o HUD não apareça na tela.
+- **A Regra**: O método `BtnMinimize_Click` deve invocar `_overlayWindow.Show()` **sempre** que a janela principal for ocultada para a bandeja, sem travas de estado de execução. Adicionalmente, o reinício automático em `Window_Loaded` exige mandatoriamente que a checkbox `ChkAutoStart.IsChecked == true` esteja marcada pelo usuário; a mera existência de `WasServiceRunning` jamais deve disparar a inicialização sem o consentimento da checkbox.
 

@@ -1,11 +1,11 @@
-# ConnectML Architecture Documentation (Versão 1.3.1)
+# ConnectML Architecture Documentation (Versão 1.3.2)
 
 ## 1. Visão Geral do Projeto
 **ConnectML** é um middleware de integração industrial desenvolvido para conectar os softwares de metrologia (notavelmente o **MeasurLink / Mitutoyo**) aos sistemas de automação de manufatura (**CLPs Siemens S7**, barramentos industriais e endpoints **Webhook REST**).
 
 O sistema monitora diretórios locais ou de rede em busca de arquivos de exportação **QIF (Quality Information Framework)** em tempo real, analisa as características geométricas e dimensionais inspecionadas, extrai o veredito da peça (`PASS` ou `FAIL`) e despacha comandos de controle aos PLCs ou sistemas MES/SCADA.
 
-A partir da versão **1.3.0**, o ConnectML incorpora o subsistema **Widget Overlay HUD (Heads-Up Display)**, e a partir da versão **1.3.1**, introduz o subsistema de **Monitoramento e Transporte Serial do Leitor de Código de Barras**, atuando como uma ponte de comunicação com intercepção de palavras-chave e simulação de atalhos físicos de teclado no MeasurLink (como `Alt + F + O` para desfazer medição).
+A partir da versão **1.3.0**, o ConnectML incorpora o subsistema **Widget Overlay HUD (Heads-Up Display)**, a partir da versão **1.3.1**, o subsistema de **Monitoramento e Transporte Serial do Leitor de Código de Barras**, e na versão **1.3.2**, aprimora a **ativação universal e confiável do HUD na bandeja/startup**, o **controle estrito do reinício automático** e a **blindagem de persistência de configurações no Velopack** contra sobrescrita indevida por templates de atualização.
 
 ---
 
@@ -186,11 +186,13 @@ A partir da versão **1.3.1**, o ConnectML incorpora o subsistema de **Monitoram
 
 ## 6. Subsistema de Atualização Automática (Velopack)
 
-O ConnectML utiliza o framework **Velopack** para atualizações transparentes:
-- **Armazenamento Seguro de Configurações**: As preferências do operador residem em `%LocalAppData%\ConnectML\user_settings.json`, isoladas dos diretórios de binários (`app-*`), garantindo que nenhuma configuração seja perdida durante os updates.
-- **Pacotes Diferenciais (Delta)**: O compilador `vpk pack` compara a versão atual com a anterior e gera pacotes delta ultraleves (ex: v1.3.0 -> v1.3.1 gerou um delta de apenas 311 KB contra 86 MB do pacote completo).
+O ConnectML utiliza o framework **Velopack** para atualizações transparentes e resilientes:
+- **Armazenamento e Blindagem de Configurações**: As preferências do operador residem em `%AppData%\ConnectML\appsettings.json`, isoladas dos diretórios transitórios de binários (`app-*`). O método `EnsureSettingsMigrated()` garante que:
+  1. Configurações customizadas existentes em `%AppData%` **nunca** sejam sobrescritas por templates de instalação.
+  2. Ao migrar de versões legadas (ex: v1.2.0), templates de fábrica de novas versões são discriminados e ignorados, priorizando arquivos que contenham credenciais reais do cliente.
+- **Pacotes Diferenciais (Delta)**: O compilador `vpk pack` compara a versão atual com a anterior e gera pacotes delta ultraleves (ex: v1.3.1 -> v1.3.2 gerou um delta de apenas **272 KB** contra 86 MB do pacote completo).
 - **Ciclo de Atualização em Segundo Plano**:
-  1. A aplicação checa periodicamente a URL de releases no GitHub via `VelopackUpdateService`.
+  1. A aplicação checa periodicamente a URL de releases no GitHub via `UpdateManager`.
   2. Ao detectar nova versão, baixa os pacotes silenciosamente em segundo plano.
   3. Altera o ícone de status no rodapé para um aviso de atualização pendente.
   4. Aplica a nova versão ao reiniciar a aplicação ou por acionamento do usuário.

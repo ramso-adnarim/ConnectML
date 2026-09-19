@@ -1,6 +1,6 @@
 # ![ConnectML Logo](/ConnectML-logo-ico.ico) ConnectML
 
-[![Release](https://img.shields.io/github/v/release/ramso-adnarim/ConnectML?color=0078D4&label=Vers%C3%A3o%20Atual)](https://github.com/ramso-adnarim/ConnectML/releases/tag/1.3.1)
+[![Release](https://img.shields.io/github/v/release/ramso-adnarim/ConnectML?color=0078D4&label=Vers%C3%A3o%20Atual)](https://github.com/ramso-adnarim/ConnectML/releases/tag/1.3.2)
 [![Target](https://img.shields.io/badge/.NET-8.0%20LTS-purple.svg)](https://dotnet.microsoft.com/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20x64-blue.svg)](https://microsoft.com/windows)
 [![Velopack](https://img.shields.io/badge/Updates-Velopack-success.svg)](https://velopack.io/)
@@ -11,27 +11,24 @@ O sistema monitora a geração de arquivos de inspeção **QIF (Quality Informat
 
 ---
 
-## 🌟 Novidades da Versão 1.3.1: Ponte Serial para Leitor de Código de Barras e Automação MeasurLink
+## 🌟 Novidades da Versão 1.3.2: HUD no Startup, Reinício Controlado e Blindagem de Configurações
 
-Na versão **1.3.1**, o ConnectML introduz uma nova seção de **Utilidades** voltada à integração de leitores de código de barras:
+A versão **1.3.2** consolida melhorias essenciais de estabilidade e usabilidade para o chão de fábrica:
 
-* **Ponte Serial Transparente (com0com)**: Monitora a porta COM serial onde o leitor físico ou virtual está conectado e transporta as leituras automaticamente para uma porta serial de saída virtual (conectada ao MeasurLink) sem latência.
-* **Intercepção Condicional de Comandos**: Permite cadastrar palavras-chave que não serão enviadas via serial para a medição, mas sim convertidas em comandos de automação.
-* **Foco Win32 & Simulação de Teclas no MeasurLink**: Ao interceptar uma palavra-chave, o ConnectML localiza a janela do MeasurLink (`EnumWindows`), restaura-a e coloca-a em primeiro plano (`SetForegroundWindow`), simulando atalhos físicos de teclado como **`Alt + F + O`** para o comando **Desfazer**.
-* **Comandos Customizáveis via JSON (`appsettings.json`)**: Novos comandos e combinações de teclas podem ser definidos ou personalizados diretamente no arquivo de configuração do usuário, com suporte a recarregamento dinâmico (hot-reload) a quente.
-* **Acesso Rápido às Configurações**: Botão sutil integrado na seção Utilidades para abrir o arquivo `appsettings.json` ativo diretamente no editor padrão com um único clique.
-* **Execução Paralela Não-Bloqueante**: O monitoramento das portas COM e os disparos de teclado operam 100% em tarefas assíncronas em segundo plano, garantindo zero interferência na esteira principal de arquivos QIF e na comunicação com PLCs.
-* **Logs Objetivos**: Registro conciso no Serilog e exibição imediata na aba visual LOG informando o sucesso do transporte ou da execução do atalho.
+* **Ativação Universal do HUD no Startup**: O HUD agora surge de forma imediata e transparente na tela sempre que a aplicação inicia minimizada para a bandeja do sistema (Startup do Windows), sincronizando com o estabelecimento assíncrono da conexão com o CLP.
+* **Controle Rigidamente Estrito do Reinício Automático**: A inicialização automática agora é um privilégio exclusivo da checkbox "Reinício automático". Se desmarcada pelo operador, o serviço **nunca** inicia sozinho, e qualquer alteração é gravada imediatamente em disco ao clique.
+* **Blindagem e Migração de Configurações no Velopack**: O algoritmo de persistência foi completamente blindado para garantir que templates padrão de novas versões nunca sobrescrevam configurações customizadas do operador em `%AppData%\ConnectML\appsettings.json`, além de restaurar automaticamente configurações de clientes que atualizaram a partir da v1.2.0.
+* **Atualizações Ultrarrápidas via Delta**: Pacote diferencial de apenas **272 KB** para atualização em segundos sem travar a produção.
 
 ---
 
-## 📥 Download da Versão Mais Recente (v1.3.1)
+## 📥 Download da Versão Mais Recente (v1.3.2)
 
-A versão **1.3.1** está disponível com suporte a instalação limpa e atualizações automáticas silenciosas:
+A versão **1.3.2** já está disponível com suporte a instalação limpa e atualizações automáticas silenciosas:
 
-* 🚀 **[Baixar Instalador Windows (ConnectML-win-Setup.exe)](https://github.com/ramso-adnarim/ConnectML/releases/download/1.3.1/ConnectML-win-Setup.exe)** — *Instalação completa com atalhos no Desktop e Menu Iniciar*
-* 📦 **[Baixar Pacote Portátil (ConnectML-win-Portable.zip)](https://github.com/ramso-adnarim/ConnectML/releases/download/1.3.1/ConnectML-win-Portable.zip)** — *Execução direta sem necessidade de instalação*
-* 📋 **[Ver Notas da Release v1.3.1 no GitHub](https://github.com/ramso-adnarim/ConnectML/releases/tag/1.3.1)**
+* 🚀 **[Baixar Instalador Windows (ConnectML-win-Setup.exe)](https://github.com/ramso-adnarim/ConnectML/releases/download/1.3.2/ConnectML-win-Setup.exe)** — *Instalação completa com atalhos no Desktop e Menu Iniciar*
+* 📦 **[Baixar Pacote Portátil (ConnectML-win-Portable.zip)](https://github.com/ramso-adnarim/ConnectML/releases/download/1.3.2/ConnectML-win-Portable.zip)** — *Execução direta sem necessidade de instalação*
+* 📋 **[Ver Notas da Release v1.3.2 no GitHub](https://github.com/ramso-adnarim/ConnectML/releases/tag/1.3.2)**
 
 ---
 
