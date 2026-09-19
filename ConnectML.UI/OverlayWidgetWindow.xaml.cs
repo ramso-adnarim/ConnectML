@@ -31,13 +31,10 @@ namespace ConnectML.UI
         public int BorderThicknessValue => _borderThickness;
         public double FontSizeValue => _fontSize;
         public int HoldSecondsValue => _holdSeconds;
-        public bool EnableOverlayValue => _enableOverlay;
-
         private string _currentSnapPosition = "Top";
         private int _borderThickness = 3;
         private double _fontSize = 13;
         private int _holdSeconds = 10;
-        private bool _enableOverlay = true;
         private OverlaySettingsWindow? _settingsDialog;
         private Storyboard? _pulseStoryboard;
 
@@ -54,7 +51,7 @@ namespace ConnectML.UI
         private double _dragStartTranslateY;
 
         // Cores da Identidade Visual
-        private static readonly Brush YellowBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F59E0B"));
+        private static readonly Brush YellowBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFCC00"));
         private static readonly Brush GreenBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#10B981"));
 
         #region Win32 Non-Activating Styles
@@ -232,10 +229,9 @@ namespace ConnectML.UI
         /// <summary>
         /// Aplica todas as configurações carregadas do AppConfig.
         /// </summary>
-        public void ApplySettings(int borderThickness, double fontSize, int holdSeconds, string snapPosition, bool enableOverlay)
+        public void ApplySettings(int borderThickness, double fontSize, int holdSeconds, string snapPosition)
         {
             _holdSeconds = Math.Clamp(holdSeconds, 1, 30);
-            _enableOverlay = enableOverlay;
             SetBorderThickness(borderThickness);
             SetFontSize(fontSize);
             SetSnapPosition(snapPosition);
@@ -243,11 +239,11 @@ namespace ConnectML.UI
 
         /// <summary>
         /// Atualiza dinamicamente a espessura da borda perimetral luminosa e compensa a margem da aba e das tiras de redimensionamento.
-        /// Limite expandido: 1 a 35 px para alta visibilidade industrial.
+        /// Limite expandido: 1 a 60 px para alta visibilidade industrial.
         /// </summary>
         public void SetBorderThickness(int thickness)
         {
-            _borderThickness = Math.Clamp(thickness, 1, 35);
+            _borderThickness = Math.Clamp(thickness, 1, 60);
             OverlayBorder.BorderThickness = new Thickness(_borderThickness);
             UpdateTabMargin();
             UpdateBorderResizeStrips();
@@ -262,8 +258,8 @@ namespace ConnectML.UI
             {
                 if (BorderResizeTop == null || BorderResizeBottom == null || BorderResizeLeft == null || BorderResizeRight == null) return;
 
-                // A tira cobre a espessura da borda mais 8 pixels de tolerância interna para facilitar o clique
-                double stripThickness = Math.Max(14, _borderThickness + 8);
+                // A tira cobre a espessura da borda mais 10 pixels de tolerância interna para facilitar o clique
+                double stripThickness = Math.Max(14, _borderThickness + 10);
                 BorderResizeTop.Height = stripThickness;
                 BorderResizeBottom.Height = stripThickness;
                 BorderResizeLeft.Width = stripThickness;
@@ -278,11 +274,11 @@ namespace ConnectML.UI
 
         /// <summary>
         /// Atualiza dinamicamente a escala da fonte e o tamanho de todos os elementos da aba.
-        /// Limite expandido: 11 a 40 pt para conforto e legibilidade a longas distâncias da tela.
+        /// Limite expandido: 11 a 60 pt para conforto e legibilidade a longas distâncias da tela.
         /// </summary>
         public void SetFontSize(double size)
         {
-            _fontSize = Math.Clamp(size, 11, 40);
+            _fontSize = Math.Clamp(size, 11, 60);
 
             Dispatcher.Invoke(() =>
             {
@@ -572,7 +568,7 @@ namespace ConnectML.UI
                     break;
             }
 
-            int newThickness = Math.Clamp(_borderResizeStartThickness + delta, 1, 35);
+            int newThickness = Math.Clamp(_borderResizeStartThickness + delta, 1, 60);
             if (newThickness != _borderThickness)
             {
                 SetBorderThickness(newThickness);
@@ -636,7 +632,7 @@ namespace ConnectML.UI
                     break;
             }
 
-            double newSize = Math.Clamp(Math.Round(_tabResizeStartFontSize + delta), 11, 40);
+            double newSize = Math.Clamp(Math.Round(_tabResizeStartFontSize + delta), 11, 60);
             if (Math.Abs(newSize - _fontSize) >= 1)
             {
                 SetFontSize(newSize);
@@ -674,8 +670,7 @@ namespace ConnectML.UI
                 BorderThickness = _borderThickness,
                 FontSize = _fontSize,
                 HoldSeconds = _holdSeconds,
-                SnapPosition = _currentSnapPosition,
-                EnableOverlay = _enableOverlay
+                SnapPosition = _currentSnapPosition
             };
         }
 
@@ -795,8 +790,7 @@ namespace ConnectML.UI
                                                         _borderThickness, 
                                                         _fontSize, 
                                                         _holdSeconds, 
-                                                        _currentSnapPosition, 
-                                                        _enableOverlay);
+                                                        _currentSnapPosition);
             _settingsDialog.Owner = this;
 
             _settingsDialog.SettingsChanged += (s, args) =>
@@ -804,7 +798,6 @@ namespace ConnectML.UI
                 _borderThickness = args.BorderThickness;
                 _fontSize = args.FontSize;
                 _holdSeconds = args.HoldSeconds;
-                _enableOverlay = args.EnableOverlay;
                 OverlaySettingsPersisted?.Invoke(this, args);
             };
 
@@ -813,7 +806,6 @@ namespace ConnectML.UI
                 _borderThickness = args.BorderThickness;
                 _fontSize = args.FontSize;
                 _holdSeconds = args.HoldSeconds;
-                _enableOverlay = args.EnableOverlay;
                 OverlaySettingsPersisted?.Invoke(this, args);
             };
 

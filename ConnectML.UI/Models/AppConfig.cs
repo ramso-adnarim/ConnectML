@@ -37,10 +37,9 @@ namespace ConnectML.UI.Models
         public bool IsLocked { get; set; } = false;
 
         // Widget Overlay HUD (v1.3.0)
-        public bool EnableOverlayWidget { get; set; } = true;
-        public int OverlayBorderThickness { get; set; } = 3;
+        public int OverlayBorderThickness { get; set; } = 3; // 1 a 60 px (padrão: 3)
         public string OverlaySnapPosition { get; set; } = "Top";
         public int OverlayHoldSeconds { get; set; } = 10;
-        public double OverlayFontSize { get; set; } = 13; // 11 a 40 pt (padrão: 13)
+        public double OverlayFontSize { get; set; } = 13; // 11 a 60 pt (padrão: 13)
     }
 }

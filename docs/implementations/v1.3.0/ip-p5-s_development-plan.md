@@ -302,11 +302,11 @@ Com base nos testes funcionais em ambiente de desenvolvimento e diretrizes opera
   - Remoção completa do Card 4 ("Widget Overlay (HUD)") da interface principal `MainWindow.xaml`.
   - Adição de um botão de Configurações com ícone de engrenagem (`BtnOverlaySettings`) diretamente na aba do HUD (`OverlayWidgetWindow.xaml`).
   - Criação da janela flutuante especializada [OverlaySettingsWindow.xaml](file:///c:/Antigravity/ConnectML/ConnectML.UI/OverlaySettingsWindow.xaml), estilizada com identidade visual moderna Dark Slate (`#0F172A`/`#1E293B`), permitindo:
-    1. Ajuste fino de espessura de borda perimetral (1px a 35px) com preview instantâneo e alta visibilidade industrial.
-    2. Ajuste dinâmico de escala de fonte/aba (11pt a 40pt) para visão de chão de fábrica a longas distâncias (10 a 15 metros).
+    1. Ajuste fino de espessura de borda perimetral (1px a 60px) com preview instantâneo e alta visibilidade industrial.
+    2. Ajuste dinâmico de escala de fonte/aba (11pt a 60pt) para visão de chão de fábrica a longas distâncias (até 25 a 30 metros).
     3. Ajuste do tempo mínimo de permanência em tela (Dwell Timer) de 1s a 30s.
     4. Seletores segmentados de ancoragem rápida (Topo, Base, Esquerda, Direita).
-    5. Checkbox para habilitar/desabilitar exibição do Overlay ao minimizar.
+  - **HUD Mandatório:** Removida a opção/checkbox de desativar o HUD ao minimizar. O HUD é uma diretriz de segurança de chão de fábrica e opera de forma permanente sempre que a aplicação estiver em execução e for minimizada.
   - Persistência automática das preferências no arquivo `%AppData%\ConnectML\appsettings.json`.
 
 ### 2. Manipulador de Arraste (Grip Handle) e Adaptação Vertical Ergonômica
@@ -320,18 +320,24 @@ Com base nos testes funcionais em ambiente de desenvolvimento e diretrizes opera
     - Os separadores sutilmente alternam para barras horizontais compactas.
     - O botão de restauração compacta-se para o modo de apenas ícone (com Tooltip explicativo), mantendo a aba com largura ultra-esbelta (~40px) e evitando qualquer intrusão visual na área útil do software MeasurLink.
 
-### 3. Redimensionamento Direto via Mouse Drag nas Extremidades e Limites Expandidos
+### 3. Redimensionamento Direto via Mouse Drag nas Extremidades e Limites Ultra-Industriais (60px / 60pt)
 - **Mecanismo de Arraste nas Extremidades da Borda Perimetral:**
   - Posicionamento de 4 tiras interativas de captura nas extremidades perimetrais do monitor (`BorderResizeTop`, `BorderResizeBottom`, `BorderResizeLeft`, `BorderResizeRight`).
   - Ao posicionar o mouse nas bordas superior/inferior, o cursor altera-se automaticamente para `SizeNS` (redimensionamento vertical ⬍).
   - Nas bordas esquerda/direita, o cursor altera-se para `SizeWE` (redimensionamento horizontal ⬄).
-  - O operador clica e arrasta para dentro ou para fora, alterando a espessura em tempo real de **1px até 35px**.
-  - A espessura ampliada para 35px atua como uma moldura de sinalização de alta intensidade visual no galpão, garantindo identificação imediata do status a mais de 10 metros de distância.
+  - O operador clica e arrasta para dentro ou para fora, alterando a espessura em tempo real de **1px até 60px**.
+  - A espessura ampliada para até 60px atua como uma moldura de sinalização de alta intensidade visual no galpão, garantindo identificação imediata do status mesmo nas maiores distâncias físicas de trabalho.
 - **Mecanismo de Arraste nas Extremidades da Aba:**
   - Duplo ponto de apoio ergonômico para redimensionamento:
     1. **Manipulador de Canto (`TabResizeGrip`):** Ícone diagonal com cursor `SizeNWSE` e efeito de destaque luminoso (hover em `#38BDF8`).
     2. **Tira da Borda Externa (`TabEdgeResizeStrip`):** Borda externa da aba voltada para o centro da tela, permitindo que o operador apenas puxe ou empurre a borda da aba (cursor `SizeNS` ou `SizeWE`).
-  - O limite máximo de tamanho de texto/aba foi expandido de 22pt para **40pt**:
-    - À escala de 40pt, o indicador luminoso `StateDot` expande para 26px, ícones de ação para 34px, separadores para 44px e o padding atinge 36px, criando um HUD de altíssima legibilidade e impacto visual.
+  - O limite máximo de tamanho de texto/aba foi expandido de 40pt para **60pt**:
+    - À escala de 60pt, o indicador luminoso `StateDot` expande para 39px, ícones de ação para 51px, separadores para 66px e o padding atinge 54px/27px, proporcionando legibilidade cinematográfica para operadores posicionados a até 30 metros da tela.
   - Ao soltar o mouse após qualquer redimensionamento direto, a nova configuração é imediatamente persistida no banco SQLite/AppConfig sem requerer abertura de menus modais.
+
+### 4. Cores de Alta Visibilidade e Dinâmica de Pulso Acelerada
+- **Amarelo Atenção Industrial (`#FFCC00`):**
+  - Substituição da tonalidade âmbar intermediária pela cor padrão internacional de advertência e atenção industrial (`#FFCC00`), garantindo contraste nítido contra fundos escuros e software MeasurLink.
+- **Pulso Energético Acelerado (500ms):**
+  - Duração do ciclo de pulso da animação GPU `PulseStoryboard` reduzida de 1.2s para **0.5s** (frequência de 1Hz completo), fornecendo uma cadência de pulso rápida, atenta e vívida para sinalizar que o sistema está ativamente aguardando medição.
 

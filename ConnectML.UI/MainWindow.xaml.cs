@@ -84,7 +84,6 @@ namespace ConnectML.UI
         private int _overlayBorderThickness = 3;
         private double _overlayFontSize = 13;
         private int _overlayHoldSeconds = 10;
-        private bool _enableOverlayWidget = true;
         private double _userPreferredLogsWidth = 380; // Largura preferida padrão
         private const double MinConfigWidth = 350; 
         private const double IdealConfigWidth = 564;
@@ -435,7 +434,7 @@ namespace ConnectML.UI
             {
                 // Ocultar para a Bandeja (Tray)
                 Hide();
-                if (_isRunning && _enableOverlayWidget && _overlayWindow != null)
+                if (_isRunning && _overlayWindow != null)
                 {
                     _overlayWindow.Show();
                 }
@@ -1646,13 +1645,12 @@ namespace ConnectML.UI
                         DgCustomHeaders.ItemsSource = headers;
 
                         // Overlay Widget (v1.3.0)
-                        _enableOverlayWidget = config.EnableOverlayWidget;
                         _overlayBorderThickness = config.OverlayBorderThickness > 0 ? config.OverlayBorderThickness : 3;
                         _overlayFontSize = config.OverlayFontSize >= 11 ? config.OverlayFontSize : 13;
                         _overlayHoldSeconds = config.OverlayHoldSeconds > 0 ? config.OverlayHoldSeconds : 10;
                         _overlaySnapPosition = !string.IsNullOrEmpty(config.OverlaySnapPosition) ? config.OverlaySnapPosition : "Top";
 
-                        _overlayWindow?.ApplySettings(_overlayBorderThickness, _overlayFontSize, _overlayHoldSeconds, _overlaySnapPosition, _enableOverlayWidget);
+                        _overlayWindow?.ApplySettings(_overlayBorderThickness, _overlayFontSize, _overlayHoldSeconds, _overlaySnapPosition);
 
                         Log.Information("Configurações carregadas.");
                     }
@@ -1739,7 +1737,6 @@ namespace ConnectML.UI
                     CustomHeaders = headers != null ? new System.Collections.Generic.List<CustomHeader>(headers) : new System.Collections.Generic.List<CustomHeader>(),
                     
                     // Overlay Widget HUD (v1.3.0)
-                    EnableOverlayWidget = _overlayWindow != null ? _overlayWindow.EnableOverlayValue : _enableOverlayWidget,
                     OverlayBorderThickness = _overlayWindow != null ? _overlayWindow.BorderThicknessValue : _overlayBorderThickness,
                     OverlayFontSize = _overlayWindow != null ? _overlayWindow.FontSizeValue : _overlayFontSize,
                     OverlaySnapPosition = _overlayWindow != null ? _overlayWindow.CurrentSnapPosition : _overlaySnapPosition,
@@ -1855,11 +1852,10 @@ namespace ConnectML.UI
                 _overlayFontSize = args.FontSize;
                 _overlayHoldSeconds = args.HoldSeconds;
                 _overlaySnapPosition = args.SnapPosition;
-                _enableOverlayWidget = args.EnableOverlay;
                 SaveSettings();
             };
 
-            _overlayWindow.ApplySettings(_overlayBorderThickness, _overlayFontSize, _overlayHoldSeconds, _overlaySnapPosition, _enableOverlayWidget);
+            _overlayWindow.ApplySettings(_overlayBorderThickness, _overlayFontSize, _overlayHoldSeconds, _overlaySnapPosition);
         }
 
         private void BtnToggleWordWrap_Click(object sender, RoutedEventArgs e)

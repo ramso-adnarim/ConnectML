@@ -17,18 +17,18 @@
         ShowActivated="False">
 
     <Window.Resources>
-        <!-- Storyboard de Pulso GPU em Amarelo para Estado 'Aguardando Medição' -->
+        <!-- Storyboard de Pulso GPU em Amarelo para Estado 'Aguardando Medição' (Aceleração Dinâmica) -->
         <Storyboard x:Key="PulseStoryboard" RepeatBehavior="Forever" AutoReverse="True">
             <DoubleAnimation Storyboard.TargetName="OverlayBorder"
                              Storyboard.TargetProperty="Opacity"
-                             From="0.30" To="1.0" Duration="0:0:1.2">
+                             From="0.20" To="1.0" Duration="0:0:0.5">
                 <DoubleAnimation.EasingFunction>
                     <QuadraticEase EasingMode="EaseInOut"/>
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
             <DoubleAnimation Storyboard.TargetName="StateDot"
                              Storyboard.TargetProperty="Opacity"
-                             From="0.35" To="1.0" Duration="0:0:1.2">
+                             From="0.25" To="1.0" Duration="0:0:0.5">
                 <DoubleAnimation.EasingFunction>
                     <QuadraticEase EasingMode="EaseInOut"/>
                 </DoubleAnimation.EasingFunction>
@@ -39,7 +39,7 @@
     <Grid x:Name="RootOverlayGrid" Background="{x:Null}">
         <!-- Borda Perimetral (IsHitTestVisible="False" garante 100% de passagem de cliques ao fundo) -->
         <Border x:Name="OverlayBorder"
-                BorderBrush="#F59E0B"
+                BorderBrush="#FFCC00"
                 BorderThickness="3"
                 IsHitTestVisible="False"
                 HorizontalAlignment="Stretch"
@@ -52,7 +52,7 @@
                 HorizontalAlignment="Stretch"
                 Background="#01000000"
                 Cursor="SizeNS"
-                ToolTip="Arraste a borda superior para ajustar a espessura (1 a 35 px)"
+                ToolTip="Arraste a borda superior para ajustar a espessura (1 a 60 px)"
                 MouseLeftButtonDown="BorderResize_MouseLeftButtonDown"
                 MouseMove="BorderResize_MouseMove"
                 MouseLeftButtonUp="BorderResize_MouseLeftButtonUp"
@@ -64,7 +64,7 @@
                 HorizontalAlignment="Stretch"
                 Background="#01000000"
                 Cursor="SizeNS"
-                ToolTip="Arraste a borda inferior para ajustar a espessura (1 a 35 px)"
+                ToolTip="Arraste a borda inferior para ajustar a espessura (1 a 60 px)"
                 MouseLeftButtonDown="BorderResize_MouseLeftButtonDown"
                 MouseMove="BorderResize_MouseMove"
                 MouseLeftButtonUp="BorderResize_MouseLeftButtonUp"
@@ -76,7 +76,7 @@
                 VerticalAlignment="Stretch"
                 Background="#01000000"
                 Cursor="SizeWE"
-                ToolTip="Arraste a borda esquerda para ajustar a espessura (1 a 35 px)"
+                ToolTip="Arraste a borda esquerda para ajustar a espessura (1 a 60 px)"
                 MouseLeftButtonDown="BorderResize_MouseLeftButtonDown"
                 MouseMove="BorderResize_MouseMove"
                 MouseLeftButtonUp="BorderResize_MouseLeftButtonUp"
@@ -88,7 +88,7 @@
                 VerticalAlignment="Stretch"
                 Background="#01000000"
                 Cursor="SizeWE"
-                ToolTip="Arraste a borda direita para ajustar a espessura (1 a 35 px)"
+                ToolTip="Arraste a borda direita para ajustar a espessura (1 a 60 px)"
                 MouseLeftButtonDown="BorderResize_MouseLeftButtonDown"
                 MouseMove="BorderResize_MouseMove"
                 MouseLeftButtonUp="BorderResize_MouseLeftButtonUp"
@@ -99,7 +99,7 @@
             <!-- Aba Flutuante do Widget -->
             <Border x:Name="OverlayTabContainer"
                     Background="#1E293B"
-                    BorderBrush="#F59E0B"
+                    BorderBrush="#FFCC00"
                     BorderThickness="1,0,1,1"
                     CornerRadius="0,0,8,8"
                     HorizontalAlignment="Center"
@@ -129,7 +129,7 @@
                         </Grid>
 
                         <!-- 2. Indicador Circular de Estado -->
-                        <Ellipse x:Name="StateDot" Width="9" Height="9" Fill="#F59E0B" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <Ellipse x:Name="StateDot" Width="9" Height="9" Fill="#FFCC00" Margin="0,0,8,0" VerticalAlignment="Center"/>
                         
                         <!-- 3. Texto de Estado Principal -->
                         <TextBlock x:Name="TxtOverlayStatus"
@@ -192,7 +192,7 @@
                               Background="Transparent"
                               VerticalAlignment="Center"
                               Margin="4,0,0,0"
-                              ToolTip="Clique e arraste para redimensionar a aba e o texto (11 a 40 pt)"
+                              ToolTip="Clique e arraste para redimensionar a aba e o texto (11 a 60 pt)"
                               MouseLeftButtonDown="TabResizeGrip_MouseLeftButtonDown"
                               MouseMove="TabResizeGrip_MouseMove"
                               MouseLeftButtonUp="TabResizeGrip_MouseLeftButtonUp"
@@ -211,7 +211,7 @@
                             VerticalAlignment="Bottom"
                             HorizontalAlignment="Stretch"
                             Height="10"
-                            ToolTip="Arraste a extremidade da aba para redimensionar (11 a 40 pt)"
+                            ToolTip="Arraste a extremidade da aba para redimensionar (11 a 60 pt)"
                             MouseLeftButtonDown="TabResizeGrip_MouseLeftButtonDown"
                             MouseMove="TabResizeGrip_MouseMove"
                             MouseLeftButtonUp="TabResizeGrip_MouseLeftButtonUp"/>

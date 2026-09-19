@@ -71,7 +71,7 @@
 
                 <!-- Ícone Engrenagem -->
                 <Viewbox Grid.Column="0" Width="24" Height="24" Margin="0,0,10,0" VerticalAlignment="Center">
-                    <Path Fill="#F59E0B" Stretch="Uniform" Data="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
+                    <Path Fill="#FFCC00" Stretch="Uniform" Data="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
                 </Viewbox>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -94,22 +94,17 @@
             <!-- 2. Settings Body -->
             <StackPanel Grid.Row="2">
 
-                <!-- Ativação do HUD -->
-                <CheckBox x:Name="ChkEnableOverlay" Content="Exibir Widget Overlay ao minimizar para a bandeja" 
-                          FontSize="12.5" Foreground="#F8FAFC" FontWeight="Medium" Margin="0,0,0,16"
-                          Checked="ChkEnableOverlay_Changed" Unchecked="ChkEnableOverlay_Changed"/>
-
                 <!-- Config 1: Espessura da Borda -->
                 <Border Background="#1E293B" CornerRadius="8" Padding="14,10" Margin="0,0,0,12" BorderBrush="#334155" BorderThickness="1">
                     <StackPanel>
                         <Grid Margin="0,0,0,6">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="Espessura da Borda Perimetral" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC"/>
-                                <TextBlock Text=" (1 a 35 px)" FontSize="11" Foreground="#64748B" Margin="4,0,0,0"/>
+                                <TextBlock Text=" (1 a 60 px)" FontSize="11" Foreground="#64748B" Margin="4,0,0,0"/>
                             </StackPanel>
-                            <TextBlock x:Name="TxtBorderThicknessValue" Text="3 px" FontSize="12" FontWeight="Bold" Foreground="#F59E0B" HorizontalAlignment="Right"/>
+                            <TextBlock x:Name="TxtBorderThicknessValue" Text="3 px" FontSize="12" FontWeight="Bold" Foreground="#FFCC00" HorizontalAlignment="Right"/>
                         </Grid>
-                        <Slider x:Name="SliderBorderThickness" Minimum="1" Maximum="35" Value="3" 
+                        <Slider x:Name="SliderBorderThickness" Minimum="1" Maximum="60" Value="3" 
                                 IsSnapToTickEnabled="True" TickFrequency="1"
                                 ValueChanged="SliderBorderThickness_ValueChanged"/>
                     </StackPanel>
@@ -121,11 +116,11 @@
                         <Grid Margin="0,0,0,6">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="Tamanho do Texto e da Aba" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC"/>
-                                <TextBlock Text=" (11 a 40 pt - Alta Visibilidade)" FontSize="11" Foreground="#64748B" Margin="4,0,0,0"/>
+                                <TextBlock Text=" (11 a 60 pt - Ultra Visibilidade)" FontSize="11" Foreground="#64748B" Margin="4,0,0,0"/>
                             </StackPanel>
                             <TextBlock x:Name="TxtFontSizeValue" Text="13 pt (Padrão)" FontSize="12" FontWeight="Bold" Foreground="#38BDF8" HorizontalAlignment="Right"/>
                         </Grid>
-                        <Slider x:Name="SliderFontSize" Minimum="11" Maximum="40" Value="13" 
+                        <Slider x:Name="SliderFontSize" Minimum="11" Maximum="60" Value="13" 
                                 IsSnapToTickEnabled="True" TickFrequency="1"
                                 ValueChanged="SliderFontSize_ValueChanged"/>
                     </StackPanel>

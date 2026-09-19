@@ -11,7 +11,6 @@ namespace ConnectML.UI
         public double FontSize { get; set; }
         public int HoldSeconds { get; set; }
         public string SnapPosition { get; set; } = "TOP";
-        public bool EnableOverlay { get; set; } = true;
     }
 
     /// <summary>
@@ -31,17 +30,15 @@ namespace ConnectML.UI
                                      int borderThickness, 
                                      double fontSize, 
                                      int holdSeconds, 
-                                     string snapPosition, 
-                                     bool enableOverlay)
+                                     string snapPosition)
         {
             InitializeComponent();
             _overlayWindow = overlayWindow;
             _currentSnap = snapPosition.ToUpperInvariant();
 
             // Atribuição dos valores iniciais
-            ChkEnableOverlay.IsChecked = enableOverlay;
-            SliderBorderThickness.Value = Math.Clamp(borderThickness, 1, 35);
-            SliderFontSize.Value = Math.Clamp(fontSize, 11, 40);
+            SliderBorderThickness.Value = Math.Clamp(borderThickness, 1, 60);
+            SliderFontSize.Value = Math.Clamp(fontSize, 11, 60);
             SliderHoldSeconds.Value = Math.Clamp(holdSeconds, 1, 30);
 
             UpdateLabels();
@@ -70,11 +67,6 @@ namespace ConnectML.UI
             Close();
         }
 
-        private void ChkEnableOverlay_Changed(object sender, RoutedEventArgs e)
-        {
-            if (_isInitializing) return;
-            NotifyLiveChange();
-        }
 
         private void SliderBorderThickness_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
@@ -122,9 +114,10 @@ namespace ConnectML.UI
                 {
                     <= 12 => $"{val} pt (Compacto)",
                     <= 16 => $"{val} pt (Padrão)",
-                    <= 22 => $"{val} pt (Grande)",
-                    <= 30 => $"{val} pt (Extra Grande)",
-                    _ => $"{val} pt (Ultra - Longa Distância)"
+                    <= 24 => $"{val} pt (Grande)",
+                    <= 36 => $"{val} pt (Extra Grande)",
+                    <= 48 => $"{val} pt (Industrial)",
+                    _ => $"{val} pt (Super Industrial - Longa Distância)"
                 };
                 TxtFontSizeValue.Text = label;
             }
@@ -175,8 +168,7 @@ namespace ConnectML.UI
                 BorderThickness = (int)SliderBorderThickness.Value,
                 FontSize = SliderFontSize.Value,
                 HoldSeconds = (int)SliderHoldSeconds.Value,
-                SnapPosition = _currentSnap,
-                EnableOverlay = ChkEnableOverlay.IsChecked == true
+                SnapPosition = _currentSnap
             };
         }
     }
