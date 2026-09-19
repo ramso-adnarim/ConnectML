@@ -5,7 +5,7 @@
 
 O sistema monitora diretórios locais ou de rede em busca de arquivos de exportação **QIF (Quality Information Framework)** em tempo real, analisa as características geométricas e dimensionais inspecionadas, extrai o veredito da peça (`PASS` ou `FAIL`) e despacha comandos de controle aos PLCs ou sistemas MES/SCADA.
 
-A partir da versão **1.3.0**, o ConnectML incorpora o subsistema **Widget Overlay HUD (Heads-Up Display)**, e a partir da versão **1.3.1**, introduz o subsistema de **Monitoramento e Transporte Serial do Leitor de Código de Barras**, atuando como uma ponte de comunicação com intercepção de palavras-chave e simulação de atalhos físicos de teclado no MeasurLink (como `Alt + Q + O` para desfazer medição).
+A partir da versão **1.3.0**, o ConnectML incorpora o subsistema **Widget Overlay HUD (Heads-Up Display)**, e a partir da versão **1.3.1**, introduz o subsistema de **Monitoramento e Transporte Serial do Leitor de Código de Barras**, atuando como uma ponte de comunicação com intercepção de palavras-chave e simulação de atalhos físicos de teclado no MeasurLink (como `Alt + F + O` para desfazer medição).
 
 ---
 
@@ -157,7 +157,7 @@ A partir da versão **1.3.1**, o ConnectML incorpora o subsistema de **Monitoram
                ▼                                   │
    [ MeasurLink (Serial) ]                         ▼
                                       [ MeasurLinkKeyboardCommandHandler ]
-                                      (Simula teclas físicas: ex: Alt+Q+O)
+                                      (Simula teclas físicas: ex: Alt+F+O)
 ```
 
 ### 5.1. Transporte Serial Transparente
@@ -166,11 +166,18 @@ A partir da versão **1.3.1**, o ConnectML incorpora o subsistema de **Monitoram
 
 ### 5.2. Intercepção e Automação de Teclado no MeasurLink
 - Quando a string recebida coincide com uma "palavra-chave" cadastrada pelo usuário (ex: `"DESFAZER"`), o repasse pela porta COM de saída é suprimido.
-- O subsistema utiliza o helper de interop Win32 (`WindowFocusHelper`) para localizar a janela ativa do MeasurLink (`EnumWindows`), restaurá-la se estiver minimizada (`ShowWindow SW_RESTORE`) e trazê-la para o primeiro plano (`SetForegroundWindow` com liberação de restrições via `AttachThreadInput`).
-- Em seguida, o `MeasurLinkKeyboardCommandHandler` aguarda o tempo de estabilização pós-foco (`PreDelayMs`, padrão 80ms) e despacha a sequência de teclas configurada (ex: `Alt + Q + O` para o comando **Desfazer**).
+- O subsistema utiliza o helper de interop Win32 (`WindowFocusHelper`) com algoritmo de pontuação de processos:
+  - Janelas pertencentes a processos legítimos do MeasurLink (`Mitutoyo.MeasurLink.WinConsole.exe`, `DataCollection.exe`) recebem pontuação máxima (+10.000 pontos).
+  - Janelas do Windows Explorer (`explorer.exe`) ou consoles com nomes coincidentes de diretórios são desqualificadas para evitar falsos positivos.
+  - A janela selecionada é restaurada se estiver minimizada (`ShowWindow SW_RESTORE`) e colocada em primeiro plano via concessão de privilégios (`AttachThreadInput` + `SetForegroundWindow`).
+- Em seguida, o `MeasurLinkKeyboardCommandHandler` aguarda o tempo de estabilização pós-foco (`PreDelayMs`, padrão 150ms) e despacha a sequência de teclas configurada (ex: `Alt + F + O` para o comando **Desfazer**):
+  - Injeta os códigos de varredura de hardware OEM (`MapVirtualKey` com `KEYEVENTF_SCANCODE`).
+  - Implementa cadência estrita de mnemônicos do Windows: pressiona `Alt`, envia a tecla do menu (`F`), libera `Alt`, aguarda 180ms para abertura do submenu e envia a tecla da ação (`O`).
 
-### 5.3. Extensibilidade via Configuração JSON (`appsettings.json`)
+### 5.3. Extensibilidade via Configuração JSON & Acesso Rápido na UI
 - Os comandos não estão engessados no código-fonte. A lista `BarcodeCommands` no `AppConfig` permite que usuários avançados e integradores adicionem novos comandos no arquivo de configurações `%AppData%\ConnectML\appsettings.json`, especificando nome, sequência de teclas e título da janela-alvo.
+- **Botão de Atalho Direto (`BtnOpenConfigJson`)**: Posicionado ao lado do botão `+` na seção Utilidades, permite abrir o `appsettings.json` ativo com apenas um clique no editor de texto padrão do Windows.
+- **Recarregamento Dinâmico (Hot Reload)**: A aplicação recarrega automaticamente os comandos do disco sempre que o serviço é iniciado, parado, o switch do leitor é alternado, uma nova regra é criada ou quando a janela do ConnectML recupera o foco (`Window.Activated`).
 
 ### 5.4. Não-Bloqueio e Concorrência Estrita
 - Toda a leitura serial e execução de atalhos operam em tarefas assíncronas dedicadas em background (`Task.Run`), garantindo zero interferência na esteira principal de arquivos QIF e na comunicação com PLCs Siemens S7 e Webhooks REST.
@@ -181,7 +188,7 @@ A partir da versão **1.3.1**, o ConnectML incorpora o subsistema de **Monitoram
 
 O ConnectML utiliza o framework **Velopack** para atualizações transparentes:
 - **Armazenamento Seguro de Configurações**: As preferências do operador residem em `%LocalAppData%\ConnectML\user_settings.json`, isoladas dos diretórios de binários (`app-*`), garantindo que nenhuma configuração seja perdida durante os updates.
-- **Pacotes Diferenciais (Delta)**: O compilador `vpk pack` compara a versão atual com a anterior e gera pacotes delta ultraleves (ex: v1.2.1 -> v1.3.0 gerou um delta de apenas 288 KB contra 86 MB do pacote completo).
+- **Pacotes Diferenciais (Delta)**: O compilador `vpk pack` compara a versão atual com a anterior e gera pacotes delta ultraleves (ex: v1.3.0 -> v1.3.1 gerou um delta de apenas 311 KB contra 86 MB do pacote completo).
 - **Ciclo de Atualização em Segundo Plano**:
   1. A aplicação checa periodicamente a URL de releases no GitHub via `VelopackUpdateService`.
   2. Ao detectar nova versão, baixa os pacotes silenciosamente em segundo plano.

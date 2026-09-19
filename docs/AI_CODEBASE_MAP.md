@@ -14,7 +14,7 @@ Este documento serve como um mapa de arquitetura e glossário de domínio projet
   - **S7Comm (PLC)**: Escrita direta em blocos de dados (DB) da Siemens utilizando TCP/IP (ISO-on-TCP).
   - **Webhook (JSON)**: Despacho assíncrono via HTTP POST para endpoints configurados, com suporte a templates Liquid.
 - **Barcode Serial Monitor (`BarcodeSerialMonitorService`)**: Serviço concorrente que monitora a porta serial de entrada do leitor de código de barras e transporta leituras em tempo real para a porta virtual do MeasurLink (`com0com`), interceptando palavras-chave cadastradas.
-- **Automação MeasurLink / Simulador de Teclas (`MeasurLinkKeyboardCommandHandler`)**: Executor Win32 que localiza e foca a janela do MeasurLink para disparar atalhos físicos de teclado, como `Alt + Q + O` (Desfazer medição).
+- **Automação MeasurLink / Simulador de Teclas (`MeasurLinkKeyboardCommandHandler`)**: Executor Win32 que localiza e foca a janela do MeasurLink para disparar atalhos físicos de teclado, como `Alt + F + O` (Desfazer medição).
 - **WindowFocusHelper**: Utilitário P/Invoke para localização de janelas por correspondência de título, restauração de minimizado e concessão segura de foco de teclado via `AttachThreadInput`.
 - **HUD / Overlay (`OverlayWidgetWindow`)**: Janela de sobreposição translúcida com borda periférica e aba informativa de alta visibilidade, operando em modo não-intrusivo para monitoramento no chão de fábrica.
 - **Dwell Timer**: Temporizador de retenção visual (0.5s) conjugado ao HUD, que sustenta o veredito de aprovação/reprovação na tela antes de retomar o modo amarela de prontidão.
@@ -38,7 +38,7 @@ c:\Antigravity\ConnectML
 │   ├── Models/InspectionResult.cs           # Veredito de medição (PASS/FAIL)
 │   └── Parsers/QifParser.cs                 # Parser XML tolerante em Latin1
 ├── ConnectML.Infrastructure/
-│   ├── Commands/MeasurLinkKeyboardCommandHandler.cs # Simulação física de atalhos (ex: Alt+Q+O)
+│   ├── Commands/MeasurLinkKeyboardCommandHandler.cs # Simulação física de atalhos (ex: Alt+F+O)
 │   ├── Interop/WindowFocusHelper.cs         # P/Invoke Win32 para busca e foco de janelas
 │   ├── PlcDrivers/SiemensS7Driver.cs        # Driver S7 com normalização automática de DBs
 │   ├── Services/BarcodeSerialMonitorService.cs # Monitor serial não-bloqueante orientado a linhas
@@ -99,10 +99,18 @@ Para evitar quebras de regressão, falhas de concorrência ou comportamentos ind
 - **A Regra**: A leitura de streams e buffers de arquivos `.qif` deve ser realizada com `Encoding.Latin1` (ISO-8859-1).
 
 ### 3.10. Foco Win32 em Aplicações Alvo (Simulação de Teclas)
-- **O Problema**: O envio de teclas simuladas via `keybd_event` ou `SendInput` exige que a aplicação de destino (ex: MeasurLink) seja a janela ativa de primeiro plano. Se a janela não estiver em foco ou se a chamada ocorrer antes da estabilização do Windows, as teclas são perdidas ou disparadas na janela errada.
-- **A Regra**: Sempre invoque `WindowFocusHelper.FindAndFocusWindowAsync(targetTitle, preDelayMs)` antes de simular teclas. Respeite o atraso mínimo (`PreDelayMs`, padrão 80ms) para que a mensagem de foco seja processada pelo subsistema Win32 da aplicação receptora.
+- **O Problema**: O envio de teclas simuladas via `keybd_event` ou `SendInput` exige que a aplicação de destino (ex: MeasurLink) seja a janela ativa de primeiro plano. Se a janela não estiver em foco ou se a chamada ocorrer antes da estabilização do Windows, as teclas são perdidas ou disparadas na janela errada. Além disso, pastas abertas no Windows Explorer contendo "MeasurLink" no título podem ser falsamente ativadas.
+- **A Regra**: 
+  1. O `WindowFocusHelper` utiliza algoritmo de pontuação de processos (`GetWindowThreadProcessId` + `Process.GetProcessById`), concedendo pontuação máxima (+10.000 pontos) para executáveis genuínos do MeasurLink (`Mitutoyo.MeasurLink.WinConsole.exe`, `DataCollection.exe`) e descartando instâncias do `explorer.exe`.
+  2. A janela é restaurada se minimizada (`ShowWindow SW_RESTORE`) e ganha foco com privilégios via `AttachThreadInput`.
+  3. Respeite o atraso mínimo (`PreDelayMs`, padrão 150ms) antes do disparo de teclas.
+  4. Para sequências com tecla `Alt` (ex: `Alt + F + O`), utilize códigos de varredura de hardware OEM (`MapVirtualKey` com `KEYEVENTF_SCANCODE`) e respeite a cadência de mnemônicos do Windows: pressione `Alt`, envie a tecla do menu (`F`), solte `Alt`, aguarde 180ms para abertura do menu e envie a tecla da ação (`O`).
 
 ### 3.11. Não-Bloqueio da Esteira Principal pelo Leitor Serial
 - **O Problema**: Falhas na porta serial (desconexão física de cabos USB ou erros de paridade) podem lançar exceções de I/O bloqueantes.
 - **A Regra**: Todo o monitoramento do leitor de código de barras deve ser contido dentro de tarefas assíncronas isoladas (`Task.Run`), com captura segura de exceções e cancelamento cooperativo. Uma pane na porta COM jamais pode travar o `FileSystemWatcher` ou o envio aos PLCs.
+
+### 3.12. Sincronização e Hot-Reload de Configurações (`appsettings.json`)
+- **O Problema**: Edições manuais no arquivo de configuração do usuário (`%AppData%\ConnectML\appsettings.json`) ou via botão da interface (`BtnOpenConfigJson`) poderiam não surtir efeito imediato se a aplicação mantivesse uma cópia estática em memória.
+- **A Regra**: A aplicação deve recarregar a lista `BarcodeCommands` do disco através de `ReloadBarcodeCommandsFromDisk()` sempre que o serviço for iniciado, parado, o switch do leitor for alternado, uma nova regra for adicionada ou a janela recuperar o foco do sistema operacional (`Window.Activated`).
 

@@ -17,8 +17,9 @@ Na versão **1.3.1**, o ConnectML introduz uma nova seção de **Utilidades** vo
 
 * **Ponte Serial Transparente (com0com)**: Monitora a porta COM serial onde o leitor físico ou virtual está conectado e transporta as leituras automaticamente para uma porta serial de saída virtual (conectada ao MeasurLink) sem latência.
 * **Intercepção Condicional de Comandos**: Permite cadastrar palavras-chave que não serão enviadas via serial para a medição, mas sim convertidas em comandos de automação.
-* **Foco Win32 & Simulação de Teclas no MeasurLink**: Ao interceptar uma palavra-chave, o ConnectML localiza a janela do MeasurLink (`EnumWindows`), restaura-a e coloca-a em primeiro plano (`SetForegroundWindow`), simulando atalhos físicos de teclado como **`Alt + Q + O`** para o comando **Desfazer**.
-* **Comandos Customizáveis via JSON (`appsettings.json`)**: Novos comandos e combinações de teclas podem ser definidos ou personalizados diretamente no arquivo de configuração do usuário, sendo carregados dinamicamente pela interface.
+* **Foco Win32 & Simulação de Teclas no MeasurLink**: Ao interceptar uma palavra-chave, o ConnectML localiza a janela do MeasurLink (`EnumWindows`), restaura-a e coloca-a em primeiro plano (`SetForegroundWindow`), simulando atalhos físicos de teclado como **`Alt + F + O`** para o comando **Desfazer**.
+* **Comandos Customizáveis via JSON (`appsettings.json`)**: Novos comandos e combinações de teclas podem ser definidos ou personalizados diretamente no arquivo de configuração do usuário, com suporte a recarregamento dinâmico (hot-reload) a quente.
+* **Acesso Rápido às Configurações**: Botão sutil integrado na seção Utilidades para abrir o arquivo `appsettings.json` ativo diretamente no editor padrão com um único clique.
 * **Execução Paralela Não-Bloqueante**: O monitoramento das portas COM e os disparos de teclado operam 100% em tarefas assíncronas em segundo plano, garantindo zero interferência na esteira principal de arquivos QIF e na comunicação com PLCs.
 * **Logs Objetivos**: Registro conciso no Serilog e exibição imediata na aba visual LOG informando o sucesso do transporte ou da execução do atalho.
 
