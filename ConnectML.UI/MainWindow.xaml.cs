@@ -830,6 +830,7 @@ namespace ConnectML.UI
                 _host = null;
             }
 
+            ReloadBarcodeCommandsFromDisk();
             await StopBarcodeServiceAsync();
 
             SetConfigurationEditState(!_isLocked);
@@ -1694,10 +1695,10 @@ namespace ConnectML.UI
                                 new ConnectML.Core.Models.BarcodeCommandDefinition
                                 {
                                     Id = "undo",
-                                    Name = "Desfazer (Alt + Q + O)",
-                                    KeySequence = "%{q}{o}",
+                                    Name = "Desfazer (Alt + F + O)",
+                                    KeySequence = "%{f}{o}",
                                     TargetWindowTitle = "MeasurLink",
-                                    PreDelayMs = 80
+                                    PreDelayMs = 150
                                 }
                             };
 
@@ -1935,6 +1936,7 @@ namespace ConnectML.UI
 
         private void ToggleBarcodeReader_Click(object sender, RoutedEventArgs e)
         {
+            ReloadBarcodeCommandsFromDisk();
             SaveSettings();
 
             if (_isRunning)
@@ -1965,6 +1967,9 @@ namespace ConnectML.UI
 
         private void BtnAddBarcodeRule_Click(object sender, RoutedEventArgs e)
         {
+            // Sincroniza comandos do JSON antes de adicionar uma nova regra para disponibilizar novos comandos imediatamente
+            ReloadBarcodeCommandsFromDisk();
+
             string defaultCmdId = AvailableBarcodeCommands.FirstOrDefault()?.Id ?? "undo";
             _barcodeRules.Add(new BarcodeRuleItem
             {
@@ -2000,8 +2005,110 @@ namespace ConnectML.UI
             }
         }
 
+        /// <summary>
+        /// Recarrega dinamicamente a lista de comandos a partir do arquivo JSON no disco,
+        /// permitindo a adição e edição de novos comandos sem necessidade de reiniciar a aplicação.
+        /// </summary>
+        private void ReloadBarcodeCommandsFromDisk()
+        {
+            try
+            {
+                string appDataConfig = GetConfigFilePath();
+                string baseDirConfig = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, LegacyConfigFile);
+
+                // Procura também na raiz do repositório/execução
+                string? projectRootConfig = null;
+                var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+                while (dir != null)
+                {
+                    string candidate = System.IO.Path.Combine(dir.FullName, LegacyConfigFile);
+                    if (File.Exists(candidate) && !string.Equals(candidate, appDataConfig, StringComparison.OrdinalIgnoreCase))
+                    {
+                        projectRootConfig = candidate;
+                        break;
+                    }
+                    dir = dir.Parent;
+                }
+
+                string fileToRead = appDataConfig;
+                FileInfo? bestFi = File.Exists(appDataConfig) ? new FileInfo(appDataConfig) : null;
+
+                if (projectRootConfig != null && File.Exists(projectRootConfig))
+                {
+                    var projectFi = new FileInfo(projectRootConfig);
+                    if (bestFi == null || projectFi.LastWriteTime > bestFi.LastWriteTime)
+                    {
+                        fileToRead = projectRootConfig;
+                        bestFi = projectFi;
+                    }
+                }
+
+                if (File.Exists(baseDirConfig))
+                {
+                    var baseFi = new FileInfo(baseDirConfig);
+                    if (bestFi == null || baseFi.LastWriteTime > bestFi.LastWriteTime)
+                    {
+                        fileToRead = baseDirConfig;
+                        bestFi = baseFi;
+                    }
+                }
+
+                if (string.IsNullOrEmpty(fileToRead) || !File.Exists(fileToRead))
+                    return;
+
+                string json = File.ReadAllText(fileToRead);
+                var config = JsonSerializer.Deserialize<AppConfig>(json);
+                if (config?.BarcodeCommands != null && config.BarcodeCommands.Count > 0)
+                {
+                    bool hasChanges = false;
+
+                    Dispatcher.Invoke(() =>
+                    {
+                        foreach (var diskCmd in config.BarcodeCommands)
+                        {
+                            var existing = AvailableBarcodeCommands.FirstOrDefault(c => string.Equals(c.Id, diskCmd.Id, StringComparison.OrdinalIgnoreCase));
+                            if (existing != null)
+                            {
+                                if (existing.Name != diskCmd.Name ||
+                                    existing.KeySequence != diskCmd.KeySequence ||
+                                    existing.TargetWindowTitle != diskCmd.TargetWindowTitle ||
+                                    existing.PreDelayMs != diskCmd.PreDelayMs)
+                                {
+                                    existing.Name = diskCmd.Name;
+                                    existing.KeySequence = diskCmd.KeySequence;
+                                    existing.TargetWindowTitle = diskCmd.TargetWindowTitle;
+                                    existing.PreDelayMs = diskCmd.PreDelayMs;
+                                    hasChanges = true;
+                                }
+                            }
+                            else
+                            {
+                                AvailableBarcodeCommands.Add(diskCmd);
+                                hasChanges = true;
+                            }
+                        }
+                    });
+
+                    _barcodeCommandHandler ??= new ConnectML.Infrastructure.Commands.MeasurLinkKeyboardCommandHandler(AvailableBarcodeCommands);
+                    _barcodeCommandHandler.ReloadCommands(AvailableBarcodeCommands);
+
+                    if (hasChanges)
+                    {
+                        Log.Information("[Leitor] Comandos de automação atualizados a partir do JSON ({Count} comandos disponíveis)", AvailableBarcodeCommands.Count);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "[Leitor] Erro ao recarregar comandos do arquivo JSON.");
+            }
+        }
+
         private async Task StartBarcodeServiceAsync()
         {
+            // Recarrega comandos antes de iniciar para garantir versão mais recente do JSON
+            ReloadBarcodeCommandsFromDisk();
+
             string readerPort = string.Empty;
             string outputPort = string.Empty;
             List<ConnectML.Core.Models.BarcodeRuleConfig> rules = new List<ConnectML.Core.Models.BarcodeRuleConfig>();
