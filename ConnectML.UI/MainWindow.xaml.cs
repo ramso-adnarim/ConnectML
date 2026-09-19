@@ -455,7 +455,7 @@ namespace ConnectML.UI
             {
                 // Ocultar para a Bandeja (Tray)
                 Hide();
-                if (_isRunning && _overlayWindow != null)
+                if (_overlayWindow != null)
                 {
                     _overlayWindow.Show();
                 }
@@ -770,6 +770,12 @@ namespace ConnectML.UI
             _lastRunSuccessful = true;
             SaveSettings();
             Log.Information("Serviço Iniciado. Monitorando: " + path);
+
+            // Garante que o HUD esteja visível se a janela principal estiver na bandeja
+            if (!IsVisible && _overlayWindow != null)
+            {
+                _overlayWindow.Show();
+            }
 
             if (ToggleBarcodeReader.IsChecked == true)
             {
