@@ -59,6 +59,8 @@ namespace ConnectML.UI
             return System.IO.Path.Combine(appDataFolder, "appsettings.json");
         }
         private ObservableCollection<ConfigFieldItem> _configFields = null!;
+        public ObservableCollection<ConnectML.Core.Models.BarcodeCommandDefinition> AvailableBarcodeCommands { get; } = new ObservableCollection<ConnectML.Core.Models.BarcodeCommandDefinition>();
+        private ObservableCollection<BarcodeRuleItem> _barcodeRules = new ObservableCollection<BarcodeRuleItem>();
 
         // System Tray (Ícone na bandeja do sistema)
         private WinForms.NotifyIcon? _notifyIcon;
@@ -129,6 +131,7 @@ namespace ConnectML.UI
 
             _configFields = new ObservableCollection<ConfigFieldItem>();
             ItemsConfigList.ItemsSource = _configFields;
+            ItemsBarcodeRules.ItemsSource = _barcodeRules;
             
             LoadSettings();
             InitializeOverlayWindow();
@@ -1652,6 +1655,46 @@ namespace ConnectML.UI
 
                         _overlayWindow?.ApplySettings(_overlayBorderThickness, _overlayFontSize, _overlayHoldSeconds, _overlaySnapPosition);
 
+                        // Leitor de Código de Barras (v1.3.1)
+                        ToggleBarcodeReader.IsChecked = config.BarcodeReaderEnabled;
+
+                        AvailableBarcodeCommands.Clear();
+                        var commandsToLoad = config.BarcodeCommands != null && config.BarcodeCommands.Count > 0
+                            ? config.BarcodeCommands
+                            : new System.Collections.Generic.List<ConnectML.Core.Models.BarcodeCommandDefinition>
+                            {
+                                new ConnectML.Core.Models.BarcodeCommandDefinition
+                                {
+                                    Id = "undo",
+                                    Name = "Desfazer (Alt + Q + O)",
+                                    KeySequence = "%{q}{o}",
+                                    TargetWindowTitle = "MeasurLink",
+                                    PreDelayMs = 80
+                                }
+                            };
+
+                        foreach (var cmd in commandsToLoad)
+                        {
+                            AvailableBarcodeCommands.Add(cmd);
+                        }
+
+                        PopulateBarcodeComPorts();
+                        SelectComboBoxItemByContent(CmbBarcodeReaderPort, config.BarcodeReaderPort);
+                        SelectComboBoxItemByContent(CmbBarcodeOutputPort, config.BarcodeOutputPort);
+
+                        _barcodeRules.Clear();
+                        if (config.BarcodeRules != null && config.BarcodeRules.Count > 0)
+                        {
+                            foreach (var r in config.BarcodeRules)
+                            {
+                                _barcodeRules.Add(new BarcodeRuleItem
+                                {
+                                    Keyword = r.Keyword,
+                                    CommandId = r.CommandId
+                                });
+                            }
+                        }
+
                         Log.Information("Configurações carregadas.");
                     }
                 }
@@ -1740,7 +1783,18 @@ namespace ConnectML.UI
                     OverlayBorderThickness = _overlayWindow != null ? _overlayWindow.BorderThicknessValue : _overlayBorderThickness,
                     OverlayFontSize = _overlayWindow != null ? _overlayWindow.FontSizeValue : _overlayFontSize,
                     OverlaySnapPosition = _overlayWindow != null ? _overlayWindow.CurrentSnapPosition : _overlaySnapPosition,
-                    OverlayHoldSeconds = _overlayWindow != null ? _overlayWindow.HoldSecondsValue : _overlayHoldSeconds
+                    OverlayHoldSeconds = _overlayWindow != null ? _overlayWindow.HoldSecondsValue : _overlayHoldSeconds,
+
+                    // Leitor de Código de Barras (v1.3.1)
+                    BarcodeReaderEnabled = ToggleBarcodeReader.IsChecked == true,
+                    BarcodeReaderPort = CmbBarcodeReaderPort.Text,
+                    BarcodeOutputPort = CmbBarcodeOutputPort.Text,
+                    BarcodeRules = _barcodeRules.Select(r => new ConnectML.Core.Models.BarcodeRuleConfig
+                    {
+                        Keyword = r.Keyword,
+                        CommandId = r.CommandId
+                    }).ToList(),
+                    BarcodeCommands = AvailableBarcodeCommands.ToList()
                 };
                 string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(GetConfigFilePath(), json);
@@ -1835,6 +1889,70 @@ namespace ConnectML.UI
                 PnlIntegrationBody.Visibility = Visibility.Visible;
                 ((System.Windows.Media.RotateTransform)IconToggleIntegration.RenderTransform).Angle = 0;
             }
+        }
+
+        private void BtnToggleUtilities_Click(object sender, RoutedEventArgs e)
+        {
+            if (PnlUtilitiesBody.Visibility == Visibility.Visible)
+            {
+                PnlUtilitiesBody.Visibility = Visibility.Collapsed;
+                ((System.Windows.Media.RotateTransform)IconToggleUtilities.RenderTransform).Angle = -90;
+            }
+            else
+            {
+                PnlUtilitiesBody.Visibility = Visibility.Visible;
+                ((System.Windows.Media.RotateTransform)IconToggleUtilities.RenderTransform).Angle = 0;
+            }
+        }
+
+        private void ToggleBarcodeReader_Click(object sender, RoutedEventArgs e)
+        {
+            SaveSettings();
+        }
+
+        private void BtnAddBarcodeRule_Click(object sender, RoutedEventArgs e)
+        {
+            string defaultCmdId = AvailableBarcodeCommands.FirstOrDefault()?.Id ?? "undo";
+            _barcodeRules.Add(new BarcodeRuleItem
+            {
+                Keyword = string.Empty,
+                CommandId = defaultCmdId
+            });
+            SaveSettings();
+        }
+
+        private void BtnRemoveBarcodeRule_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.DataContext is BarcodeRuleItem item)
+            {
+                _barcodeRules.Remove(item);
+                SaveSettings();
+            }
+        }
+
+        private void PopulateBarcodeComPorts()
+        {
+            try
+            {
+                var ports = System.IO.Ports.SerialPort.GetPortNames();
+                foreach (var port in ports)
+                {
+                    if (!CmbBarcodeReaderPort.Items.Cast<object>().Any(i => i.ToString()?.Equals(port, StringComparison.OrdinalIgnoreCase) == true))
+                        CmbBarcodeReaderPort.Items.Add(port);
+
+                    if (!CmbBarcodeOutputPort.Items.Cast<object>().Any(i => i.ToString()?.Equals(port, StringComparison.OrdinalIgnoreCase) == true))
+                        CmbBarcodeOutputPort.Items.Add(port);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"[Leitor] Falha ao listar portas COM: {ex.Message}");
+            }
+        }
+
+        private void CmbBarcodePort_DropDownOpened(object? sender, EventArgs e)
+        {
+            PopulateBarcodeComPorts();
         }
 
         private void InitializeOverlayWindow()
@@ -2570,6 +2688,40 @@ namespace ConnectML.UI
                     {
                         _removeButtonVisibility = value;
                         OnPropertyChanged(nameof(RemoveButtonVisibility));
+                    }
+                }
+            }
+
+            public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+            protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+        }
+
+        public class BarcodeRuleItem : System.ComponentModel.INotifyPropertyChanged
+        {
+            private string _keyword = string.Empty;
+            public string Keyword
+            {
+                get => _keyword;
+                set
+                {
+                    if (_keyword != value)
+                    {
+                        _keyword = value;
+                        OnPropertyChanged(nameof(Keyword));
+                    }
+                }
+            }
+
+            private string _commandId = "undo";
+            public string CommandId
+            {
+                get => _commandId;
+                set
+                {
+                    if (_commandId != value)
+                    {
+                        _commandId = value;
+                        OnPropertyChanged(nameof(CommandId));
                     }
                 }
             }
