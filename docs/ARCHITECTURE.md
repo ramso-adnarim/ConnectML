@@ -1,117 +1,162 @@
-# ConnectML Architecture Documentation
+# ConnectML Architecture Documentation (Versão 1.3.0)
 
 ## 1. Visão Geral do Projeto
-**ConnectML** é um middleware de integração projetado para atuar como uma ponte entre o software de metrologia **MeasurLink** (Mitutoyo) e controladores lógicos programáveis (**PLCs Siemens S7**).
+**ConnectML** é um middleware de integração industrial desenvolvido para conectar os softwares de metrologia (notavelmente o **MeasurLink / Mitutoyo**) aos sistemas de automação de manufatura (**CLPs Siemens S7**, barramentos industriais e endpoints **Webhook REST**).
 
-O sistema monitora arquivos de saída QIF (Quality Information Framework), extrai resultados de medição e envia sinais de controle (Aprovado/Reprovado ou Contadores) para o PLC em tempo real.
+O sistema monitora diretórios locais ou de rede em busca de arquivos de exportação **QIF (Quality Information Framework)** em tempo real, analisa as características geométricas e dimensionais inspecionadas, extrai o veredito da peça (`PASS` ou `FAIL`) e despacha comandos de controle aos PLCs ou sistemas MES/SCADA.
+
+A partir da versão **1.3.0**, o ConnectML incorpora o subsistema **Widget Overlay HUD (Heads-Up Display)**, proporcionando acompanhamento visual contínuo e feedback instantâneo na tela do operador sem interromper suas atividades em outros softwares.
+
+---
 
 ### Stack Tecnológica
-- **Plataforma**: .NET 8 (LTS)
-- **UI Framework**: WPF (Windows Presentation Foundation)
-- **Driver PLC**: [S7NetPlus](https://github.com/S7NetPlus/s7netplus) (Driver S7 Nativo em C#)
-- **Logging**: Serilog (Sinks para Arquivo e UI)
-- **Configuração**: JSON (`System.Text.Json`)
+- **Linguagem & Runtime**: C# 12 / .NET 8 (LTS)
+- **Apresentação (UI)**: WPF (Windows Presentation Foundation) com Design System Dark Industrial
+- **Integração Win32**: P/Invoke para estilos de janela transparentes não intrusivos (`WS_EX_NOACTIVATE`, `WS_EX_TOOLWINDOW`)
+- **Comunicação Industrial**: [S7NetPlus](https://github.com/S7NetPlus/s7netplus) (comunicação nativa ISO-on-TCP para Siemens S7-300/1200/1500)
+- **Comunicação Web**: `HttpClient` assíncrono resiliente com suporte a templates JSON Fluid/Liquid
+- **Logging Estruturado**: Serilog (Sinks paralelos para Arquivo rotativo e terminal visual WPF via `AvalonEdit`)
+- **Distribuição e Atualização Automática**: [Velopack](https://velopack.io/) integrado nativamente com suporte a pacotes delta e GitHub Releases
 
 ---
 
 ## 2. Estrutura da Solução
 
-A solução segue uma arquitetura em camadas simplificada para garantir manutenibilidade e separação de responsabilidades.
+A solução adota uma arquitetura modular em camadas limpas, garantindo isolamento entre domínio, infraestrutura e apresentação:
 
-| Projeto | Camada | Descrição |
+```
+c:\Antigravity\ConnectML
+├── ConnectML.Core/            # Domínio puro e contratos (agnóstico de infraestrutura)
+├── ConnectML.Infrastructure/  # Drivers S7, Webhooks, Leitura QIF e Logging
+├── ConnectML.UI/              # Aplicação Desktop WPF, HUD Overlay e Configurações
+└── ConnectML.Simulator/       # Emulador local de PLC Siemens para desenvolvimento e QA
+```
+
+| Projeto | Camada | Responsabilidades Principais |
 | :--- | :--- | :--- |
-| **`ConnectML.UI`** | Apresentação | Interface gráfica (WPF), Gerenciamento de Estado (MVVM simplificado), Injeção de Dependências e Persistência de Configurações. Responsável por instanciar os serviços. |
-| **`ConnectML.Core`** | Domínio | Contém as Interfaces principais (`IPlcDriver`), Logicações de Negócio puras e Parsers (`QifParser`). Não possui dependências de infraestrutura. |
-| **`ConnectML.Infrastructure`** | Infraestrutura | Implementações concretas das interfaces do Core. Aqui reside o **`SiemensS7Driver`** (comunicação TCP/IP) e **`FileWatcherService`**. |
-| **`ConnectML.Simulator`** | QA / Ferramentas | Aplicação Console isolada que simula um PLC Siemens S7. Abre um Socket na porta 102 para validar o `Handshake` e receber comandos de escrita. |
+| **`ConnectML.UI`** | Apresentação | Janela Principal (`MainWindow`), Janela do HUD (`OverlayWidgetWindow`), Janela de Configurações do HUD (`OverlaySettingsWindow`), Gerenciamento de Ciclo de Vida da Bandeja (Tray Icon), `VelopackApp` e Persistência em `%LocalAppData%`. |
+| **`ConnectML.Core`** | Domínio | Interfaces de abstração (`IPlcDriver`), modelos de configuração (`AppConfig`, `OverlayPosition`), modelos de metrologia (`InspectionResult`) e parsing XML agnóstico (`QifParser`). |
+| **`ConnectML.Infrastructure`** | Infraestrutura | `SiemensS7Driver` (normalização de DBs e pacotes S7Comm), `FileWatcherService` (monitoramento reativo de I/O em disco), clientes HTTP para Webhook e sinks de log. |
+| **`ConnectML.Simulator`** | QA / Ferramentas | Servidor console Socket TCP na porta 102 que emula o handshake COTP/S7 e exibe hex dump dos dados recebidos para testes offline. |
 
 ---
 
-## 3. Fluxo de Dados (Data Flow)
+## 3. Subsistema Widget Overlay HUD Industrial (v1.3.0)
 
-O ciclo de vida da informação no ConnectML segue 5 etapas principais:
+O subsistema HUD foi desenvolvido para atender à demanda de chão de fábrica onde o operador utiliza a máquina com softwares de medição ou CNC em tela cheia e necessita saber, sem tocar no computador, o status da comunicação e o resultado da última peça inspecionada.
 
-1.  **Monitoramento**: O `FileWatcherService` detecta a criação de um novo arquivo `.QIF` na pasta configurada.
-2.  **Extração (Parsing)**: O `QifParser` lê o XML, identifica a última medição e determina o status (`PASS` ou `FAIL`).
-3.  **Lógica de Negócio**: Com base no modo selecionado (`Booleano` ou `Inteiro`), o sistema decide qual valor escrever.
-4.  **Comunicação (Driver S7)**:
-    - O `SiemensS7Driver` normaliza o endereço (ex: `DB10.0` -> `DB10.DBX0.0`).
-    - Envia o pacote via TCP/IP (ISO-on-TCP).
-    - Aguarda o ACK do PLC.
-5.  **Feedback**: O resultado é registrado nos Logs visuais da UI e salvo em arquivo.
+```
++-------------------------------------------------------------------------+
+| [Borda Superior com Alça de Redimensionamento SizeNS]                  |
+|                                                                         |
+|                                                                         |
+|   +---------------------------------------------------------------+     |
+|   |  [⋮⋮ Drag]  (• Pulso) AGUARDANDO MEDIÇÃO  [⚙ Config] [🗖 Rest] |     |  <-- Aba de Status
+|   +---------------------------------------------------------------+     |      (4-Edge Snap)
+|                                                                         |
+|                                                                         |
+| [Borda Inferior com Alça de Redimensionamento SizeNS]                  |
++-------------------------------------------------------------------------+
+```
 
-### Diagrama de Sequência
+### 3.1. Não-Intrusividade e Interop Win32
+O HUD sobrepõe toda a área de trabalho sem interromper a rotina de trabalho:
+- **`WS_EX_NOACTIVATE (0x08000000)`**: Aplicado via `SetWindowLong` no evento `SourceInitialized`. Impede que o clique na aba do HUD roube o foco da janela ativa (ex: MeasurLink ou editor de texto do operador).
+- **`WS_EX_TOOLWINDOW (0x00000080)`**: Remove o HUD da listagem do alternador de janelas `Alt+Tab`.
+- **Hit Testing Seletivo**: O contêiner principal do HUD opera com `Background="Transparent"` e áreas desprovidas de controles possuem `IsHitTestVisible="False"`. Cliques nessas regiões passam integralmente para o software rodando abaixo.
+
+### 3.2. Snapping Magnético em 4 Bordas e Rotação Vertical
+O usuário pode posicionar a aba de status onde for mais conveniente usando a alça de arraste (`⋮⋮`):
+- **Bordas Disponíveis**: `TOP`, `BOTTOM`, `LEFT` e `RIGHT`, limitadas estritamente à `SystemParameters.WorkArea` (respeitando barras de tarefas e monitores secundários).
+- **Adaptação Lateral**: Ao ser acoplado à esquerda ou à direita, o contêiner aplica uma `LayoutTransform` com `RotateTransform Angle="90"`. A hierarquia interna inverte sua ordem para que a leitura dos textos e ícones ocorra ergonomicamente de baixo para cima.
+
+### 3.3. Janela de Configurações Desacoplada (`OverlaySettingsWindow`)
+Todas as preferências do HUD foram retiradas da tela principal e concentradas em uma janela modal dedicada:
+- Acionada pelo ícone de engrenagem (⚙️) na aba.
+- Permite regular a espessura da borda, tamanho da aba/fonte e alternar a posição de docking.
+- As alterações são refletidas em tempo real na interface do HUD através de bindings e eventos imediatos.
+
+### 3.4. Redimensionamento Direto por Mouse Drag
+O operador pode redimensionar visualmente os elementos sem abrir o menu de configurações:
+- **Borda Principal**: Quatro faixas invisíveis nas extremidades da tela (`BorderTopGrip`, `BorderBottomGrip`, `BorderLeftGrip`, `BorderRightGrip`) capturam o cursor (`SizeNS` ou `SizeWE`) e recalculam dinamicamente a propriedade `BorderThickness`.
+- **Aba de Status**: O grip do canto (`TabResizeGrip`) e a faixa longitudinal externa (`TabEdgeResizeStrip`) ajustam a altura/largura da aba e a escala da tipografia com preservação de proporção.
+- **Faixas Operacionais**:
+  - Espessura de Borda: de `1 px` até `60 px`.
+  - Tipografia/Aba: de `11 pt` até `60 pt` (leitura nítida a mais de 5 metros de distância).
+
+### 3.5. Estados Visuais, Safety Yellow e Dwell Timer Conjugado
+O HUD transiciona por três estados operacionais:
+1. **Aguardando Medição (Prontidão)**: Borda externa, contorno da aba e ponto de pulso em **Safety Yellow** (`#FFCC00`), com animação rápida de Storyboard (0.5s / 1 Hz).
+2. **Peça Aprovada (PASS)**: Borda e aba em **Verde Industrial** (`#2ECC71`), com texto em destaque e indicação sonora/visual.
+3. **Peça Reprovada (FAIL)**: Borda e aba em **Vermelho Alerta** (`#E74C3C`), alertando imediatamente o operador da não-conformidade.
+- **Dwell Timer (0.5s)**: Quando um veredito é processado pelo `FileWatcherService`, o HUD congela o resultado pelo intervalo de 0.5s antes de retomar automaticamente a animação amarela de prontidão para a próxima peça.
+
+### 3.6. Ciclo de Vida Integrado
+- **Minimização Mandatória**: Sempre que a janela principal é minimizada ou fechada para a bandeja (`HideToTray`), o HUD é instanciado e exibido automaticamente. Não há chave para desativá-lo, garantindo a supervisão contínua da linha.
+- **Restauração Rápida**: Clicar no botão de restaurar (🗖) ou dar duplo-clique no ícone da bandeja oculta o HUD e traz a janela principal ao primeiro plano.
+
+---
+
+## 4. Fluxo de Dados e Ciclo de Vida do Middleware
 
 ```mermaid
 sequenceDiagram
-    participant MW as Middleware (UI)
-    participant FW as FileWatcher
+    participant OS as Sistema Operacional
+    participant UI as MainWindow (UI)
+    participant HUD as OverlayWidgetWindow
+    participant FW as FileWatcherService
     participant Parser as QifParser
-    participant Driver as S7 Driver
-    participant PLC as PLC Physical / Simulator
+    participant S7 as SiemensS7Driver
+    participant PLC as PLC Siemens S7
 
-    Note over MW, PLC: Inicialização
-    MW->>Driver: ConnectAsync(IP, Rack, Slot)
-    Driver->>PLC: ISO Connection Request (CR)
-    PLC-->>Driver: ISO Connection Confirm (CC)
-    Driver->>PLC: S7 Setup Communication
-    PLC-->>Driver: S7 Setup ACK
-    MW->>MW: Save Settings (JSON)
-    MW->>FW: Start Monitoring()
+    Note over UI, HUD: Inicialização e Minimização
+    UI->>S7: ConnectAsync(IP, Rack, Slot)
+    S7-->>UI: Conectado com Sucesso
+    UI->>FW: StartMonitoring(SourcePath)
+    UI->>OS: Minimizar Janela
+    UI->>HUD: Show() (Modo Aguardando Medição - Safety Yellow)
 
-    Note over MW, PLC: Ciclo de Operação
-    PLC->>FW: (External) Create .QIF File
-    FW->>MW: OnCreated Event
-    MW->>Parser: Parse(File)
-    Parser-->>MW: Result {Status: Pass, Value: True}
+    Note over FW, PLC: Ciclo de Inpeção de Peça
+    OS->>FW: Novo Arquivo .QIF detectado
+    FW->>Parser: ParseFile(Stream)
+    Parser-->>FW: InspectionResult { Status = PASS, Value = 1 }
     
-    rect rgb(240, 248, 255)
-        Note right of MW: Envio para PLC
-        MW->>Driver: WriteBoolAsync("DB10.0", True)
-        Driver->>Driver: Normalize("DB10.DBX0.0")
-        Driver->>PLC: S7 Write Var Request
-        PLC-->>Driver: S7 Write ACK
+    rect rgb(30, 45, 60)
+        Note over HUD: Dwell Timer Conjugado
+        FW->>HUD: Dispatcher.Invoke -> Exibir PASS (Verde)
+        HUD->>HUD: Iniciar Timer de Retenção (0.5s)
     end
-    
-    MW->>MW: Log Success
+
+    rect rgb(20, 50, 30)
+        Note over S7, PLC: Despacho para Automação
+        FW->>S7: WriteBoolAsync("DB10.0", True)
+        S7->>PLC: S7comm Write Variable
+        PLC-->>S7: ACK Success
+    end
+
+    HUD->>HUD: Dwell Expirado -> Retornar para Aguardando (Safety Yellow)
 ```
 
 ---
 
-## 4. Guia de Configuração e Uso
+## 5. Subsistema de Atualização Automática (Velopack)
 
-### Persistência de Dados
-As configurações são salvas automaticamente no arquivo `appsettings.json` na raiz da aplicação.
-- **Save Trigger**: Ao clicar em "Iniciar Serviço".
-- **Load Trigger**: Ao abrir a aplicação.
-
-### Configuração do Driver S7
-- **Endereço IP**: IP do PLC (ex: `192.168.0.1`). Para testes locais, use `127.0.0.1`.
-- **Rack / Slot**: Padrão Siemens S7-1500/1200 é Rack `0`, Slot `1`. Para S7-300 geralmente é Rack `0`, Slot `2`.
-- **Endereços DB**:
-  - **Booleano**: Formato `DBn.x` (ex: `DB10.0`). O sistema converte automaticamente para `DB10.DBX0.0`.
-  - **Inteiro**: Formato `DBn.x` (ex: `DB10.2`). O sistema converte para `DB10.DBW2`.
-
-### Utilizando o ConnectML.Simulator
-Para validar a comunicação sem hardware físico:
-1.  Abra o terminal como **Administrador**.
-2.  Navegue até `ConnectML.Simulator`.
-3.  Execute: `dotnet run`.
-4.  Na UI do ConnectML, configure o IP para `127.0.0.1`.
-5.  Inicie o serviço. O Simulator responderá aos handshakes e exibirá os dados recebidos.
+O ConnectML utiliza o framework **Velopack** para atualizações transparentes:
+- **Armazenamento Seguro de Configurações**: As preferências do operador residem em `%LocalAppData%\ConnectML\user_settings.json`, isoladas dos diretórios de binários (`app-*`), garantindo que nenhuma configuração seja perdida durante os updates.
+- **Pacotes Diferenciais (Delta)**: O compilador `vpk pack` compara a versão atual com a anterior e gera pacotes delta ultraleves (ex: v1.2.1 -> v1.3.0 gerou um delta de apenas 288 KB contra 86 MB do pacote completo).
+- **Ciclo de Atualização em Segundo Plano**:
+  1. A aplicação checa periodicamente a URL de releases no GitHub via `VelopackUpdateService`.
+  2. Ao detectar nova versão, baixa os pacotes silenciosamente em segundo plano.
+  3. Altera o ícone de status no rodapé para um aviso de atualização pendente.
+  4. Aplica a nova versão ao reiniciar a aplicação ou por acionamento do usuário.
 
 ---
 
-## 5. Decisões Técnicas Importantes
+## 6. Decisões Técnicas Importantes
 
-### Por que S7NetPlus?
-Optamos pelo **S7NetPlus** por ser uma biblioteca Open Source madura, nativa em C# (sem dependências de DLLs C++ não gerenciadas como LibNodave) e com bom suporte aos protocolos modernos S7Comm usados nos PLCs S7-1200/1500.
-
-### Normalização de Endereços
-Para melhorar a UX, implementamos uma camada de normalização no `SiemensS7Driver.cs`. O usuário final (operador) muitas vezes conhece o endereço apenas como "DB10.0". O driver intercepta isso e expande para a notação técnica que o protocolo exige (`DB10.DBX0.0` para bits, `DB10.DBW0` para palavras), prevenindo o erro `ArgumentOutOfRangeException` que ocorreria nativamente na biblioteca.
-
-### Estratégia de "Hex Dump" no Simulador
-Em vez de implementar a stack S7 completa (que é proprietária e complexa), o simulador implementa apenas o **Handshake** (COTP CR/CC + S7 Setup) necessário para enganar o driver e faz um "Hex Dump" do payload de escrita. Isso é suficiente para validar que:
-1.  A rede está acessível.
-2.  O driver conectou.
-3.  O driver enviou bytes de escrita.
+1. **Janelas WPF Transparentes sem Foco (`WS_EX_NOACTIVATE`)**:
+   - Em WPF padrão, janelas com `WindowStyle="None"` e `AllowsTransparency="True"` ainda recebem ativação do Windows ao serem clicadas. A injeção das flags Win32 via P/Invoke foi essencial para garantir a ergonomia do operador em máquinas de medir tridimensionais (CMM).
+2. **Normalização de Endereçamento Siemens**:
+   - Para evitar exceções de formato (`ArgumentOutOfRangeException`), o driver converte representações simples como `DB10.0` em notações completas do protocolo (`DB10.DBX0.0`).
+3. **Encoding Latin1 / ISO-8859-1 para Arquivos QIF**:
+   - Softwares de metrologia frequentemente exportam símbolos de grau (`°`), diâmetro (`Ø`) e acentuação padrão ANSI. O parser utiliza estritamente `Encoding.Latin1` para evitar corrupção de caracteres.
