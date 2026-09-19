@@ -41,5 +41,24 @@ namespace ConnectML.UI.Models
         public string OverlaySnapPosition { get; set; } = "Top";
         public int OverlayHoldSeconds { get; set; } = 10;
         public double OverlayFontSize { get; set; } = 13; // 11 a 60 pt (padrão: 13)
+
+        // Leitor de Código de Barras (v1.3.1)
+        public bool BarcodeReaderEnabled { get; set; } = false;
+        public string BarcodeReaderPort { get; set; } = string.Empty;
+        public string BarcodeOutputPort { get; set; } = string.Empty;
+        public List<ConnectML.Core.Models.BarcodeRuleConfig> BarcodeRules { get; set; } = new List<ConnectML.Core.Models.BarcodeRuleConfig>();
+
+        // Catálogo de Comandos customizável via appsettings.json
+        public List<ConnectML.Core.Models.BarcodeCommandDefinition> BarcodeCommands { get; set; } = new List<ConnectML.Core.Models.BarcodeCommandDefinition>
+        {
+            new ConnectML.Core.Models.BarcodeCommandDefinition
+            {
+                Id = "undo",
+                Name = "Desfazer (Alt + F + O)",
+                KeySequence = "%{f}{o}",
+                TargetWindowTitle = "MeasurLink",
+                PreDelayMs = 150
+            }
+        };
     }
 }

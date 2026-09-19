@@ -1,4 +1,4 @@
-# AI Codebase Map: ConnectML (Versão 1.3.0)
+# AI Codebase Map: ConnectML (Versão 1.3.1)
 
 Este documento serve como um mapa de arquitetura e glossário de domínio projetado especificamente para agentes de IA que farão manutenção, refatoração ou extensão do **ConnectML**. O objetivo é prover contexto imediato sobre as regras de negócio essenciais, convenções de engenharia e as armadilhas (gotchas) arquiteturais da base de código.
 
@@ -13,6 +13,9 @@ Este documento serve como um mapa de arquitetura e glossário de domínio projet
 - **Outbound (Destino do Veredito)**:
   - **S7Comm (PLC)**: Escrita direta em blocos de dados (DB) da Siemens utilizando TCP/IP (ISO-on-TCP).
   - **Webhook (JSON)**: Despacho assíncrono via HTTP POST para endpoints configurados, com suporte a templates Liquid.
+- **Barcode Serial Monitor (`BarcodeSerialMonitorService`)**: Serviço concorrente que monitora a porta serial de entrada do leitor de código de barras e transporta leituras em tempo real para a porta virtual do MeasurLink (`com0com`), interceptando palavras-chave cadastradas.
+- **Automação MeasurLink / Simulador de Teclas (`MeasurLinkKeyboardCommandHandler`)**: Executor Win32 que localiza e foca a janela do MeasurLink para disparar atalhos físicos de teclado, como `Alt + Q + O` (Desfazer medição).
+- **WindowFocusHelper**: Utilitário P/Invoke para localização de janelas por correspondência de título, restauração de minimizado e concessão segura de foco de teclado via `AttachThreadInput`.
 - **HUD / Overlay (`OverlayWidgetWindow`)**: Janela de sobreposição translúcida com borda periférica e aba informativa de alta visibilidade, operando em modo não-intrusivo para monitoramento no chão de fábrica.
 - **Dwell Timer**: Temporizador de retenção visual (0.5s) conjugado ao HUD, que sustenta o veredito de aprovação/reprovação na tela antes de retomar o modo amarela de prontidão.
 - **Snapping Magnético**: Mecanismo de encaixe da aba de status nas 4 extremidades da tela (`TOP`, `BOTTOM`, `LEFT`, `RIGHT`) calculado contra a `SystemParameters.WorkArea`.
@@ -26,18 +29,26 @@ Este documento serve como um mapa de arquitetura e glossário de domínio projet
 ```
 c:\Antigravity\ConnectML
 ├── ConnectML.Core/
+│   ├── Interfaces/IBarcodeCommandHandler.cs # Contrato para execução de atalhos/comandos
+│   ├── Interfaces/IBarcodeMonitorService.cs  # Contrato do ciclo de vida do monitor serial
 │   ├── Interfaces/IPlcDriver.cs             # Contrato de comunicação com PLC
+│   ├── Models/BarcodeCommandDefinition.cs   # Definição de comandos customizáveis (JSON)
+│   ├── Models/BarcodeRuleConfig.cs          # Mapeamento palavra-chave vs comando
+│   ├── Models/BarcodeTransportResult.cs     # Veredito da leitura serial (normal vs interceptado)
 │   ├── Models/InspectionResult.cs           # Veredito de medição (PASS/FAIL)
 │   └── Parsers/QifParser.cs                 # Parser XML tolerante em Latin1
 ├── ConnectML.Infrastructure/
+│   ├── Commands/MeasurLinkKeyboardCommandHandler.cs # Simulação física de atalhos (ex: Alt+Q+O)
+│   ├── Interop/WindowFocusHelper.cs         # P/Invoke Win32 para busca e foco de janelas
 │   ├── PlcDrivers/SiemensS7Driver.cs        # Driver S7 com normalização automática de DBs
+│   ├── Services/BarcodeSerialMonitorService.cs # Monitor serial não-bloqueante orientado a linhas
 │   ├── Services/FileWatcherService.cs       # Observador de disco com debounce e retry Polly
 │   └── Logging/                             # Configuração Serilog (Rolling File e UI Sink)
 ├── ConnectML.UI/
-│   ├── MainWindow.xaml / .cs                # View principal, orquestração e gerenciamento de estado
-│   ├── OverlayWidgetWindow.xaml / .cs       # Janela HUD com interop Win32, grips de redimensionamento e snapping
+│   ├── MainWindow.xaml / .cs                # View principal, Card Utilidades, orquestração de ciclo
+│   ├── OverlayWidgetWindow.xaml / .cs       # Janela HUD com interop Win32, grips e snapping
 │   ├── OverlaySettingsWindow.xaml / .cs     # Janela modal desacoplada para ajustes do HUD
-│   ├── Models/AppConfig.cs                  # Modelo de configurações persistidas (inclui Overlay)
+│   ├── Models/AppConfig.cs                  # Modelo de configurações persistidas (inclui Leitor/JSON)
 │   └── Program.cs                           # Entrypoint com Mutex de instância única e VelopackApp.Run()
 └── ConnectML.Simulator/
     └── Program.cs                           # Socket TCP 102 simulando COTP + S7 Setup
@@ -86,3 +97,12 @@ Para evitar quebras de regressão, falhas de concorrência ou comportamentos ind
 ### 3.9. Encoding Latin1 em Arquivos QIF
 - **O Problema**: Arquivos XML de relatórios de metrologia contêm símbolos físicos como graus (`°`), diâmetro (`Ø`) e caracteres especiais. O parsing em UTF-8 puro pode truncar ou lançar exceções de caractere inválido.
 - **A Regra**: A leitura de streams e buffers de arquivos `.qif` deve ser realizada com `Encoding.Latin1` (ISO-8859-1).
+
+### 3.10. Foco Win32 em Aplicações Alvo (Simulação de Teclas)
+- **O Problema**: O envio de teclas simuladas via `keybd_event` ou `SendInput` exige que a aplicação de destino (ex: MeasurLink) seja a janela ativa de primeiro plano. Se a janela não estiver em foco ou se a chamada ocorrer antes da estabilização do Windows, as teclas são perdidas ou disparadas na janela errada.
+- **A Regra**: Sempre invoque `WindowFocusHelper.FindAndFocusWindowAsync(targetTitle, preDelayMs)` antes de simular teclas. Respeite o atraso mínimo (`PreDelayMs`, padrão 80ms) para que a mensagem de foco seja processada pelo subsistema Win32 da aplicação receptora.
+
+### 3.11. Não-Bloqueio da Esteira Principal pelo Leitor Serial
+- **O Problema**: Falhas na porta serial (desconexão física de cabos USB ou erros de paridade) podem lançar exceções de I/O bloqueantes.
+- **A Regra**: Todo o monitoramento do leitor de código de barras deve ser contido dentro de tarefas assíncronas isoladas (`Task.Run`), com captura segura de exceções e cancelamento cooperativo. Uma pane na porta COM jamais pode travar o `FileSystemWatcher` ou o envio aos PLCs.
+

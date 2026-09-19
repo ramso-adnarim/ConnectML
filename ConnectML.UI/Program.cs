@@ -35,7 +35,7 @@ namespace ConnectML.UI
             if (!createdNew)
             {
                 // Instância anterior já está ativa. Procura a janela existente.
-                IntPtr hWnd = FindWindow(null, "ConnectML - V1.3.0");
+                IntPtr hWnd = FindWindow(null, "ConnectML - V1.3.1");
                 if (hWnd != IntPtr.Zero)
                 {
                     // Envia uma mensagem customizada para que a instância ativa se restaure de forma limpa pelo thread do WPF

@@ -59,6 +59,13 @@ namespace ConnectML.UI
             return System.IO.Path.Combine(appDataFolder, "appsettings.json");
         }
         private ObservableCollection<ConfigFieldItem> _configFields = null!;
+        public ObservableCollection<ConnectML.Core.Models.BarcodeCommandDefinition> AvailableBarcodeCommands { get; } = new ObservableCollection<ConnectML.Core.Models.BarcodeCommandDefinition>();
+        private ObservableCollection<BarcodeRuleItem> _barcodeRules = new ObservableCollection<BarcodeRuleItem>();
+
+        // Leitor de Código de Barras (v1.3.1)
+        private ConnectML.Core.Interfaces.IBarcodeMonitorService? _barcodeMonitorService;
+        private ConnectML.Core.Interfaces.IBarcodeCommandHandler? _barcodeCommandHandler;
+        private CancellationTokenSource? _barcodeCts;
 
         // System Tray (Ícone na bandeja do sistema)
         private WinForms.NotifyIcon? _notifyIcon;
@@ -125,10 +132,15 @@ namespace ConnectML.UI
             SetupLogging();
             InitializeTrayIcon();
             
-            AppDomain.CurrentDomain.ProcessExit += (s, e) => SaveSettings();
+            AppDomain.CurrentDomain.ProcessExit += (s, e) =>
+            {
+                try { _barcodeMonitorService?.Dispose(); } catch { }
+                SaveSettings();
+            };
 
             _configFields = new ObservableCollection<ConfigFieldItem>();
             ItemsConfigList.ItemsSource = _configFields;
+            ItemsBarcodeRules.ItemsSource = _barcodeRules;
             
             LoadSettings();
             InitializeOverlayWindow();
@@ -188,6 +200,8 @@ namespace ConnectML.UI
                    }
                }
             };
+
+            Activated += (s, e) => ReloadBarcodeCommandsFromDisk();
 
             ApplySecurityState();
         }
@@ -749,6 +763,21 @@ namespace ConnectML.UI
             _lastRunSuccessful = true;
             SaveSettings();
             Log.Information("Serviço Iniciado. Monitorando: " + path);
+
+            if (ToggleBarcodeReader.IsChecked == true)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await StartBarcodeServiceAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error("[Leitor] Erro ao iniciar monitor serial: {Message}", ex.Message);
+                    }
+                });
+            }
         }
 
         private async Task StopService()
@@ -802,6 +831,9 @@ namespace ConnectML.UI
                 _host.Dispose();
                 _host = null;
             }
+
+            ReloadBarcodeCommandsFromDisk();
+            await StopBarcodeServiceAsync();
 
             SetConfigurationEditState(!_isLocked);
 
@@ -1426,6 +1458,8 @@ namespace ConnectML.UI
             if (PnlSourceBody != null) PnlSourceBody.IsEnabled = isEditable;
             if (PnlLogicBody != null) PnlLogicBody.IsEnabled = isEditable;
             if (PnlIntegrationBody != null) PnlIntegrationBody.IsEnabled = isEditable;
+            if (CmbBarcodeReaderPort != null) CmbBarcodeReaderPort.IsEnabled = isEditable;
+            if (CmbBarcodeOutputPort != null) CmbBarcodeOutputPort.IsEnabled = isEditable;
         }
 
         private void BtnToggleLogs_Click(object sender, RoutedEventArgs e)
@@ -1652,6 +1686,46 @@ namespace ConnectML.UI
 
                         _overlayWindow?.ApplySettings(_overlayBorderThickness, _overlayFontSize, _overlayHoldSeconds, _overlaySnapPosition);
 
+                        // Leitor de Código de Barras (v1.3.1)
+                        ToggleBarcodeReader.IsChecked = config.BarcodeReaderEnabled;
+
+                        AvailableBarcodeCommands.Clear();
+                        var commandsToLoad = config.BarcodeCommands != null && config.BarcodeCommands.Count > 0
+                            ? config.BarcodeCommands
+                            : new System.Collections.Generic.List<ConnectML.Core.Models.BarcodeCommandDefinition>
+                            {
+                                new ConnectML.Core.Models.BarcodeCommandDefinition
+                                {
+                                    Id = "undo",
+                                    Name = "Desfazer (Alt + F + O)",
+                                    KeySequence = "%{f}{o}",
+                                    TargetWindowTitle = "MeasurLink",
+                                    PreDelayMs = 150
+                                }
+                            };
+
+                        foreach (var cmd in commandsToLoad)
+                        {
+                            AvailableBarcodeCommands.Add(cmd);
+                        }
+
+                        PopulateBarcodeComPorts();
+                        SelectComboBoxItemByContent(CmbBarcodeReaderPort, config.BarcodeReaderPort);
+                        SelectComboBoxItemByContent(CmbBarcodeOutputPort, config.BarcodeOutputPort);
+
+                        _barcodeRules.Clear();
+                        if (config.BarcodeRules != null && config.BarcodeRules.Count > 0)
+                        {
+                            foreach (var r in config.BarcodeRules)
+                            {
+                                _barcodeRules.Add(new BarcodeRuleItem
+                                {
+                                    Keyword = r.Keyword,
+                                    CommandId = r.CommandId
+                                });
+                            }
+                        }
+
                         Log.Information("Configurações carregadas.");
                     }
                 }
@@ -1740,7 +1814,18 @@ namespace ConnectML.UI
                     OverlayBorderThickness = _overlayWindow != null ? _overlayWindow.BorderThicknessValue : _overlayBorderThickness,
                     OverlayFontSize = _overlayWindow != null ? _overlayWindow.FontSizeValue : _overlayFontSize,
                     OverlaySnapPosition = _overlayWindow != null ? _overlayWindow.CurrentSnapPosition : _overlaySnapPosition,
-                    OverlayHoldSeconds = _overlayWindow != null ? _overlayWindow.HoldSecondsValue : _overlayHoldSeconds
+                    OverlayHoldSeconds = _overlayWindow != null ? _overlayWindow.HoldSecondsValue : _overlayHoldSeconds,
+
+                    // Leitor de Código de Barras (v1.3.1)
+                    BarcodeReaderEnabled = ToggleBarcodeReader.IsChecked == true,
+                    BarcodeReaderPort = CmbBarcodeReaderPort.Text,
+                    BarcodeOutputPort = CmbBarcodeOutputPort.Text,
+                    BarcodeRules = _barcodeRules.Select(r => new ConnectML.Core.Models.BarcodeRuleConfig
+                    {
+                        Keyword = r.Keyword,
+                        CommandId = r.CommandId
+                    }).ToList(),
+                    BarcodeCommands = AvailableBarcodeCommands.ToList()
                 };
                 string json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(GetConfigFilePath(), json);
@@ -1835,6 +1920,321 @@ namespace ConnectML.UI
                 PnlIntegrationBody.Visibility = Visibility.Visible;
                 ((System.Windows.Media.RotateTransform)IconToggleIntegration.RenderTransform).Angle = 0;
             }
+        }
+
+        private void BtnToggleUtilities_Click(object sender, RoutedEventArgs e)
+        {
+            if (PnlUtilitiesBody.Visibility == Visibility.Visible)
+            {
+                PnlUtilitiesBody.Visibility = Visibility.Collapsed;
+                ((System.Windows.Media.RotateTransform)IconToggleUtilities.RenderTransform).Angle = -90;
+            }
+            else
+            {
+                PnlUtilitiesBody.Visibility = Visibility.Visible;
+                ((System.Windows.Media.RotateTransform)IconToggleUtilities.RenderTransform).Angle = 0;
+            }
+        }
+
+        private void ToggleBarcodeReader_Click(object sender, RoutedEventArgs e)
+        {
+            ReloadBarcodeCommandsFromDisk();
+            SaveSettings();
+
+            if (_isRunning)
+            {
+                if (ToggleBarcodeReader.IsChecked == true)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await StartBarcodeServiceAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error("[Leitor] Falha ao iniciar monitor serial: {Message}", ex.Message);
+                        }
+                    });
+                }
+                else
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        await StopBarcodeServiceAsync();
+                    });
+                }
+            }
+        }
+
+        private void BtnOpenConfigJson_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                SaveSettings();
+
+                string configPath = GetConfigFilePath();
+
+                if (!File.Exists(configPath))
+                {
+                    SaveSettings();
+                }
+
+                if (File.Exists(configPath))
+                {
+                    Log.Information("[Config] Abrindo arquivo de configuração ativo: {Path}", configPath);
+
+                    var psi = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = configPath,
+                        UseShellExecute = true
+                    };
+                    System.Diagnostics.Process.Start(psi);
+                }
+                else
+                {
+                    MessageBox.Show($"O arquivo de configuração não foi encontrado em:\n{configPath}", "Aviso", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "[Config] Falha ao abrir o arquivo appsettings.json");
+                MessageBox.Show($"Não foi possível abrir o arquivo de configuração:\n{ex.Message}", "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void BtnAddBarcodeRule_Click(object sender, RoutedEventArgs e)
+        {
+            // Sincroniza comandos do JSON antes de adicionar uma nova regra para disponibilizar novos comandos imediatamente
+            ReloadBarcodeCommandsFromDisk();
+
+            string defaultCmdId = AvailableBarcodeCommands.FirstOrDefault()?.Id ?? "undo";
+            _barcodeRules.Add(new BarcodeRuleItem
+            {
+                Keyword = string.Empty,
+                CommandId = defaultCmdId
+            });
+            SaveSettings();
+
+            NotifyBarcodeRulesUpdated();
+        }
+
+        private void BtnRemoveBarcodeRule_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.DataContext is BarcodeRuleItem item)
+            {
+                _barcodeRules.Remove(item);
+                SaveSettings();
+
+                NotifyBarcodeRulesUpdated();
+            }
+        }
+
+        private void NotifyBarcodeRulesUpdated()
+        {
+            if (_barcodeMonitorService != null && _barcodeMonitorService.IsRunning)
+            {
+                var rules = _barcodeRules.Select(r => new ConnectML.Core.Models.BarcodeRuleConfig
+                {
+                    Keyword = r.Keyword,
+                    CommandId = r.CommandId
+                }).ToList();
+                _barcodeMonitorService.UpdateRules(rules);
+            }
+        }
+
+        /// <summary>
+        /// Recarrega dinamicamente a lista de comandos a partir do arquivo JSON no disco,
+        /// permitindo a adição e edição de novos comandos sem necessidade de reiniciar a aplicação.
+        /// </summary>
+        private void ReloadBarcodeCommandsFromDisk()
+        {
+            try
+            {
+                string appDataConfig = GetConfigFilePath();
+                string baseDirConfig = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, LegacyConfigFile);
+
+                // Procura também na raiz do repositório/execução
+                string? projectRootConfig = null;
+                var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+                while (dir != null)
+                {
+                    string candidate = System.IO.Path.Combine(dir.FullName, LegacyConfigFile);
+                    if (File.Exists(candidate) && !string.Equals(candidate, appDataConfig, StringComparison.OrdinalIgnoreCase))
+                    {
+                        projectRootConfig = candidate;
+                        break;
+                    }
+                    dir = dir.Parent;
+                }
+
+                string fileToRead = appDataConfig;
+                FileInfo? bestFi = File.Exists(appDataConfig) ? new FileInfo(appDataConfig) : null;
+
+                if (projectRootConfig != null && File.Exists(projectRootConfig))
+                {
+                    var projectFi = new FileInfo(projectRootConfig);
+                    if (bestFi == null || projectFi.LastWriteTime > bestFi.LastWriteTime)
+                    {
+                        fileToRead = projectRootConfig;
+                        bestFi = projectFi;
+                    }
+                }
+
+                if (File.Exists(baseDirConfig))
+                {
+                    var baseFi = new FileInfo(baseDirConfig);
+                    if (bestFi == null || baseFi.LastWriteTime > bestFi.LastWriteTime)
+                    {
+                        fileToRead = baseDirConfig;
+                        bestFi = baseFi;
+                    }
+                }
+
+                if (string.IsNullOrEmpty(fileToRead) || !File.Exists(fileToRead))
+                    return;
+
+                string json = File.ReadAllText(fileToRead);
+                var config = JsonSerializer.Deserialize<AppConfig>(json);
+                if (config?.BarcodeCommands != null && config.BarcodeCommands.Count > 0)
+                {
+                    bool hasChanges = false;
+
+                    Dispatcher.Invoke(() =>
+                    {
+                        foreach (var diskCmd in config.BarcodeCommands)
+                        {
+                            var existing = AvailableBarcodeCommands.FirstOrDefault(c => string.Equals(c.Id, diskCmd.Id, StringComparison.OrdinalIgnoreCase));
+                            if (existing != null)
+                            {
+                                if (existing.Name != diskCmd.Name ||
+                                    existing.KeySequence != diskCmd.KeySequence ||
+                                    existing.TargetWindowTitle != diskCmd.TargetWindowTitle ||
+                                    existing.PreDelayMs != diskCmd.PreDelayMs)
+                                {
+                                    existing.Name = diskCmd.Name;
+                                    existing.KeySequence = diskCmd.KeySequence;
+                                    existing.TargetWindowTitle = diskCmd.TargetWindowTitle;
+                                    existing.PreDelayMs = diskCmd.PreDelayMs;
+                                    hasChanges = true;
+                                }
+                            }
+                            else
+                            {
+                                AvailableBarcodeCommands.Add(diskCmd);
+                                hasChanges = true;
+                            }
+                        }
+                    });
+
+                    _barcodeCommandHandler ??= new ConnectML.Infrastructure.Commands.MeasurLinkKeyboardCommandHandler(AvailableBarcodeCommands);
+                    _barcodeCommandHandler.ReloadCommands(AvailableBarcodeCommands);
+
+                    if (hasChanges)
+                    {
+                        Log.Information("[Leitor] Comandos de automação atualizados a partir do JSON ({Count} comandos disponíveis)", AvailableBarcodeCommands.Count);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "[Leitor] Erro ao recarregar comandos do arquivo JSON.");
+            }
+        }
+
+        private async Task StartBarcodeServiceAsync()
+        {
+            // Recarrega comandos antes de iniciar para garantir versão mais recente do JSON
+            ReloadBarcodeCommandsFromDisk();
+
+            string readerPort = string.Empty;
+            string outputPort = string.Empty;
+            List<ConnectML.Core.Models.BarcodeRuleConfig> rules = new List<ConnectML.Core.Models.BarcodeRuleConfig>();
+
+            Dispatcher.Invoke(() =>
+            {
+                readerPort = CmbBarcodeReaderPort.Text.Trim();
+                outputPort = CmbBarcodeOutputPort.Text.Trim();
+                rules = _barcodeRules.Select(r => new ConnectML.Core.Models.BarcodeRuleConfig
+                {
+                    Keyword = r.Keyword,
+                    CommandId = r.CommandId
+                }).ToList();
+            });
+
+            if (string.IsNullOrWhiteSpace(readerPort) || string.IsNullOrWhiteSpace(outputPort))
+            {
+                Log.Warning("[Leitor] Monitoramento não iniciado: portas COM de entrada e saída devem ser selecionadas.");
+                return;
+            }
+
+            if (string.Equals(readerPort, outputPort, StringComparison.OrdinalIgnoreCase))
+            {
+                Log.Warning("[Leitor] Monitoramento não iniciado: a porta do leitor ({Port}) não pode ser idêntica à porta de saída.", readerPort);
+                return;
+            }
+
+            await StopBarcodeServiceAsync();
+
+            _barcodeCommandHandler ??= new ConnectML.Infrastructure.Commands.MeasurLinkKeyboardCommandHandler(AvailableBarcodeCommands);
+            _barcodeCommandHandler.ReloadCommands(AvailableBarcodeCommands);
+
+            _barcodeMonitorService = new ConnectML.Infrastructure.Services.BarcodeSerialMonitorService(_barcodeCommandHandler);
+            _barcodeCts = new CancellationTokenSource();
+
+            try
+            {
+                await _barcodeMonitorService.StartMonitoringAsync(readerPort, outputPort, rules, _barcodeCts.Token);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("[Leitor] Erro ao abrir portas seriais ({Reader} -> {Output}): {Message}", readerPort, outputPort, ex.Message);
+            }
+        }
+
+        private async Task StopBarcodeServiceAsync()
+        {
+            if (_barcodeMonitorService != null)
+            {
+                try
+                {
+                    _barcodeCts?.Cancel();
+                    await _barcodeMonitorService.StopMonitoringAsync();
+                    _barcodeMonitorService.Dispose();
+                }
+                catch { }
+                finally
+                {
+                    _barcodeMonitorService = null;
+                    _barcodeCts?.Dispose();
+                    _barcodeCts = null;
+                }
+            }
+        }
+
+        private void PopulateBarcodeComPorts()
+        {
+            try
+            {
+                var ports = System.IO.Ports.SerialPort.GetPortNames();
+                foreach (var port in ports)
+                {
+                    if (!CmbBarcodeReaderPort.Items.Cast<object>().Any(i => i.ToString()?.Equals(port, StringComparison.OrdinalIgnoreCase) == true))
+                        CmbBarcodeReaderPort.Items.Add(port);
+
+                    if (!CmbBarcodeOutputPort.Items.Cast<object>().Any(i => i.ToString()?.Equals(port, StringComparison.OrdinalIgnoreCase) == true))
+                        CmbBarcodeOutputPort.Items.Add(port);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning($"[Leitor] Falha ao listar portas COM: {ex.Message}");
+            }
+        }
+
+        private void CmbBarcodePort_DropDownOpened(object? sender, EventArgs e)
+        {
+            PopulateBarcodeComPorts();
         }
 
         private void InitializeOverlayWindow()
@@ -2570,6 +2970,40 @@ namespace ConnectML.UI
                     {
                         _removeButtonVisibility = value;
                         OnPropertyChanged(nameof(RemoveButtonVisibility));
+                    }
+                }
+            }
+
+            public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+            protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+        }
+
+        public class BarcodeRuleItem : System.ComponentModel.INotifyPropertyChanged
+        {
+            private string _keyword = string.Empty;
+            public string Keyword
+            {
+                get => _keyword;
+                set
+                {
+                    if (_keyword != value)
+                    {
+                        _keyword = value;
+                        OnPropertyChanged(nameof(Keyword));
+                    }
+                }
+            }
+
+            private string _commandId = "undo";
+            public string CommandId
+            {
+                get => _commandId;
+                set
+                {
+                    if (_commandId != value)
+                    {
+                        _commandId = value;
+                        OnPropertyChanged(nameof(CommandId));
                     }
                 }
             }

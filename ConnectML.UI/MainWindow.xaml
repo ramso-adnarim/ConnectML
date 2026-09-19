@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:ConnectML.UI"
         xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
         mc:Ignorable="d"
-        Title="ConnectML - V1.3.0" Height="700" Width="980"
+        Title="ConnectML - V1.3.1" Height="700" Width="980"
         Background="{DynamicResource BackgroundDark}"
         Foreground="{DynamicResource TextPrimary}"
         WindowStartupLocation="CenterScreen"
@@ -166,6 +166,42 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="Padding" Value="8,2"/>
+        </Style>
+
+        <Style x:Key="SwitchToggleStyle" TargetType="ToggleButton">
+            <Setter Property="Width" Value="44"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="#334155"/>
+            <Setter Property="BorderBrush" Value="#475569"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="BackgroundBorder" Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                CornerRadius="12" SnapsToDevicePixels="True">
+                            <Grid>
+                                <Ellipse x:Name="Thumb" Width="16" Height="16" Fill="#94a3b8" 
+                                         HorizontalAlignment="Left" Margin="3,0,0,0" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="BackgroundBorder" Property="Background" Value="#10b981"/>
+                                <Setter TargetName="BackgroundBorder" Property="BorderBrush" Value="#059669"/>
+                                <Setter TargetName="Thumb" Property="Fill" Value="#FFFFFF"/>
+                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="Thumb" Property="Margin" Value="0,0,3,0"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="BackgroundBorder" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style TargetType="TextBox">
@@ -874,6 +910,123 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- CARD 4: UTILIDADES -->
+                        <Border Style="{StaticResource CardStyle}" Margin="0,12,0,0">
+                            <StackPanel>
+                                <Border BorderBrush="{StaticResource BorderDark}" BorderThickness="0,0,0,1">
+                                    <Button x:Name="BtnToggleUtilities" Click="BtnToggleUtilities_Click" Style="{StaticResource DarkExpanderButtonStyle}" Padding="20,5" Height="40">
+                                        <Grid>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                                <Viewbox Width="24" Height="24" Margin="0,0,8,0">
+                                                    <Path Fill="{StaticResource PurpleColor}" Stretch="Fill" Data="M22.7,19l-9.1-9.1c0.9-2.3,0.4-5-1.5-6.9C9.8,0.7,6.4,0.4,4,2.3L8,6.3L6.3,8L2.3,4C0.4,6.4,0.7,9.8,3,12.1 c1.9,1.9,4.6,2.4,6.9,1.5l9.1,9.1c0.4,0.4,1,0.4,1.4,0l2.3-2.3C23.1,20,23.1,19.4,22.7,19z"/>
+                                                </Viewbox>
+                                                <TextBlock Text="Utilidades" FontSize="18" FontWeight="Bold" VerticalAlignment="Center" Foreground="{StaticResource TextPrimary}"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                <Path x:Name="IconToggleUtilities" Fill="{StaticResource TextSecondary}" Data="M7,10L12,15L17,10H7Z" Stretch="Uniform" Width="12" Height="12" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                                    <Path.RenderTransform>
+                                                        <RotateTransform Angle="0"/>
+                                                    </Path.RenderTransform>
+                                                </Path>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Button>
+                                </Border>
+
+                                <StackPanel x:Name="PnlUtilitiesBody" Margin="24,12">
+                                    <!-- Subseção: Leitor de Código de Barras -->
+                                    <Grid Margin="0,0,0,12">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Viewbox Width="20" Height="20" Margin="0,0,8,0">
+                                                <Path Fill="#38bdf8" Stretch="Uniform" Data="M2,4H4V16H2V4M5,4H6V16H5V4M7,4H9V16H7V4M10,4H12V16H10V4M13,4H14V16H13V4M16,4H18V16H16V4M19,4H20V16H19V4M21,4H22V16H21V4Z"/>
+                                            </Viewbox>
+                                            <TextBlock Text="Leitor de Código de Barras" FontSize="14" FontWeight="Medium" Foreground="#cbd5e1" VerticalAlignment="Center"/>
+                                        </StackPanel>
+
+                                        <!-- Toggle Button de Ativação -->
+                                        <ToggleButton x:Name="ToggleBarcodeReader" HorizontalAlignment="Right" Click="ToggleBarcodeReader_Click"
+                                                      Cursor="Hand" ToolTip="Ligar/Desligar comunicação com o leitor"
+                                                      Style="{StaticResource SwitchToggleStyle}"/>
+                                    </Grid>
+
+                                    <!-- Portas COM: Entrada (Leitor) e Saída (MeasurLink) -->
+                                    <Grid Margin="0,0,0,16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="16"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Porta Serial do Leitor (Entrada)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
+                                            <ComboBox x:Name="CmbBarcodeReaderPort" Height="30" DropDownOpened="CmbBarcodePort_DropDownOpened" ToolTip="Selecione a porta serial onde o leitor está conectado"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Porta Serial de Saída (MeasurLink)" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,0,0,4"/>
+                                            <ComboBox x:Name="CmbBarcodeOutputPort" Height="30" DropDownOpened="CmbBarcodePort_DropDownOpened" ToolTip="Selecione a porta serial virtual conectada ao MeasurLink"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Subpainel Dinâmico: Palavras-chave e Comandos -->
+                                    <Grid Margin="0,0,0,8">
+                                        <TextBlock Text="Palavras-chave e Comandos de Ação" FontSize="12" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <Button x:Name="BtnOpenConfigJson" Click="BtnOpenConfigJson_Click" Width="28" Height="28" Margin="0,0,6,0" Style="{StaticResource RoundedButtonStyle}" ToolTip="Abrir arquivo de configuração ativo (appsettings.json)">
+                                                <Viewbox Width="12" Height="12">
+                                                    <Path Fill="{StaticResource TextSecondary}" Data="M14,2H6C4.89,2 4,2.89 4,4V20C4,21.1 4.89,22 6,22H18C19.1,22 20,21.1 20,20V8L14,2M18,20H6V4H13V9H18V20Z" Stretch="Uniform"/>
+                                                </Viewbox>
+                                            </Button>
+                                            <Button x:Name="BtnAddBarcodeRule" Click="BtnAddBarcodeRule_Click" Width="28" Height="28" Style="{StaticResource RoundedButtonStyle}" ToolTip="Adicionar Palavra-chave e Comando">
+                                                <Viewbox Width="12" Height="12">
+                                                    <Path Fill="{StaticResource TextSecondary}" Data="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" Stretch="Uniform"/>
+                                                </Viewbox>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Lista Dinâmica de Regras -->
+                                    <ItemsControl x:Name="ItemsBarcodeRules">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,6">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="1.2*"/>
+                                                        <ColumnDefinition Width="12"/>
+                                                        <ColumnDefinition Width="1.8*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <!-- Campo Palavra-chave -->
+                                                    <TextBox Grid.Column="0" Text="{Binding Keyword, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                                             Height="30" VerticalAlignment="Center" ToolTip="Palavra-chave a ser interceptada (ex: DESFAZER)"/>
+
+                                                    <!-- Combobox Comando -->
+                                                    <ComboBox Grid.Column="2" 
+                                                              SelectedValue="{Binding CommandId, Mode=TwoWay}"
+                                                              SelectedValuePath="Id"
+                                                              DisplayMemberPath="Name"
+                                                              ItemsSource="{Binding AvailableBarcodeCommands, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                              Height="30" VerticalAlignment="Center" ToolTip="Comando a ser acionado ao detectar a palavra-chave"/>
+
+                                                    <!-- Botão Remover -->
+                                                    <Button Grid.Column="3" Click="BtnRemoveBarcodeRule_Click" Width="30" Height="30" Margin="8,0,0,0" 
+                                                            Style="{StaticResource RoundedButtonStyle}" Background="{StaticResource StopRedBg}" 
+                                                            Foreground="{StaticResource StopRed}" BorderBrush="{StaticResource StopRedBorder}" 
+                                                            BorderThickness="1" VerticalAlignment="Center" ToolTip="Remover Regra">
+                                                        <Viewbox Width="12" Height="12">
+                                                            <Path Fill="{StaticResource StopRed}" Data="M19,13H5V11H19V13Z" Stretch="Uniform"/>
+                                                        </Viewbox>
+                                                    </Button>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
 
                         <Border Height="24"/>
                     </StackPanel>
@@ -941,7 +1094,7 @@
                             <Grid>
                                 <Button x:Name="BtnUpdate" Click="BtnUpdate_Click" Background="Transparent" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Left" Padding="4,0" ToolTip="Checar atualizações manualmente">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="Versão 1.3.0" FontSize="10" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Versão 1.3.1" FontSize="10" Foreground="{StaticResource TextSecondary}" VerticalAlignment="Center"/>
                                         <!-- Check Icon (Default) -->
                                         <Path x:Name="IconUpdateCheck" Visibility="Visible" Data="M9,16.17L4.83,12l-1.42,1.41L9,19 21,7l-1.41-1.41z" Fill="#10b981" Width="12" Height="12" Stretch="Uniform" Margin="6,0,0,0" VerticalAlignment="Center"/>
                                         <!-- Warning Icon (Hidden until update available) -->

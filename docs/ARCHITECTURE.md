@@ -1,11 +1,11 @@
-# ConnectML Architecture Documentation (Versão 1.3.0)
+# ConnectML Architecture Documentation (Versão 1.3.1)
 
 ## 1. Visão Geral do Projeto
 **ConnectML** é um middleware de integração industrial desenvolvido para conectar os softwares de metrologia (notavelmente o **MeasurLink / Mitutoyo**) aos sistemas de automação de manufatura (**CLPs Siemens S7**, barramentos industriais e endpoints **Webhook REST**).
 
 O sistema monitora diretórios locais ou de rede em busca de arquivos de exportação **QIF (Quality Information Framework)** em tempo real, analisa as características geométricas e dimensionais inspecionadas, extrai o veredito da peça (`PASS` ou `FAIL`) e despacha comandos de controle aos PLCs ou sistemas MES/SCADA.
 
-A partir da versão **1.3.0**, o ConnectML incorpora o subsistema **Widget Overlay HUD (Heads-Up Display)**, proporcionando acompanhamento visual contínuo e feedback instantâneo na tela do operador sem interromper suas atividades em outros softwares.
+A partir da versão **1.3.0**, o ConnectML incorpora o subsistema **Widget Overlay HUD (Heads-Up Display)**, e a partir da versão **1.3.1**, introduz o subsistema de **Monitoramento e Transporte Serial do Leitor de Código de Barras**, atuando como uma ponte de comunicação com intercepção de palavras-chave e simulação de atalhos físicos de teclado no MeasurLink (como `Alt + Q + O` para desfazer medição).
 
 ---
 
@@ -139,7 +139,45 @@ sequenceDiagram
 
 ---
 
-## 5. Subsistema de Atualização Automática (Velopack)
+## 5. Subsistema Leitor de Código de Barras e Automação MeasurLink (v1.3.1)
+
+A partir da versão **1.3.1**, o ConnectML incorpora o subsistema de **Monitoramento e Transporte Serial do Leitor de Código de Barras**, atuando como uma ponte de comunicação com intercepção condicional de comandos.
+
+```
+[ Leitor de Código de Barras ]
+               │
+      (Porta COM Entrada)
+               ▼
+[ BarcodeSerialMonitorService ] ────▶ Coincide com Palavra-Chave?
+               │                                   │
+               │ NÃO                               │ SIM (Intercepção)
+               ▼                                   ▼
+ [ COM Saída (com0com) ]                [ WindowFocusHelper (Win32) ]
+               │                        (Localiza e Foca "MeasurLink")
+               ▼                                   │
+   [ MeasurLink (Serial) ]                         ▼
+                                      [ MeasurLinkKeyboardCommandHandler ]
+                                      (Simula teclas físicas: ex: Alt+Q+O)
+```
+
+### 5.1. Transporte Serial Transparente
+- A aplicação monitora a porta serial de entrada conectada ao leitor (físico ou virtual) de forma assíncrona.
+- Toda leitura ordinária de dados é transportada em tempo real para uma porta serial de saída virtual (par gerenciado pelo utilitário `com0com`), permitindo que o MeasurLink receba os dados sem latência perceptível.
+
+### 5.2. Intercepção e Automação de Teclado no MeasurLink
+- Quando a string recebida coincide com uma "palavra-chave" cadastrada pelo usuário (ex: `"DESFAZER"`), o repasse pela porta COM de saída é suprimido.
+- O subsistema utiliza o helper de interop Win32 (`WindowFocusHelper`) para localizar a janela ativa do MeasurLink (`EnumWindows`), restaurá-la se estiver minimizada (`ShowWindow SW_RESTORE`) e trazê-la para o primeiro plano (`SetForegroundWindow` com liberação de restrições via `AttachThreadInput`).
+- Em seguida, o `MeasurLinkKeyboardCommandHandler` aguarda o tempo de estabilização pós-foco (`PreDelayMs`, padrão 80ms) e despacha a sequência de teclas configurada (ex: `Alt + Q + O` para o comando **Desfazer**).
+
+### 5.3. Extensibilidade via Configuração JSON (`appsettings.json`)
+- Os comandos não estão engessados no código-fonte. A lista `BarcodeCommands` no `AppConfig` permite que usuários avançados e integradores adicionem novos comandos no arquivo de configurações `%AppData%\ConnectML\appsettings.json`, especificando nome, sequência de teclas e título da janela-alvo.
+
+### 5.4. Não-Bloqueio e Concorrência Estrita
+- Toda a leitura serial e execução de atalhos operam em tarefas assíncronas dedicadas em background (`Task.Run`), garantindo zero interferência na esteira principal de arquivos QIF e na comunicação com PLCs Siemens S7 e Webhooks REST.
+
+---
+
+## 6. Subsistema de Atualização Automática (Velopack)
 
 O ConnectML utiliza o framework **Velopack** para atualizações transparentes:
 - **Armazenamento Seguro de Configurações**: As preferências do operador residem em `%LocalAppData%\ConnectML\user_settings.json`, isoladas dos diretórios de binários (`app-*`), garantindo que nenhuma configuração seja perdida durante os updates.
@@ -152,7 +190,7 @@ O ConnectML utiliza o framework **Velopack** para atualizações transparentes:
 
 ---
 
-## 6. Decisões Técnicas Importantes
+## 7. Decisões Técnicas Importantes
 
 1. **Janelas WPF Transparentes sem Foco (`WS_EX_NOACTIVATE`)**:
    - Em WPF padrão, janelas com `WindowStyle="None"` e `AllowsTransparency="True"` ainda recebem ativação do Windows ao serem clicadas. A injeção das flags Win32 via P/Invoke foi essencial para garantir a ergonomia do operador em máquinas de medir tridimensionais (CMM).
