@@ -62,6 +62,11 @@ namespace ConnectML.UI
         public ObservableCollection<ConnectML.Core.Models.BarcodeCommandDefinition> AvailableBarcodeCommands { get; } = new ObservableCollection<ConnectML.Core.Models.BarcodeCommandDefinition>();
         private ObservableCollection<BarcodeRuleItem> _barcodeRules = new ObservableCollection<BarcodeRuleItem>();
 
+        // Leitor de Código de Barras (v1.3.1)
+        private ConnectML.Core.Interfaces.IBarcodeMonitorService? _barcodeMonitorService;
+        private ConnectML.Core.Interfaces.IBarcodeCommandHandler? _barcodeCommandHandler;
+        private CancellationTokenSource? _barcodeCts;
+
         // System Tray (Ícone na bandeja do sistema)
         private WinForms.NotifyIcon? _notifyIcon;
         private Drawing.Icon? _defaultIcon;
@@ -127,7 +132,11 @@ namespace ConnectML.UI
             SetupLogging();
             InitializeTrayIcon();
             
-            AppDomain.CurrentDomain.ProcessExit += (s, e) => SaveSettings();
+            AppDomain.CurrentDomain.ProcessExit += (s, e) =>
+            {
+                try { _barcodeMonitorService?.Dispose(); } catch { }
+                SaveSettings();
+            };
 
             _configFields = new ObservableCollection<ConfigFieldItem>();
             ItemsConfigList.ItemsSource = _configFields;
@@ -752,6 +761,21 @@ namespace ConnectML.UI
             _lastRunSuccessful = true;
             SaveSettings();
             Log.Information("Serviço Iniciado. Monitorando: " + path);
+
+            if (ToggleBarcodeReader.IsChecked == true)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await StartBarcodeServiceAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error("[Leitor] Erro ao iniciar monitor serial: {Message}", ex.Message);
+                    }
+                });
+            }
         }
 
         private async Task StopService()
@@ -805,6 +829,8 @@ namespace ConnectML.UI
                 _host.Dispose();
                 _host = null;
             }
+
+            await StopBarcodeServiceAsync();
 
             SetConfigurationEditState(!_isLocked);
 
@@ -1429,6 +1455,8 @@ namespace ConnectML.UI
             if (PnlSourceBody != null) PnlSourceBody.IsEnabled = isEditable;
             if (PnlLogicBody != null) PnlLogicBody.IsEnabled = isEditable;
             if (PnlIntegrationBody != null) PnlIntegrationBody.IsEnabled = isEditable;
+            if (CmbBarcodeReaderPort != null) CmbBarcodeReaderPort.IsEnabled = isEditable;
+            if (CmbBarcodeOutputPort != null) CmbBarcodeOutputPort.IsEnabled = isEditable;
         }
 
         private void BtnToggleLogs_Click(object sender, RoutedEventArgs e)
@@ -1908,6 +1936,31 @@ namespace ConnectML.UI
         private void ToggleBarcodeReader_Click(object sender, RoutedEventArgs e)
         {
             SaveSettings();
+
+            if (_isRunning)
+            {
+                if (ToggleBarcodeReader.IsChecked == true)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await StartBarcodeServiceAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error("[Leitor] Falha ao iniciar monitor serial: {Message}", ex.Message);
+                        }
+                    });
+                }
+                else
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        await StopBarcodeServiceAsync();
+                    });
+                }
+            }
         }
 
         private void BtnAddBarcodeRule_Click(object sender, RoutedEventArgs e)
@@ -1919,6 +1972,8 @@ namespace ConnectML.UI
                 CommandId = defaultCmdId
             });
             SaveSettings();
+
+            NotifyBarcodeRulesUpdated();
         }
 
         private void BtnRemoveBarcodeRule_Click(object sender, RoutedEventArgs e)
@@ -1927,6 +1982,88 @@ namespace ConnectML.UI
             {
                 _barcodeRules.Remove(item);
                 SaveSettings();
+
+                NotifyBarcodeRulesUpdated();
+            }
+        }
+
+        private void NotifyBarcodeRulesUpdated()
+        {
+            if (_barcodeMonitorService != null && _barcodeMonitorService.IsRunning)
+            {
+                var rules = _barcodeRules.Select(r => new ConnectML.Core.Models.BarcodeRuleConfig
+                {
+                    Keyword = r.Keyword,
+                    CommandId = r.CommandId
+                }).ToList();
+                _barcodeMonitorService.UpdateRules(rules);
+            }
+        }
+
+        private async Task StartBarcodeServiceAsync()
+        {
+            string readerPort = string.Empty;
+            string outputPort = string.Empty;
+            List<ConnectML.Core.Models.BarcodeRuleConfig> rules = new List<ConnectML.Core.Models.BarcodeRuleConfig>();
+
+            Dispatcher.Invoke(() =>
+            {
+                readerPort = CmbBarcodeReaderPort.Text.Trim();
+                outputPort = CmbBarcodeOutputPort.Text.Trim();
+                rules = _barcodeRules.Select(r => new ConnectML.Core.Models.BarcodeRuleConfig
+                {
+                    Keyword = r.Keyword,
+                    CommandId = r.CommandId
+                }).ToList();
+            });
+
+            if (string.IsNullOrWhiteSpace(readerPort) || string.IsNullOrWhiteSpace(outputPort))
+            {
+                Log.Warning("[Leitor] Monitoramento não iniciado: portas COM de entrada e saída devem ser selecionadas.");
+                return;
+            }
+
+            if (string.Equals(readerPort, outputPort, StringComparison.OrdinalIgnoreCase))
+            {
+                Log.Warning("[Leitor] Monitoramento não iniciado: a porta do leitor ({Port}) não pode ser idêntica à porta de saída.", readerPort);
+                return;
+            }
+
+            await StopBarcodeServiceAsync();
+
+            _barcodeCommandHandler ??= new ConnectML.Infrastructure.Commands.MeasurLinkKeyboardCommandHandler(AvailableBarcodeCommands);
+            _barcodeCommandHandler.ReloadCommands(AvailableBarcodeCommands);
+
+            _barcodeMonitorService = new ConnectML.Infrastructure.Services.BarcodeSerialMonitorService(_barcodeCommandHandler);
+            _barcodeCts = new CancellationTokenSource();
+
+            try
+            {
+                await _barcodeMonitorService.StartMonitoringAsync(readerPort, outputPort, rules, _barcodeCts.Token);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("[Leitor] Erro ao abrir portas seriais ({Reader} -> {Output}): {Message}", readerPort, outputPort, ex.Message);
+            }
+        }
+
+        private async Task StopBarcodeServiceAsync()
+        {
+            if (_barcodeMonitorService != null)
+            {
+                try
+                {
+                    _barcodeCts?.Cancel();
+                    await _barcodeMonitorService.StopMonitoringAsync();
+                    _barcodeMonitorService.Dispose();
+                }
+                catch { }
+                finally
+                {
+                    _barcodeMonitorService = null;
+                    _barcodeCts?.Dispose();
+                    _barcodeCts = null;
+                }
             }
         }
 
