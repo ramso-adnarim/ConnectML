@@ -1553,33 +1553,78 @@ namespace ConnectML.UI
         {
             try
             {
-                string targetConfig = GetConfigFilePath();
+                string targetConfig = GetConfigFilePath(); // %AppData%\ConnectML\appsettings.json
                 string currentBaseDir = AppDomain.CurrentDomain.BaseDirectory;
+                
+                // 1. Se o arquivo definitivo em %AppData% já existe e contém configurações reais do usuário:
+                if (File.Exists(targetConfig) && new FileInfo(targetConfig).Length > 0)
+                {
+                    // Se não for o template padrão intocado, NUNCA sobrescreva!
+                    if (!IsDefaultTemplateConfig(targetConfig))
+                    {
+                        return;
+                    }
+                }
+
+                // 2. Se %AppData% não existe ou possui apenas o template inicial genérico,
+                // vamos procurar nos diretórios legados do Velopack (app-*) a configuração real do usuário.
                 DirectoryInfo? parentDir = Directory.GetParent(currentBaseDir.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar));
 
                 FileInfo? bestLegacyFile = null;
 
                 if (parentDir != null && parentDir.Exists)
                 {
+                    var currentAssemblyVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+
                     var appDirs = parentDir.GetDirectories("app-*");
                     foreach (var dir in appDirs)
                     {
+                        // Ignora se for exatamente a pasta em execução
                         if (string.Equals(dir.FullName.TrimEnd('\\'), currentBaseDir.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
                             continue;
 
-                        string candidatePath = System.IO.Path.Combine(dir.FullName, LegacyConfigFile);
-                        if (File.Exists(candidatePath))
+                        // Analisa a versão da pasta (ex: "app-1.2.0")
+                        string dirName = dir.Name;
+                        if (dirName.StartsWith("app-", StringComparison.OrdinalIgnoreCase))
                         {
+                            string verStr = dirName.Substring(4);
+                            if (Version.TryParse(verStr, out var parsedVer) && currentAssemblyVersion != null)
+                            {
+                                // Pastas de versão IGUAL ou SUPERIOR à atual não são legado
+                                if (parsedVer >= currentAssemblyVersion)
+                                    continue;
+                            }
+                        }
+
+                        string candidatePath = System.IO.Path.Combine(dir.FullName, LegacyConfigFile);
+                        if (File.Exists(candidatePath) && new FileInfo(candidatePath).Length > 0)
+                        {
+                            bool isTemplate = IsDefaultTemplateConfig(candidatePath);
                             var fi = new FileInfo(candidatePath);
-                            if (bestLegacyFile == null || fi.LastWriteTime > bestLegacyFile.LastWriteTime)
+
+                            if (bestLegacyFile == null)
                             {
                                 bestLegacyFile = fi;
+                            }
+                            else
+                            {
+                                bool bestIsTemplate = IsDefaultTemplateConfig(bestLegacyFile.FullName);
+                                // Arquivo customizado tem prioridade absoluta sobre template padrão
+                                if (!isTemplate && bestIsTemplate)
+                                {
+                                    bestLegacyFile = fi;
+                                }
+                                else if (isTemplate == bestIsTemplate && fi.LastWriteTime > bestLegacyFile.LastWriteTime)
+                                {
+                                    bestLegacyFile = fi;
+                                }
                             }
                         }
                     }
                 }
 
-                if (bestLegacyFile == null)
+                // Fallback para arquivo local na pasta atual caso targetConfig ainda não exista
+                if (bestLegacyFile == null && !File.Exists(targetConfig))
                 {
                     string fallbackPath = System.IO.Path.Combine(currentBaseDir, LegacyConfigFile);
                     if (File.Exists(fallbackPath))
@@ -1588,32 +1633,35 @@ namespace ConnectML.UI
                     }
                 }
 
+                // 3. Se encontramos uma configuração legada aplicável:
                 if (bestLegacyFile != null)
                 {
-                    bool shouldCopy = false;
-                    if (!File.Exists(targetConfig))
-                    {
-                        shouldCopy = true;
-                    }
-                    else
-                    {
-                        var targetFi = new FileInfo(targetConfig);
-                        if (bestLegacyFile.LastWriteTime > targetFi.LastWriteTime)
-                        {
-                            shouldCopy = true;
-                        }
-                    }
-
-                    if (shouldCopy)
-                    {
-                        File.Copy(bestLegacyFile.FullName, targetConfig, overwrite: true);
-                        Log.Information($"Configurações migradas de '{bestLegacyFile.FullName}' para '{targetConfig}'");
-                    }
+                    File.Copy(bestLegacyFile.FullName, targetConfig, overwrite: true);
+                    Log.Information($"Configurações migradas com sucesso de '{bestLegacyFile.FullName}' para '{targetConfig}'");
                 }
             }
             catch (Exception ex)
             {
                 Log.Warning(ex, "Erro durante a migração de configurações legadas.");
+            }
+        }
+
+        private static bool IsDefaultTemplateConfig(string filePath)
+        {
+            try
+            {
+                if (!File.Exists(filePath)) return true;
+                string content = File.ReadAllText(filePath);
+                if (string.IsNullOrWhiteSpace(content)) return true;
+
+                // O template padrão de fábrica possui IP 192.168.2.100, endpoint de exemplo e caminho padrão simultaneamente
+                return content.Contains("192.168.2.100") && 
+                       content.Contains("api.exa.mple/webhook") && 
+                       content.Contains("C:\\\\Mitutoyo\\\\ConnectML\\\\QIF");
+            }
+            catch
+            {
+                return false;
             }
         }
 
