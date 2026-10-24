@@ -8,7 +8,7 @@ namespace ConnectML.Core
 {
     public static class QifParser
     {
-        public static (bool IsOk, int FailCount, string Product) Parse(string filePath)
+        public static (bool IsOk, int FailCount, string Product, string SerialNumber) Parse(string filePath)
         {
             try
             {
@@ -23,7 +23,7 @@ namespace ConnectML.Core
                 if (!measurementResultsElements.Any())
                 {
                     Log.Warning($"[QIF PARSER] Nenhum elemento MeasurementResults encontrado em {Path.GetFileName(filePath)}");
-                    return (false, 0, "Desconhecido");
+                    return (false, 0, "Desconhecido", string.Empty);
                 }
 
                 // Seleciona o MeasurementResults com o maior ID numérico
@@ -49,7 +49,7 @@ namespace ConnectML.Core
                 if (!statusElements.Any())
                 {
                     Log.Warning($"[QIF PARSER] Nenhuma característica encontrada em ID {latestId}");
-                    return (false, 0, "Desconhecido");
+                    return (false, 0, "Desconhecido", string.Empty);
                 }
 
                 int failCount = 0;
@@ -68,15 +68,65 @@ namespace ConnectML.Core
                 var inspectionStatus = latestMeasurement.Descendants()
                     .FirstOrDefault(x => x.Name.LocalName == "InspectionStatusEnum")?.Value;
 
-                // Extrai nome do Produto
+                // Extrai nome do Produto/Rotina
                 var productName = doc.Descendants()
                     .Where(x => x.Name.LocalName == "Product")
                     .Descendants()
                     .FirstOrDefault(x => x.Name.LocalName == "Name")?.Value ?? "Desconhecido";
 
-                Log.Information($"[QIF PARSER] Resultado ID {latestId} (Produto: {productName}): {inspectionStatus ?? "N/A"}. Falhas: {failCount}");
+                // Extrai o Número de Série (SerialNumber) correlacionado ao ActualComponent da medição mais recente
+                string? serialNumber = null;
+                var componentId = latestMeasurement.Descendants()
+                    .Where(x => x.Name.LocalName == "ActualComponentIds")
+                    .Descendants()
+                    .FirstOrDefault(x => x.Name.LocalName == "Id")?.Value;
 
-                return (isOk, failCount, productName);
+                if (!string.IsNullOrWhiteSpace(componentId))
+                {
+                    var matchingComponent = doc.Descendants()
+                        .FirstOrDefault(x => x.Name.LocalName == "ActualComponent" && x.Attribute("id")?.Value == componentId);
+
+                    serialNumber = matchingComponent?.Descendants()
+                        .FirstOrDefault(x => x.Name.LocalName == "SerialNumber")?.Value?.Trim();
+                }
+
+                // Fallback resiliente 1: caso não encontre por ActualComponentIds, busca o ActualComponent com maior ID
+                if (string.IsNullOrWhiteSpace(serialNumber))
+                {
+                    var allComponents = doc.Descendants()
+                        .Where(x => x.Name.LocalName == "ActualComponent")
+                        .ToList();
+
+                    if (allComponents.Any())
+                    {
+                        var fallbackComponent = allComponents
+                            .OrderByDescending(x =>
+                            {
+                                if (long.TryParse(x.Attribute("id")?.Value, out long id))
+                                    return id;
+                                return -1;
+                            })
+                            .FirstOrDefault();
+
+                        serialNumber = fallbackComponent?.Descendants()
+                            .FirstOrDefault(x => x.Name.LocalName == "SerialNumber")?.Value?.Trim();
+                    }
+                }
+
+                // Fallback resiliente 2: qualquer tag SerialNumber no documento
+                if (string.IsNullOrWhiteSpace(serialNumber))
+                {
+                    serialNumber = doc.Descendants()
+                        .FirstOrDefault(x => x.Name.LocalName == "SerialNumber")?.Value?.Trim() ?? string.Empty;
+                }
+                else
+                {
+                    serialNumber ??= string.Empty;
+                }
+
+                Log.Information($"[QIF PARSER] Resultado ID {latestId} (Produto: {productName}, Serial: {(!string.IsNullOrEmpty(serialNumber) ? serialNumber : "N/A")}): {inspectionStatus ?? "N/A"}. Falhas: {failCount}");
+
+                return (isOk, failCount, productName, serialNumber);
             }
             catch (Exception ex)
             {

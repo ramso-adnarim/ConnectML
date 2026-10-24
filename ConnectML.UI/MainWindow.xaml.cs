@@ -457,6 +457,14 @@ namespace ConnectML.UI
                 Hide();
                 if (_overlayWindow != null)
                 {
+                    if (_isRunning)
+                    {
+                        _overlayWindow.SetWaitingState();
+                    }
+                    else
+                    {
+                        _overlayWindow.SetInterruptedState();
+                    }
                     _overlayWindow.Show();
                 }
             }
@@ -771,10 +779,18 @@ namespace ConnectML.UI
             SaveSettings();
             Log.Information("Serviço Iniciado. Monitorando: " + path);
 
-            // Garante que o HUD esteja visível se a janela principal estiver na bandeja
+            // Garante que o HUD esteja visível e em espera se a janela principal estiver na bandeja
             if (!IsVisible && _overlayWindow != null)
             {
-                _overlayWindow.Show();
+                try
+                {
+                    _overlayWindow.SetWaitingState();
+                    _overlayWindow.Show();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Erro ao exibir overlay no StartService: {Message}", ex.Message);
+                }
             }
 
             if (ToggleBarcodeReader.IsChecked == true)
@@ -869,8 +885,22 @@ namespace ConnectML.UI
             StatusIndicator.RenderTransform = new ScaleTransform(1, 1);
 
             _lastRunSuccessful = false;
-            _overlayWindow?.Hide();
-            _overlayWindow?.ResetLifecycleState();
+            try
+            {
+                _overlayWindow?.ResetLifecycleState(toWaiting: false);
+                if (!IsVisible && _overlayWindow != null)
+                {
+                    _overlayWindow.Show();
+                }
+                else
+                {
+                    _overlayWindow?.Hide();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Erro ao atualizar overlay no StopService: {Message}", ex.Message);
+            }
             SaveSettings();
             Log.Information("Serviço Parado.");
 
@@ -1160,9 +1190,19 @@ namespace ConnectML.UI
                     }
                 }
 
-                // Notifica o Widget Overlay HUD sobre a conclusão da medição
-                int holdSec = _overlayWindow?.HoldSecondsValue ?? _overlayHoldSeconds;
-                _overlayWindow?.TriggerMeasurementCompleted(holdSec, $"Peça: {result.Product}");
+                // Notifica o Widget Overlay HUD sobre a conclusão da medição (formato: <ROTINA> / <SERIALNUMBER>)
+                try
+                {
+                    int holdSec = _overlayWindow?.HoldSecondsValue ?? _overlayHoldSeconds;
+                    string hudMessage = !string.IsNullOrWhiteSpace(result.SerialNumber)
+                        ? $"{result.Product} / {result.SerialNumber}"
+                        : result.Product;
+                    _overlayWindow?.TriggerMeasurementCompleted(holdSec, hudMessage);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Erro ao acionar HUD Overlay no ProcessFile: {Message}", ex.Message);
+                }
 
                 if (isWebhookMode)
                 {
@@ -1177,7 +1217,10 @@ namespace ConnectML.UI
                     // Notificação de balão no System Tray (apenas se minimizada/na bandeja)
                     if (WindowState == WindowState.Minimized || !IsVisible)
                     {
-                        _notifyIcon?.ShowBalloonTip(3000, "Arquivo Processado", $"O arquivo foi processado com sucesso.\nPeça (Part Number): {result.Product}", WinForms.ToolTipIcon.Info);
+                        string balloonMsg = !string.IsNullOrWhiteSpace(result.SerialNumber)
+                            ? $"O arquivo foi processado com sucesso.\nRotina: {result.Product}\nSerial: {result.SerialNumber}"
+                            : $"O arquivo foi processado com sucesso.\nRotina: {result.Product}";
+                        _notifyIcon?.ShowBalloonTip(3000, "Arquivo Processado", balloonMsg, WinForms.ToolTipIcon.Info);
                     }
                 }
                 catch (Exception ex) { Log.Error($"Erro ao deletar: {ex.Message}"); }
