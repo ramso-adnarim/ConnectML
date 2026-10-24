@@ -118,17 +118,26 @@ namespace ConnectML.UI
         /// </summary>
         public void SetWaitingState()
         {
-            Dispatcher.Invoke(() =>
+            if (Dispatcher.HasShutdownStarted) return;
+            try
             {
-                _isStateInitialized = true;
-                TxtOverlayStatus.Text = "AGUARDANDO MEDIÇÃO";
+                Dispatcher.Invoke(() =>
+                {
+                    try
+                    {
+                        _isStateInitialized = true;
+                        TxtOverlayStatus.Text = "AGUARDANDO MEDIÇÃO";
 
-                OverlayBorder.BorderBrush = YellowBrush;
-                OverlayTabContainer.BorderBrush = YellowBrush;
-                StateDot.Fill = YellowBrush;
+                        OverlayBorder.BorderBrush = YellowBrush;
+                        OverlayTabContainer.BorderBrush = YellowBrush;
+                        StateDot.Fill = YellowBrush;
 
-                _pulseStoryboard?.Begin(this, isControllable: true);
-            });
+                        _pulseStoryboard?.Begin(this, isControllable: true);
+                    }
+                    catch (Exception) { }
+                });
+            }
+            catch (Exception) { }
         }
 
         /// <summary>
@@ -137,20 +146,29 @@ namespace ConnectML.UI
         /// </summary>
         public void SetCompletedState(string? message = null)
         {
-            Dispatcher.Invoke(() =>
+            if (Dispatcher.HasShutdownStarted) return;
+            try
             {
-                _isStateInitialized = true;
-                _pulseStoryboard?.Stop(this);
+                Dispatcher.Invoke(() =>
+                {
+                    try
+                    {
+                        _isStateInitialized = true;
+                        _pulseStoryboard?.Stop(this);
 
-                OverlayBorder.Opacity = 1.0;
-                StateDot.Opacity = 1.0;
+                        OverlayBorder.Opacity = 1.0;
+                        StateDot.Opacity = 1.0;
 
-                OverlayBorder.BorderBrush = GreenBrush;
-                OverlayTabContainer.BorderBrush = GreenBrush;
-                StateDot.Fill = GreenBrush;
+                        OverlayBorder.BorderBrush = GreenBrush;
+                        OverlayTabContainer.BorderBrush = GreenBrush;
+                        StateDot.Fill = GreenBrush;
 
-                TxtOverlayStatus.Text = !string.IsNullOrWhiteSpace(message) ? message : "CONCLUÍDO";
-            });
+                        TxtOverlayStatus.Text = !string.IsNullOrWhiteSpace(message) ? message : "CONCLUÍDO";
+                    }
+                    catch (Exception) { }
+                });
+            }
+            catch (Exception) { }
         }
 
         /// <summary>
@@ -159,29 +177,38 @@ namespace ConnectML.UI
         /// </summary>
         public void SetInterruptedState()
         {
-            Dispatcher.Invoke(() =>
+            if (Dispatcher.HasShutdownStarted) return;
+            try
             {
-                lock (_stateLock)
+                Dispatcher.Invoke(() =>
                 {
-                    _dwellCts?.Cancel();
-                    _dwellCts?.Dispose();
-                    _dwellCts = null;
-                    _plcResetReceived = false;
-                    _dwellTimeElapsed = false;
-                }
+                    try
+                    {
+                        lock (_stateLock)
+                        {
+                            _dwellCts?.Cancel();
+                            _dwellCts?.Dispose();
+                            _dwellCts = null;
+                            _plcResetReceived = false;
+                            _dwellTimeElapsed = false;
+                        }
 
-                _isStateInitialized = true;
-                _pulseStoryboard?.Stop(this);
+                        _isStateInitialized = true;
+                        _pulseStoryboard?.Stop(this);
 
-                OverlayBorder.Opacity = 1.0;
-                StateDot.Opacity = 1.0;
+                        OverlayBorder.Opacity = 1.0;
+                        StateDot.Opacity = 1.0;
 
-                OverlayBorder.BorderBrush = GrayBrush;
-                OverlayTabContainer.BorderBrush = GrayBrush;
-                StateDot.Fill = GrayBrush;
+                        OverlayBorder.BorderBrush = GrayBrush;
+                        OverlayTabContainer.BorderBrush = GrayBrush;
+                        StateDot.Fill = GrayBrush;
 
-                TxtOverlayStatus.Text = "PROCESSAMENTO INTERROMPIDO";
-            });
+                        TxtOverlayStatus.Text = "PROCESSAMENTO INTERROMPIDO";
+                    }
+                    catch (Exception) { }
+                });
+            }
+            catch (Exception) { }
         }
 
         /// <summary>

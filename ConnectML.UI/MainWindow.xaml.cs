@@ -782,8 +782,15 @@ namespace ConnectML.UI
             // Garante que o HUD esteja visível e em espera se a janela principal estiver na bandeja
             if (!IsVisible && _overlayWindow != null)
             {
-                _overlayWindow.SetWaitingState();
-                _overlayWindow.Show();
+                try
+                {
+                    _overlayWindow.SetWaitingState();
+                    _overlayWindow.Show();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Erro ao exibir overlay no StartService: {Message}", ex.Message);
+                }
             }
 
             if (ToggleBarcodeReader.IsChecked == true)
@@ -878,14 +885,21 @@ namespace ConnectML.UI
             StatusIndicator.RenderTransform = new ScaleTransform(1, 1);
 
             _lastRunSuccessful = false;
-            _overlayWindow?.ResetLifecycleState(toWaiting: false);
-            if (!IsVisible && _overlayWindow != null)
+            try
             {
-                _overlayWindow.Show();
+                _overlayWindow?.ResetLifecycleState(toWaiting: false);
+                if (!IsVisible && _overlayWindow != null)
+                {
+                    _overlayWindow.Show();
+                }
+                else
+                {
+                    _overlayWindow?.Hide();
+                }
             }
-            else
+            catch (Exception ex)
             {
-                _overlayWindow?.Hide();
+                Log.Error(ex, "Erro ao atualizar overlay no StopService: {Message}", ex.Message);
             }
             SaveSettings();
             Log.Information("Serviço Parado.");
@@ -1177,11 +1191,18 @@ namespace ConnectML.UI
                 }
 
                 // Notifica o Widget Overlay HUD sobre a conclusão da medição (formato: <ROTINA> / <SERIALNUMBER>)
-                int holdSec = _overlayWindow?.HoldSecondsValue ?? _overlayHoldSeconds;
-                string hudMessage = !string.IsNullOrWhiteSpace(result.SerialNumber)
-                    ? $"{result.Product} / {result.SerialNumber}"
-                    : result.Product;
-                _overlayWindow?.TriggerMeasurementCompleted(holdSec, hudMessage);
+                try
+                {
+                    int holdSec = _overlayWindow?.HoldSecondsValue ?? _overlayHoldSeconds;
+                    string hudMessage = !string.IsNullOrWhiteSpace(result.SerialNumber)
+                        ? $"{result.Product} / {result.SerialNumber}"
+                        : result.Product;
+                    _overlayWindow?.TriggerMeasurementCompleted(holdSec, hudMessage);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Erro ao acionar HUD Overlay no ProcessFile: {Message}", ex.Message);
+                }
 
                 if (isWebhookMode)
                 {

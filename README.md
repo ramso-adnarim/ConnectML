@@ -1,34 +1,45 @@
 # ![ConnectML Logo](/ConnectML-logo-ico.ico) ConnectML
 
-[![Release](https://img.shields.io/github/v/release/ramso-adnarim/ConnectML?color=0078D4&label=Vers%C3%A3o%20Atual)](https://github.com/ramso-adnarim/ConnectML/releases/tag/1.3.3)
+[![Release](https://img.shields.io/github/v/release/ramso-adnarim/ConnectML?color=0078D4&label=Vers%C3%A3o%20Atual)](https://github.com/ramso-adnarim/ConnectML/releases/tag/1.3.4)
 [![Target](https://img.shields.io/badge/.NET-8.0%20LTS-purple.svg)](https://dotnet.microsoft.com/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20x64-blue.svg)](https://microsoft.com/windows)
 [![Velopack](https://img.shields.io/badge/Updates-Velopack-success.svg)](https://velopack.io/)
 
 **ConnectML** é um middleware industrial de alta performance desenvolvido para atuar como ponte em tempo real entre softwares de metrologia (**MeasurLink / Mitutoyo**) e sistemas de automação de manufatura (**CLPs Siemens S7**, barramentos industriais e endpoints **Webhook REST**).
 
-O sistema monitora a geração de arquivos de inspeção **QIF (Quality Information Framework)**, extrai automaticamente os dados da última peça inspecionada, valida tolerâncias e despacha sinais de controle (Aprovado/Reprovado ou Contadores) para as linhas de montagem.
+O sistema monitora a geração de arquivos de inspeção **QIF (Quality Information Framework)**, extrai automaticamente os dados da última peça inspecionada, identifica a rotina e o número de série da peça física, valida tolerâncias e despacha sinais de controle (Aprovado/Reprovado ou Contadores) para as linhas de montagem.
 
 ---
 
-## 🌟 Novidades da Versão 1.3.3: Autocura MDI no MeasurLink, Foco Seguro e Refinamento do HUD
+## 🌟 Novidades da Versão 1.3.4: Rastreabilidade QIF com Serial, Hit-Testing Estrito e Estado Interrompido no HUD
 
-A versão **1.3.3** introduz blindagens operacionais críticas para garantir que a automação no chão de fábrica ocorra de forma transparente e 100% autônoma:
+A versão **1.3.4** traz melhorias focadas na rastreabilidade metrológica de peças físicas, ergonomia avançada de redimensionamento e supervisão visual clara do estado de operação:
+
+* **Rastreabilidade com Número de Série no QIF**: Extração resiliente da tag `<SerialNumber>` correlacionada à medição mais recente no arquivo QIF. A notificação no HUD agora exibe o formato unificado `<ROTINA> / <SERIALNUMBER>` (ex: `MANPESADO / 101807776895` ou `D-1001 / 123456`) sem prefixos. A comunicação de controle com o PLC Siemens S7 e Webhooks permanece estritamente desacoplada, enviando apenas a rotina (`result.Product`) para preservar a compatibilidade de automação.
+* **Hit-Testing Geométrico Estrito (8px)**: A captura de redimensionamento da borda periférica luminosa do HUD foi calibrada para uma faixa de exatamente 8px sobre a aresta interna (±4px), eliminando capturas acidentais de cursor no meio de bordas espessas ou no desktop.
+* **Corner Resize Grip Ancorado**: O manipulador diagonal de redimensionamento (`TabResizeGrip`) agora reside no canto inferior direito da aba (ou respectivo canto para cada orientação), acompanhando perfeitamente a silhueta externa do contêiner.
+* **Desacoplamento de Escala dos Controles da Aba**: Ao aumentar o tamanho do título do HUD (11 a 60pt para visualização à distância), os botões operacionais (Configurações, Restaurar/Abrir, grips e divisores) preservam dimensões ergonômicas estáveis (~14px para ícones, 11pt para texto), com espaçamento amplo em relação ao título.
+* **Estado Visual "PROCESSAMENTO INTERROMPIDO" (#64748B)**: Quando a aplicação é minimizada para a bandeja sem que o serviço esteja em execução (`!_isRunning`), o HUD assume uma tonalidade cinza ardósia sólida sem pulso com a mensagem `"PROCESSAMENTO INTERROMPIDO"`. Ao clicar em "Iniciar", o HUD comuta instantaneamente para `"AGUARDANDO MEDIÇÃO"` em amarelo pulsante.
+* **Nova Splashscreen Oficial Velopack**: Banner de instalação atualizado com o design system industrial e a identificação oficial da versão `V1.3.4`.
+
+---
+
+## 📥 Download da Versão Mais Recente (v1.3.4)
+
+A versão **1.3.4** já está disponível com suporte a instalação limpa e atualizações automáticas silenciosas:
+
+* 🚀 **[Baixar Instalador Windows (ConnectML-win-Setup.exe)](https://github.com/ramso-adnarim/ConnectML/releases/download/1.3.4/ConnectML-win-Setup.exe)** — *Instalação completa com splashscreen e atalhos no Desktop e Menu Iniciar*
+* 📦 **[Baixar Pacote Portátil (ConnectML-win-Portable.zip)](https://github.com/ramso-adnarim/ConnectML/releases/download/1.3.4/ConnectML-win-Portable.zip)** — *Execução direta sem necessidade de instalação*
+* 📋 **[Ver Notas da Release v1.3.4 no GitHub](https://github.com/ramso-adnarim/ConnectML/releases/tag/1.3.4)**
+
+---
+
+## 🌟 Versão 1.3.3: Autocura MDI no MeasurLink, Foco Seguro e Refinamento do HUD
 
 * **Autocura e Maximização Contínua de Abas do MeasurLink**: Previne e corrige autonomamente a desmaximização da aba de medição ao escanear o comando "Desfazer". O ConnectML inspeciona o contêiner `MDIClient` e remaximiza a aba via protocolo Win32 nativo (`WM_MDIMAXIMIZE`), garantindo que o operador nunca dependa de um mouse para remaximizar a tela.
 * **Transferência Segura de Foco Win32**: Elimina chamadas desestabilizadoras de `SetFocus` na janela-mãe externa do software de metrologia, direcionando o foco de teclado estritamente para a sub-janela de medição ativa.
 * **Supressão de Teclas Modificadoras Fantasmas**: Implementa checagem física de hardware via `GetAsyncKeyState`, disparando eventos de liberação (`KEYUP`) apenas se teclas como `Alt`, `Ctrl` ou `Shift` estiverem fisicamente pressionadas, evitando aberturas indesejadas do menu do sistema.
 * **Refinamento do HUD & Nova Splashscreen**: Status do HUD padronizado em caixa alta para visibilidade imediata à distância e novo banner de splashscreen integrado ao instalador Velopack.
-
----
-
-## 📥 Download da Versão Mais Recente (v1.3.3)
-
-A versão **1.3.3** já está disponível com suporte a instalação limpa e atualizações automáticas silenciosas:
-
-* 🚀 **[Baixar Instalador Windows (ConnectML-win-Setup.exe)](https://github.com/ramso-adnarim/ConnectML/releases/download/1.3.3/ConnectML-win-Setup.exe)** — *Instalação completa com splashscreen e atalhos no Desktop e Menu Iniciar*
-* 📦 **[Baixar Pacote Portátil (ConnectML-win-Portable.zip)](https://github.com/ramso-adnarim/ConnectML/releases/download/1.3.3/ConnectML-win-Portable.zip)** — *Execução direta sem necessidade de instalação*
-* 📋 **[Ver Notas da Release v1.3.3 no GitHub](https://github.com/ramso-adnarim/ConnectML/releases/tag/1.3.3)**
 
 ---
 
