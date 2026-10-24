@@ -1,11 +1,11 @@
-# ConnectML Architecture Documentation (Versão 1.3.3)
+# ConnectML Architecture Documentation (Versão 1.3.4)
 
 ## 1. Visão Geral do Projeto
 **ConnectML** é um middleware de integração industrial desenvolvido para conectar os softwares de metrologia (notavelmente o **MeasurLink / Mitutoyo**) aos sistemas de automação de manufatura (**CLPs Siemens S7**, barramentos industriais e endpoints **Webhook REST**).
 
-O sistema monitora diretórios locais ou de rede em busca de arquivos de exportação **QIF (Quality Information Framework)** em tempo real, analisa as características geométricas e dimensionais inspecionadas, extrai o veredito da peça (`PASS` ou `FAIL`) e despacha comandos de controle aos PLCs ou sistemas MES/SCADA.
+O sistema monitora diretórios locais ou de rede em busca de arquivos de exportação **QIF (Quality Information Framework)** em tempo real, analisa as características geométricas e dimensionais inspecionadas, extrai o veredito da peça (`PASS` ou `FAIL`), identifica a rotina e o número de série da peça, e despacha comandos de controle aos PLCs ou sistemas MES/SCADA.
 
-A partir da versão **1.3.0**, o ConnectML incorpora o subsistema **Widget Overlay HUD (Heads-Up Display)**, a partir da versão **1.3.1**, o subsistema de **Monitoramento e Transporte Serial do Leitor de Código de Barras**, na versão **1.3.2**, aprimora a **ativação universal e confiável do HUD na bandeja/startup**, o **controle estrito do reinício automático** e a **blindagem de persistência de configurações no Velopack**, e na versão **1.3.3**, introduz o mecanismo de **Autocura e Maximização Contínua de Abas MDI do MeasurLink**, **transferência segura de foco Win32** e **supressão de teclas modificadoras fantasmas**.
+A partir da versão **1.3.0**, o ConnectML incorpora o subsistema **Widget Overlay HUD (Heads-Up Display)**, a partir da versão **1.3.1**, o subsistema de **Monitoramento e Transporte Serial do Leitor de Código de Barras**, na versão **1.3.2**, aprimora a **ativação universal e confiável do HUD na bandeja/startup**, o **controle estrito do reinício automático** e a **blindagem de persistência de configurações no Velopack**, na versão **1.3.3**, introduz o mecanismo de **Autocura e Maximização Contínua de Abas MDI do MeasurLink**, **transferência segura de foco Win32** e **supressão de teclas modificadoras fantasmas**, e na versão **1.3.4**, implementa a **extração do `<SerialNumber>` no parser QIF com exibição no HUD (`<ROTINA> / <SERIALNUMBER>`)**, **calibração de hit-testing milimétrico de borda (8px)**, **desacoplamento de escala dos controles da aba com grip ancorado no canto**, e o **estado visual estático "PROCESSAMENTO INTERROMPIDO" (#64748B)** quando o serviço está pausado.
 
 ---
 
@@ -76,24 +76,29 @@ Todas as preferências do HUD foram retiradas da tela principal e concentradas e
 - Permite regular a espessura da borda, tamanho da aba/fonte e alternar a posição de docking.
 - As alterações são refletidas em tempo real na interface do HUD através de bindings e eventos imediatos.
 
-### 3.4. Redimensionamento Direto por Mouse Drag
+### 3.4. Redimensionamento Direto por Mouse Drag e Calibração de Hit-Testing (v1.3.4)
 O operador pode redimensionar visualmente os elementos sem abrir o menu de configurações:
-- **Borda Principal**: Quatro faixas invisíveis nas extremidades da tela (`BorderTopGrip`, `BorderBottomGrip`, `BorderLeftGrip`, `BorderRightGrip`) capturam o cursor (`SizeNS` ou `SizeWE`) e recalculam dinamicamente a propriedade `BorderThickness`.
-- **Aba de Status**: O grip do canto (`TabResizeGrip`) e a faixa longitudinal externa (`TabEdgeResizeStrip`) ajustam a altura/largura da aba e a escala da tipografia com preservação de proporção.
+- **Calibração Geométrica da Borda (8px)**: Quatro faixas estritas de hit-testing (`BorderResizeTop`, `BorderResizeBottom`, `BorderResizeLeft`, `BorderResizeRight`) são posicionadas sobre a aresta interna da borda luminosa (4px para dentro e 4px para fora), eliminando acionamentos indesejados no interior da tela ou no meio de bordas largas.
+- **Aba de Status e Desacoplamento Tipográfico**: 
+  - Apenas o título principal (`TxtOverlayStatus`) e o círculo de estado (`StateDot`) escalam com o tamanho da fonte (11 a 60pt).
+  - Os botões de ação e utilitários (`BtnOverlaySettings`, `BtnRestoreMainWindow`, `TabResizeGrip`, `GripHandle` e separadores) mantêm tamanho ergonômico estável (~14px para ícones, 11pt para o texto "Abrir") com redução responsiva suave apenas se a fonte for inferior a 14pt (piso de 8-9px).
+  - O manipulador diagonal de resize (`TabResizeGrip`) fica ancorado diretamente no canto inferior direito da aba (ou canto correspondente nos modos acoplados).
 - **Faixas Operacionais**:
   - Espessura de Borda: de `1 px` até `60 px`.
   - Tipografia/Aba: de `11 pt` até `60 pt` (leitura nítida a mais de 5 metros de distância).
 
-### 3.5. Estados Visuais, Safety Yellow e Dwell Timer Conjugado
-O HUD transiciona por três estados operacionais:
-1. **Aguardando Medição (Prontidão)**: Borda externa, contorno da aba e ponto de pulso em **Safety Yellow** (`#FFCC00`), com animação rápida de Storyboard (0.5s / 1 Hz).
-2. **Peça Aprovada (PASS)**: Borda e aba em **Verde Industrial** (`#2ECC71`), com texto em destaque e indicação sonora/visual.
-3. **Peça Reprovada (FAIL)**: Borda e aba em **Vermelho Alerta** (`#E74C3C`), alertando imediatamente o operador da não-conformidade.
-- **Dwell Timer (0.5s)**: Quando um veredito é processado pelo `FileWatcherService`, o HUD congela o resultado pelo intervalo de 0.5s antes de retomar automaticamente a animação amarela de prontidão para a próxima peça.
+### 3.5. Estados Visuais e Máquina de Estados do HUD (v1.3.4)
+O HUD opera sob quatro estados visuais bem definidos:
+1. **Aguardando Medição (Prontidão)**: Borda externa, contorno da aba e ponto de pulso em **Safety Yellow** (`#FFCC00`), com animação cíclica de pulso de opacidade ativa.
+2. **Medição Concluída (PASS / Formato com Número de Série)**: Borda e aba em **Verde Esmeralda Sólido** (`#10B981`) sem pulsação (`Opacity = 1.0`). O texto exibe `<ROTINA> / <SERIALNUMBER>` (ex: `MANPESADO / 101807776895` ou `D-1001 / 123456`) sem prefixos.
+3. **Medição Reprovada (FAIL)**: Borda e aba em **Vermelho Alerta** (`#EF4444`), sinalizando não-conformidade dimensional.
+4. **Processamento Interrompido (Pausado)**: Quando a aplicação é minimizada/ocultada com o serviço desligado (`!_isRunning`), o HUD assume cor **Cinza Sólido** (`#64748B`) estático com o texto `"PROCESSAMENTO INTERROMPIDO"`, indicando prontidão inativa.
+- **Dwell Timer Conjugado**: Retém o resultado na tela pelo tempo configurado (`HoldSeconds`, 1 a 30s) e aguarda o reset do handshake pelo PLC antes de retornar ao modo amarelo.
 
-### 3.6. Ciclo de Vida Integrado
-- **Minimização Mandatória**: Sempre que a janela principal é minimizada ou fechada para a bandeja (`HideToTray`), o HUD é instanciado e exibido automaticamente. Não há chave para desativá-lo, garantindo a supervisão contínua da linha.
-- **Restauração Rápida**: Clicar no botão de restaurar (🗖) ou dar duplo-clique no ícone da bandeja oculta o HUD e traz a janela principal ao primeiro plano.
+### 3.6. Ciclo de Vida Integrado e Sincronização
+- **Minimização Inteligente**: Ao minimizar para a bandeja, a aplicação inspeciona o estado do serviço (`_isRunning`): se ativo, o HUD inicia em `"AGUARDANDO MEDIÇÃO"`; se inativo, inicia em `"PROCESSAMENTO INTERROMPIDO"`.
+- **Transição em Execução**: Disparar `StartService()` comanda o HUD para entrar imediatamente em modo de espera amarelo, e disparar `StopService()` com a janela oculta comuta o HUD para o modo cinza interrompido.
+- **Restauração Rápida**: Clicar no botão "Abrir" (🗖) ou dar duplo-clique no ícone da bandeja oculta o HUD e traz a janela principal ao primeiro plano.
 
 ---
 
