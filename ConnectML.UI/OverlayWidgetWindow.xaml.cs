@@ -258,17 +258,19 @@ namespace ConnectML.UI
             {
                 if (BorderResizeTop == null || BorderResizeBottom == null || BorderResizeLeft == null || BorderResizeRight == null) return;
 
-                // A tira cobre a espessura da borda mais 10 pixels de tolerância interna para facilitar o clique
-                double stripThickness = Math.Max(14, _borderThickness + 10);
-                BorderResizeTop.Height = stripThickness;
-                BorderResizeBottom.Height = stripThickness;
-                BorderResizeLeft.Width = stripThickness;
-                BorderResizeRight.Width = stripThickness;
+                // Faixa estreita de 8px (±4px) na aresta divisória da borda
+                double offset = Math.Max(0, _borderThickness - 4);
+                BorderResizeTop.Height = 8;
+                BorderResizeTop.Margin = new Thickness(0, offset, 0, 0);
 
-                BorderResizeTop.Margin = new Thickness(0);
-                BorderResizeBottom.Margin = new Thickness(0);
-                BorderResizeLeft.Margin = new Thickness(0);
-                BorderResizeRight.Margin = new Thickness(0);
+                BorderResizeBottom.Height = 8;
+                BorderResizeBottom.Margin = new Thickness(0, 0, 0, offset);
+
+                BorderResizeLeft.Width = 8;
+                BorderResizeLeft.Margin = new Thickness(offset, 0, 0, 0);
+
+                BorderResizeRight.Width = 8;
+                BorderResizeRight.Margin = new Thickness(0, 0, offset, 0);
             });
         }
 
@@ -309,10 +311,11 @@ namespace ConnectML.UI
 
                 TxtBtnRestore.FontSize = Math.Max(10, _fontSize - 2);
 
-                // Padding da aba cresce harmoniosamente com a fonte
+                // Padding da aba aplicado via margem do TabContentPanel para manter tiras e grip ancorados na borda externa
                 double padH = Math.Round(_fontSize * 0.9);
                 double padV = Math.Round(_fontSize * 0.45);
-                OverlayTabContainer.Padding = new Thickness(padH, padV, padH, padV);
+                OverlayTabContainer.Padding = new Thickness(0);
+                TabContentPanel.Margin = new Thickness(padH, padV, padH + 4, padV);
 
                 // Separadores
                 if (TabContentPanel.Orientation == Orientation.Horizontal)
@@ -387,15 +390,17 @@ namespace ConnectML.UI
                         TabSeparator1.Margin = new Thickness(10, 0, 8, 0);
                         TabSeparator2.Width = 1; TabSeparator2.Height = sepHeight;
                         TabSeparator2.Margin = new Thickness(6, 0, 8, 0);
-                        if (TabSeparator3 != null)
-                        {
-                            TabSeparator3.Width = 1; TabSeparator3.Height = sepHeight;
-                            TabSeparator3.Margin = new Thickness(6, 0, 6, 0);
-                        }
+                        if (TabSeparator3 != null) TabSeparator3.Visibility = Visibility.Collapsed;
 
                         StateDot.Margin = new Thickness(0, 0, 8, 0);
                         GripHandle.Margin = new Thickness(0, 0, 8, 0);
-                        if (TabResizeGrip != null) TabResizeGrip.Margin = new Thickness(4, 0, 0, 0);
+                        if (TabResizeGrip != null)
+                        {
+                            TabResizeGrip.HorizontalAlignment = HorizontalAlignment.Right;
+                            TabResizeGrip.VerticalAlignment = VerticalAlignment.Top;
+                            TabResizeGrip.Margin = new Thickness(0, 3, 3, 0);
+                            TabResizeGrip.Cursor = Cursors.SizeNESW;
+                        }
                         if (TabEdgeResizeStrip != null)
                         {
                             TabEdgeResizeStrip.VerticalAlignment = VerticalAlignment.Top;
@@ -403,7 +408,7 @@ namespace ConnectML.UI
                             TabEdgeResizeStrip.Height = 10;
                             TabEdgeResizeStrip.Width = double.NaN;
                             TabEdgeResizeStrip.Cursor = Cursors.SizeNS;
-                            TabEdgeResizeStrip.Margin = new Thickness(-12, -6, -10, 0);
+                            TabEdgeResizeStrip.Margin = new Thickness(0, -4, 0, 0);
                         }
                         TxtBtnRestore.Visibility = Visibility.Visible;
                         break;
@@ -423,15 +428,17 @@ namespace ConnectML.UI
                         TabSeparator1.Margin = new Thickness(0, 8, 0, 8);
                         TabSeparator2.Width = sepWidth; TabSeparator2.Height = 1;
                         TabSeparator2.Margin = new Thickness(0, 6, 0, 8);
-                        if (TabSeparator3 != null)
-                        {
-                            TabSeparator3.Width = sepWidth; TabSeparator3.Height = 1;
-                            TabSeparator3.Margin = new Thickness(0, 6, 0, 6);
-                        }
+                        if (TabSeparator3 != null) TabSeparator3.Visibility = Visibility.Collapsed;
 
                         StateDot.Margin = new Thickness(0, 0, 0, 6);
                         GripHandle.Margin = new Thickness(0, 0, 0, 8);
-                        if (TabResizeGrip != null) TabResizeGrip.Margin = new Thickness(0, 4, 0, 0);
+                        if (TabResizeGrip != null)
+                        {
+                            TabResizeGrip.HorizontalAlignment = HorizontalAlignment.Right;
+                            TabResizeGrip.VerticalAlignment = VerticalAlignment.Bottom;
+                            TabResizeGrip.Margin = new Thickness(0, 0, 3, 3);
+                            TabResizeGrip.Cursor = Cursors.SizeNWSE;
+                        }
                         if (TabEdgeResizeStrip != null)
                         {
                             TabEdgeResizeStrip.VerticalAlignment = VerticalAlignment.Stretch;
@@ -439,7 +446,7 @@ namespace ConnectML.UI
                             TabEdgeResizeStrip.Width = 10;
                             TabEdgeResizeStrip.Height = double.NaN;
                             TabEdgeResizeStrip.Cursor = Cursors.SizeWE;
-                            TabEdgeResizeStrip.Margin = new Thickness(0, -6, -10, -6);
+                            TabEdgeResizeStrip.Margin = new Thickness(0, 0, -4, 0);
                         }
                         TxtBtnRestore.Visibility = Visibility.Collapsed;
                         break;
@@ -459,15 +466,17 @@ namespace ConnectML.UI
                         TabSeparator1.Margin = new Thickness(0, 8, 0, 8);
                         TabSeparator2.Width = sepWidth; TabSeparator2.Height = 1;
                         TabSeparator2.Margin = new Thickness(0, 6, 0, 8);
-                        if (TabSeparator3 != null)
-                        {
-                            TabSeparator3.Width = sepWidth; TabSeparator3.Height = 1;
-                            TabSeparator3.Margin = new Thickness(0, 6, 0, 6);
-                        }
+                        if (TabSeparator3 != null) TabSeparator3.Visibility = Visibility.Collapsed;
 
                         StateDot.Margin = new Thickness(0, 0, 0, 6);
                         GripHandle.Margin = new Thickness(0, 0, 0, 8);
-                        if (TabResizeGrip != null) TabResizeGrip.Margin = new Thickness(0, 4, 0, 0);
+                        if (TabResizeGrip != null)
+                        {
+                            TabResizeGrip.HorizontalAlignment = HorizontalAlignment.Left;
+                            TabResizeGrip.VerticalAlignment = VerticalAlignment.Bottom;
+                            TabResizeGrip.Margin = new Thickness(3, 0, 0, 3);
+                            TabResizeGrip.Cursor = Cursors.SizeNESW;
+                        }
                         if (TabEdgeResizeStrip != null)
                         {
                             TabEdgeResizeStrip.VerticalAlignment = VerticalAlignment.Stretch;
@@ -475,7 +484,7 @@ namespace ConnectML.UI
                             TabEdgeResizeStrip.Width = 10;
                             TabEdgeResizeStrip.Height = double.NaN;
                             TabEdgeResizeStrip.Cursor = Cursors.SizeWE;
-                            TabEdgeResizeStrip.Margin = new Thickness(-12, -6, 0, -6);
+                            TabEdgeResizeStrip.Margin = new Thickness(-4, 0, 0, 0);
                         }
                         TxtBtnRestore.Visibility = Visibility.Collapsed;
                         break;
@@ -497,15 +506,17 @@ namespace ConnectML.UI
                         TabSeparator1.Margin = new Thickness(10, 0, 8, 0);
                         TabSeparator2.Width = 1; TabSeparator2.Height = sepHeight;
                         TabSeparator2.Margin = new Thickness(6, 0, 8, 0);
-                        if (TabSeparator3 != null)
-                        {
-                            TabSeparator3.Width = 1; TabSeparator3.Height = sepHeight;
-                            TabSeparator3.Margin = new Thickness(6, 0, 6, 0);
-                        }
+                        if (TabSeparator3 != null) TabSeparator3.Visibility = Visibility.Collapsed;
 
                         StateDot.Margin = new Thickness(0, 0, 8, 0);
                         GripHandle.Margin = new Thickness(0, 0, 8, 0);
-                        if (TabResizeGrip != null) TabResizeGrip.Margin = new Thickness(4, 0, 0, 0);
+                        if (TabResizeGrip != null)
+                        {
+                            TabResizeGrip.HorizontalAlignment = HorizontalAlignment.Right;
+                            TabResizeGrip.VerticalAlignment = VerticalAlignment.Bottom;
+                            TabResizeGrip.Margin = new Thickness(0, 0, 3, 3);
+                            TabResizeGrip.Cursor = Cursors.SizeNWSE;
+                        }
                         if (TabEdgeResizeStrip != null)
                         {
                             TabEdgeResizeStrip.VerticalAlignment = VerticalAlignment.Bottom;
@@ -513,7 +524,7 @@ namespace ConnectML.UI
                             TabEdgeResizeStrip.Height = 10;
                             TabEdgeResizeStrip.Width = double.NaN;
                             TabEdgeResizeStrip.Cursor = Cursors.SizeNS;
-                            TabEdgeResizeStrip.Margin = new Thickness(-12, 0, -10, -6);
+                            TabEdgeResizeStrip.Margin = new Thickness(0, 0, 0, -4);
                         }
                         TxtBtnRestore.Visibility = Visibility.Visible;
                         break;
