@@ -53,6 +53,8 @@ namespace ConnectML.UI
         // Cores da Identidade Visual
         private static readonly Brush YellowBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFCC00"));
         private static readonly Brush GreenBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#10B981"));
+        private static readonly Brush GrayBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#64748B"));
+        private bool _isStateInitialized = false;
 
         #region Win32 Non-Activating Styles
 
@@ -100,8 +102,11 @@ namespace ConnectML.UI
 
             _pulseStoryboard = (Storyboard)FindResource("PulseStoryboard");
 
-            // Inicia em modo de espera (Aguardando Medição)
-            SetWaitingState();
+            // Inicia no estado apropriado (se ainda não definido pela janela chamadora)
+            if (!_isStateInitialized)
+            {
+                SetWaitingState();
+            }
             UpdateBorderResizeStrips();
         }
 
@@ -115,6 +120,7 @@ namespace ConnectML.UI
         {
             Dispatcher.Invoke(() =>
             {
+                _isStateInitialized = true;
                 TxtOverlayStatus.Text = "AGUARDANDO MEDIÇÃO";
 
                 OverlayBorder.BorderBrush = YellowBrush;
@@ -133,6 +139,7 @@ namespace ConnectML.UI
         {
             Dispatcher.Invoke(() =>
             {
+                _isStateInitialized = true;
                 _pulseStoryboard?.Stop(this);
 
                 OverlayBorder.Opacity = 1.0;
@@ -143,6 +150,37 @@ namespace ConnectML.UI
                 StateDot.Fill = GreenBrush;
 
                 TxtOverlayStatus.Text = !string.IsNullOrWhiteSpace(message) ? message : "CONCLUÍDO";
+            });
+        }
+
+        /// <summary>
+        /// Define o estado visual para 'Processamento Interrompido':
+        /// Interrompe a animação de pulso e fixa as bordas e indicador em Cinza Sólido (#64748B).
+        /// </summary>
+        public void SetInterruptedState()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                lock (_stateLock)
+                {
+                    _dwellCts?.Cancel();
+                    _dwellCts?.Dispose();
+                    _dwellCts = null;
+                    _plcResetReceived = false;
+                    _dwellTimeElapsed = false;
+                }
+
+                _isStateInitialized = true;
+                _pulseStoryboard?.Stop(this);
+
+                OverlayBorder.Opacity = 1.0;
+                StateDot.Opacity = 1.0;
+
+                OverlayBorder.BorderBrush = GrayBrush;
+                OverlayTabContainer.BorderBrush = GrayBrush;
+                StateDot.Fill = GrayBrush;
+
+                TxtOverlayStatus.Text = "PROCESSAMENTO INTERROMPIDO";
             });
         }
 
@@ -207,9 +245,9 @@ namespace ConnectML.UI
         }
 
         /// <summary>
-        /// Reseta o ciclo de vida do overlay para 'Aguardando' limpo (ex: ao parar o serviço).
+        /// Reseta o ciclo de vida do overlay para 'Aguardando' limpo (ou 'Interrompido' se toWaiting = false).
         /// </summary>
-        public void ResetLifecycleState()
+        public void ResetLifecycleState(bool toWaiting = true)
         {
             lock (_stateLock)
             {
@@ -218,7 +256,10 @@ namespace ConnectML.UI
                 _dwellCts = null;
                 _plcResetReceived = false;
                 _dwellTimeElapsed = false;
-                SetWaitingState();
+                if (toWaiting)
+                    SetWaitingState();
+                else
+                    SetInterruptedState();
             }
         }
 

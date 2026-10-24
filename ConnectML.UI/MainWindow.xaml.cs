@@ -457,6 +457,14 @@ namespace ConnectML.UI
                 Hide();
                 if (_overlayWindow != null)
                 {
+                    if (_isRunning)
+                    {
+                        _overlayWindow.SetWaitingState();
+                    }
+                    else
+                    {
+                        _overlayWindow.SetInterruptedState();
+                    }
                     _overlayWindow.Show();
                 }
             }
@@ -771,9 +779,10 @@ namespace ConnectML.UI
             SaveSettings();
             Log.Information("Serviço Iniciado. Monitorando: " + path);
 
-            // Garante que o HUD esteja visível se a janela principal estiver na bandeja
+            // Garante que o HUD esteja visível e em espera se a janela principal estiver na bandeja
             if (!IsVisible && _overlayWindow != null)
             {
+                _overlayWindow.SetWaitingState();
                 _overlayWindow.Show();
             }
 
@@ -869,8 +878,15 @@ namespace ConnectML.UI
             StatusIndicator.RenderTransform = new ScaleTransform(1, 1);
 
             _lastRunSuccessful = false;
-            _overlayWindow?.Hide();
-            _overlayWindow?.ResetLifecycleState();
+            _overlayWindow?.ResetLifecycleState(toWaiting: false);
+            if (!IsVisible && _overlayWindow != null)
+            {
+                _overlayWindow.Show();
+            }
+            else
+            {
+                _overlayWindow?.Hide();
+            }
             SaveSettings();
             Log.Information("Serviço Parado.");
 
