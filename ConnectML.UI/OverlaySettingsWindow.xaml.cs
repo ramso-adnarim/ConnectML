@@ -112,12 +112,12 @@ namespace ConnectML.UI
                 int val = (int)SliderFontSize.Value;
                 string label = val switch
                 {
-                    <= 12 => $"{val} pt (Compacto)",
-                    <= 16 => $"{val} pt (Padrão)",
-                    <= 24 => $"{val} pt (Grande)",
-                    <= 36 => $"{val} pt (Extra Grande)",
-                    <= 48 => $"{val} pt (Industrial)",
-                    _ => $"{val} pt (Super Industrial - Longa Distância)"
+                    <= 12 => $"{val} pt",
+                    <= 16 => $"{val} pt",
+                    <= 24 => $"{val} pt",
+                    <= 36 => $"{val} pt",
+                    <= 48 => $"{val} pt",
+                    _ => $"{val} pt"
                 };
                 TxtFontSizeValue.Text = label;
             }

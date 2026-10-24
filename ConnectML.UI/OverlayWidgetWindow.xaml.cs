@@ -115,7 +115,7 @@ namespace ConnectML.UI
         {
             Dispatcher.Invoke(() =>
             {
-                TxtOverlayStatus.Text = "Aguardando Medição";
+                TxtOverlayStatus.Text = "AGUARDANDO MEDIÇÃO";
 
                 OverlayBorder.BorderBrush = YellowBrush;
                 OverlayTabContainer.BorderBrush = YellowBrush;
@@ -142,7 +142,7 @@ namespace ConnectML.UI
                 OverlayTabContainer.BorderBrush = GreenBrush;
                 StateDot.Fill = GreenBrush;
 
-                TxtOverlayStatus.Text = !string.IsNullOrWhiteSpace(message) ? message : "Medição Concluída";
+                TxtOverlayStatus.Text = !string.IsNullOrWhiteSpace(message) ? message : "CONCLUÍDO";
             });
         }
 

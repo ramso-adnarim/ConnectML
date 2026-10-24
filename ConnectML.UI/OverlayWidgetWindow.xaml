@@ -133,7 +133,7 @@
                         
                         <!-- 3. Texto de Estado Principal -->
                         <TextBlock x:Name="TxtOverlayStatus"
-                                   Text="Aguardando Medição"
+                                   Text="AGUARDANDO MEDIÇÃO"
                                    FontSize="13"
                                    FontWeight="SemiBold"
                                    Foreground="#F8FAFC"
@@ -152,7 +152,7 @@
                                 BorderThickness="0"
                                 Padding="3"
                                 Cursor="Hand"
-                                ToolTip="Configurações do Widget HUD"
+                                ToolTip="Configurações do HUD"
                                 Click="BtnOverlaySettings_Click"
                                 PreviewMouseLeftButtonDown="Btn_PreviewMouseLeftButtonDown"
                                 VerticalAlignment="Center">

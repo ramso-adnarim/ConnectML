@@ -75,8 +75,8 @@
                 </Viewbox>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="Configurações do Widget HUD" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC"/>
-                    <TextBlock Text="Personalize borda, escala da aba e visibilidade" FontSize="11" Foreground="#94A3B8"/>
+                    <TextBlock Text="Configurações do HUD" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC"/>
+                    <TextBlock Text="Ajuste borda, escala da aba e visibilidade" FontSize="11" Foreground="#94A3B8"/>
                 </StackPanel>
 
                 <!-- Botão Fechar 'X' -->
@@ -99,7 +99,7 @@
                     <StackPanel>
                         <Grid Margin="0,0,0,6">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Espessura da Borda Perimetral" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC"/>
+                                <TextBlock Text="Espessura da Borda" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC"/>
                                 <TextBlock Text=" (1 a 60 px)" FontSize="11" Foreground="#64748B" Margin="4,0,0,0"/>
                             </StackPanel>
                             <TextBlock x:Name="TxtBorderThicknessValue" Text="3 px" FontSize="12" FontWeight="Bold" Foreground="#FFCC00" HorizontalAlignment="Right"/>
@@ -115,10 +115,10 @@
                     <StackPanel>
                         <Grid Margin="0,0,0,6">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Tamanho do Texto e da Aba" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC"/>
-                                <TextBlock Text=" (11 a 60 pt - Ultra Visibilidade)" FontSize="11" Foreground="#64748B" Margin="4,0,0,0"/>
+                                <TextBlock Text="Tamanho da Aba" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC"/>
+                                <TextBlock Text=" (11 a 60 pt)" FontSize="11" Foreground="#64748B" Margin="4,0,0,0"/>
                             </StackPanel>
-                            <TextBlock x:Name="TxtFontSizeValue" Text="13 pt (Padrão)" FontSize="12" FontWeight="Bold" Foreground="#38BDF8" HorizontalAlignment="Right"/>
+                            <TextBlock x:Name="TxtFontSizeValue" Text="13 pt" FontSize="12" FontWeight="Bold" Foreground="#38BDF8" HorizontalAlignment="Right"/>
                         </Grid>
                         <Slider x:Name="SliderFontSize" Minimum="11" Maximum="60" Value="13" 
                                 IsSnapToTickEnabled="True" TickFrequency="1"
@@ -131,7 +131,7 @@
                     <StackPanel>
                         <Grid Margin="0,0,0,6">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Tempo em Tela ('Concluído')" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC"/>
+                                <TextBlock Text="Tempo em Tela" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC"/>
                                 <TextBlock Text=" (1 a 30 seg)" FontSize="11" Foreground="#64748B" Margin="4,0,0,0"/>
                             </StackPanel>
                             <TextBlock x:Name="TxtHoldSecondsValue" Text="10 seg" FontSize="12" FontWeight="Bold" Foreground="#10B981" HorizontalAlignment="Right"/>
@@ -145,7 +145,7 @@
                 <!-- Config 4: Ancoragem Manual da Aba -->
                 <Border Background="#1E293B" CornerRadius="8" Padding="14,10" Margin="0,0,0,8" BorderBrush="#334155" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock Text="Posição de Ancoragem da Aba" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC" Margin="0,0,0,8"/>
+                        <TextBlock Text="Posição da Aba" FontSize="12" FontWeight="SemiBold" Foreground="#F8FAFC" Margin="0,0,0,8"/>
                         <UniformGrid Columns="4">
                             <Button x:Name="BtnSnapTop" Content="⬆ Topo" Style="{StaticResource SegmentButtonStyle}" Margin="0,0,4,0" Click="BtnSnap_Click" Tag="TOP"/>
                             <Button x:Name="BtnSnapBottom" Content="⬇ Base" Style="{StaticResource SegmentButtonStyle}" Margin="2,0,2,0" Click="BtnSnap_Click" Tag="BOTTOM"/>
