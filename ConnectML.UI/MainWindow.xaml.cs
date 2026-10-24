@@ -1160,9 +1160,12 @@ namespace ConnectML.UI
                     }
                 }
 
-                // Notifica o Widget Overlay HUD sobre a conclusão da medição
+                // Notifica o Widget Overlay HUD sobre a conclusão da medição (formato: <ROTINA> / <SERIALNUMBER>)
                 int holdSec = _overlayWindow?.HoldSecondsValue ?? _overlayHoldSeconds;
-                _overlayWindow?.TriggerMeasurementCompleted(holdSec, $"Peça: {result.Product}");
+                string hudMessage = !string.IsNullOrWhiteSpace(result.SerialNumber)
+                    ? $"{result.Product} / {result.SerialNumber}"
+                    : result.Product;
+                _overlayWindow?.TriggerMeasurementCompleted(holdSec, hudMessage);
 
                 if (isWebhookMode)
                 {
@@ -1177,7 +1180,10 @@ namespace ConnectML.UI
                     // Notificação de balão no System Tray (apenas se minimizada/na bandeja)
                     if (WindowState == WindowState.Minimized || !IsVisible)
                     {
-                        _notifyIcon?.ShowBalloonTip(3000, "Arquivo Processado", $"O arquivo foi processado com sucesso.\nPeça (Part Number): {result.Product}", WinForms.ToolTipIcon.Info);
+                        string balloonMsg = !string.IsNullOrWhiteSpace(result.SerialNumber)
+                            ? $"O arquivo foi processado com sucesso.\nRotina: {result.Product}\nSerial: {result.SerialNumber}"
+                            : $"O arquivo foi processado com sucesso.\nRotina: {result.Product}";
+                        _notifyIcon?.ShowBalloonTip(3000, "Arquivo Processado", balloonMsg, WinForms.ToolTipIcon.Info);
                     }
                 }
                 catch (Exception ex) { Log.Error($"Erro ao deletar: {ex.Message}"); }
