@@ -286,51 +286,78 @@ namespace ConnectML.UI
             {
                 TxtOverlayStatus.FontSize = _fontSize;
 
-                // Escala os elementos visuais proporcionalmente para chão de fábrica a longa distância
-                double dotSize = Math.Round(_fontSize * 0.65);
+                // 1. Elementos que DEVEM crescer com a fonte (título e indicador circular)
+                double dotSize = Math.Max(8, Math.Round(_fontSize * 0.65));
                 StateDot.Width = dotSize;
                 StateDot.Height = dotSize;
 
-                double iconSize = Math.Max(12, Math.Round(_fontSize * 0.85));
-                IconSettingsViewbox.Width = iconSize;
-                IconSettingsViewbox.Height = iconSize;
-                IconRestoreViewbox.Width = iconSize;
-                IconRestoreViewbox.Height = iconSize;
+                // 2. Controles operacionais com tamanho base estável (~14px) e redução responsiva suave se _fontSize < 14
+                double iconSettingsSize = _fontSize >= 14 ? 14 : Math.Clamp(Math.Round(_fontSize * 0.95), 9, 14);
+                IconSettingsViewbox.Width = iconSettingsSize;
+                IconSettingsViewbox.Height = iconSettingsSize;
 
-                double gripW = Math.Max(9, Math.Round(_fontSize * 0.65));
-                double gripH = Math.Max(13, Math.Round(_fontSize * 0.95));
+                double iconRestoreSize = _fontSize >= 14 ? 13 : Math.Clamp(Math.Round(_fontSize * 0.92), 9, 13);
+                IconRestoreViewbox.Width = iconRestoreSize;
+                IconRestoreViewbox.Height = iconRestoreSize;
+
+                TxtBtnRestore.FontSize = _fontSize >= 14 ? 11 : Math.Clamp(_fontSize - 2, 8, 11);
+
+                // Manipulador de arraste (GripHandle - pontos verticais de orientação de movimento)
+                double gripW = _fontSize >= 14 ? 10 : Math.Clamp(Math.Round(_fontSize * 0.70), 7, 10);
+                double gripH = _fontSize >= 14 ? 14 : Math.Clamp(Math.Round(_fontSize * 1.00), 10, 14);
                 GripViewbox.Width = gripW;
                 GripViewbox.Height = gripH;
 
-                double resizeGripSize = Math.Max(11, Math.Round(_fontSize * 0.75));
+                // Manipulador de redimensionamento (Corner Grip no canto)
+                double resizeGripSize = _fontSize >= 14 ? 12 : Math.Clamp(Math.Round(_fontSize * 0.85), 9, 12);
                 if (ResizeGripViewbox != null)
                 {
                     ResizeGripViewbox.Width = resizeGripSize;
                     ResizeGripViewbox.Height = resizeGripSize;
                 }
 
-                TxtBtnRestore.FontSize = Math.Max(10, _fontSize - 2);
+                // 3. Espaçamento respirável entre título e controles, e aproximação dos botões da borda direita da aba
+                double padH = Math.Round(_fontSize * 0.85);
+                double padV = Math.Round(_fontSize * 0.40);
+                double rightMargin = Math.Clamp(Math.Round(_fontSize * 0.35), 8, 14);
+                double bottomMargin = Math.Clamp(Math.Round(_fontSize * 0.35), 6, 12);
 
-                // Padding da aba aplicado via margem do TabContentPanel para manter tiras e grip ancorados na borda externa
-                double padH = Math.Round(_fontSize * 0.9);
-                double padV = Math.Round(_fontSize * 0.45);
                 OverlayTabContainer.Padding = new Thickness(0);
-                TabContentPanel.Margin = new Thickness(padH, padV, padH + 4, padV);
 
-                // Separadores
+                // Distanciamento respirável do título para os controles (não colado no texto)
+                double titleGap = Math.Max(20, Math.Round(_fontSize * 0.85));
+
                 if (TabContentPanel.Orientation == Orientation.Horizontal)
                 {
-                    double sepHeight = Math.Round(_fontSize * 1.1);
+                    TabContentPanel.Margin = new Thickness(padH, padV, rightMargin, padV);
+
+                    // Separadores com altura ergonômica estável (~14px)
+                    double sepHeight = _fontSize >= 14 ? 14 : Math.Max(9, Math.Round(_fontSize * 0.9));
                     TabSeparator1.Height = sepHeight;
+                    TabSeparator1.Width = 1;
+                    TabSeparator1.Margin = new Thickness(titleGap, 0, 6, 0);
+
                     TabSeparator2.Height = sepHeight;
-                    if (TabSeparator3 != null) TabSeparator3.Height = sepHeight;
+                    TabSeparator2.Width = 1;
+                    TabSeparator2.Margin = new Thickness(6, 0, 6, 0);
+
+                    if (TabSeparator3 != null) TabSeparator3.Visibility = Visibility.Collapsed;
                 }
                 else
                 {
-                    double sepWidth = Math.Round(_fontSize * 1.3);
+                    TabContentPanel.Margin = new Thickness(padV, padH, padV, bottomMargin);
+
+                    // Separadores verticais com largura ergonômica estável (~14px)
+                    double sepWidth = _fontSize >= 14 ? 14 : Math.Max(9, Math.Round(_fontSize * 0.9));
                     TabSeparator1.Width = sepWidth;
+                    TabSeparator1.Height = 1;
+                    TabSeparator1.Margin = new Thickness(0, titleGap, 0, 6);
+
                     TabSeparator2.Width = sepWidth;
-                    if (TabSeparator3 != null) TabSeparator3.Width = sepWidth;
+                    TabSeparator2.Height = 1;
+                    TabSeparator2.Margin = new Thickness(0, 6, 0, 6);
+
+                    if (TabSeparator3 != null) TabSeparator3.Visibility = Visibility.Collapsed;
                 }
             });
         }
@@ -531,6 +558,7 @@ namespace ConnectML.UI
                 }
 
                 UpdateTabMargin();
+                SetFontSize(_fontSize);
                 SnapPositionChanged?.Invoke(this, _currentSnapPosition);
             });
         }
