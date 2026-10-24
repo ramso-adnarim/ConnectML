@@ -68,10 +68,10 @@ Configurar a estrutura de versionamento da versão `1.3.4` em toda a solução e
   4. Fallback: se `<ActualComponentIds>` estiver ausente, recupera o último `<ActualComponent>` do documento que possua `<SerialNumber>`.
 
 ### 🛡️ Critérios de Aceite da Sprint 9.1
-- [ ] Compilação de todos os 4 projetos sem warnings ou erros com `dotnet build`.
-- [ ] O parser extrai com sucesso `"101807776895"` do arquivo `C:\Mitutoyo\ConnectML\MANPESADO_20261024_130323.QIF`.
-- [ ] O parser extrai com sucesso `"152"` do arquivo `C:\Mitutoyo\ConnectML\QIF-BOM.QIF`.
-- [ ] Arquivos sem `<SerialNumber>` retornam string vazia sem lançar exceções.
+- [x] Compilação de todos os 4 projetos sem warnings ou erros com `dotnet build`.
+- [x] O parser extrai com sucesso `"101807776895"` do arquivo `C:\Mitutoyo\ConnectML\MANPESADO_20261024_130323.QIF`.
+- [x] O parser extrai com sucesso `"152"` do arquivo `C:\Mitutoyo\ConnectML\QIF-BOM.QIF`.
+- [x] Arquivos sem `<SerialNumber>` retornam string vazia sem lançar exceções.
 
 ---
 
@@ -114,9 +114,9 @@ Corrigir a imprecisão de redimensionamento da borda perimetral e da aba, confin
 - Manter o visual do triângulo diagonal indicativo de redimensionamento encostado ao canto.
 
 ### 🛡️ Critérios de Aceite da Sprint 9.2
-- [ ] O cursor de redimensionamento da borda só é ativado na aresta da borda perimetral. Clicar no meio de uma borda grossa (ex: 30px) ou fora dela não dispara o resize.
-- [ ] Posicionar o mouse exatamente na borda externa da aba ativa o cursor de redimensionamento.
-- [ ] O ícone diagonal de redimensionamento fica posicionado harmoniosamente no canto da aba.
+- [x] O cursor de redimensionamento da borda só é ativado na aresta da borda perimetral. Clicar no meio de uma borda grossa (ex: 30px) ou fora dela não dispara o resize.
+- [x] Posicionar o mouse exatamente na borda externa da aba ativa o cursor de redimensionamento.
+- [x] O ícone diagonal de redimensionamento fica posicionado harmoniosamente no canto da aba.
 
 ---
 
@@ -145,9 +145,9 @@ Desacoplar a escala dos controles operacionais da aba do HUD para que apenas o t
 - Garantir comportamento responsivo harmonioso para qualquer valor de fonte entre 11 e 60 pt.
 
 ### 🛡️ Critérios de Aceite da Sprint 9.3
-- [ ] Em fontes grandes (ex: 30 a 60 pt), os ícones de configurações, abrir e grip mantêm proporções limpas (~14px) sem hipertrofia.
-- [ ] O título da mensagem e o ponto indicador continuam ampliados e legíveis à distância.
-- [ ] Há espaçamento adequado entre o texto principal e os botões de ação.
+- [x] Em fontes grandes (ex: 30 a 60 pt), os ícones de configurações, abrir e grip mantêm proporções limpas (~14px) sem hipertrofia.
+- [x] O título da mensagem e o ponto indicador continuam ampliados e legíveis à distância.
+- [x] Há espaçamento adequado entre o texto principal e os botões de ação.
 
 ---
 
@@ -187,9 +187,9 @@ Implementar o estado visual cinza sem pulso no HUD para sinalizar quando o proce
   - Atualizar balão de notificação no System Tray.
 
 ### 🛡️ Critérios de Aceite da Sprint 9.4
-- [ ] Minimizar a aplicação com o serviço parado exibe o HUD em cinza com o título `"PROCESSAMENTO INTERROMPIDO"`.
-- [ ] Iniciar o serviço muda imediatamente o HUD para amarelo pulsante com `"AGUARDANDO MEDIÇÃO"`.
-- [ ] O processamento de um arquivo QIF com serial exibe no HUD o formato `<ROTINA> / <SERIALNUMBER>` em verde sólido.
+- [x] Minimizar a aplicação com o serviço parado exibe o HUD em cinza com o título `"PROCESSAMENTO INTERROMPIDO"`.
+- [x] Iniciar o serviço muda imediatamente o HUD para amarelo pulsante com `"AGUARDANDO MEDIÇÃO"`.
+- [x] O processamento de um arquivo QIF com serial exibe no HUD o formato `<ROTINA> / <SERIALNUMBER>` em verde sólido.
 
 ---
 
@@ -205,5 +205,5 @@ Executar bateria completa de testes ponta a ponta com arquivos reais, atualizar 
 4. Criação do relatório de entrega da v1.3.4 em `docs/implementations/v1.3.4/ip-p9_release-v134-delivery.md`.
 
 ### 🛡️ Critérios de Aceite da Sprint 9.5
-- [ ] Todos os testes executados com sucesso em ambiente de simulação/local.
-- [ ] Documentação técnica sincronizada com a versão 1.3.4.
+- [x] Todos os testes executados com sucesso em ambiente de simulação/local.
+- [x] Documentação técnica sincronizada com a versão 1.3.4.

@@ -1,4 +1,4 @@
-# AI Codebase Map: ConnectML (Versão 1.3.3)
+# AI Codebase Map: ConnectML (Versão 1.3.4)
 
 Este documento serve como um mapa de arquitetura e glossário de domínio projetado especificamente para agentes de IA que farão manutenção, refatoração ou extensão do **ConnectML**. O objetivo é prover contexto imediato sobre as regras de negócio essenciais, convenções de engenharia e as armadilhas (gotchas) arquiteturais da base de código.
 
@@ -127,4 +127,29 @@ Para evitar quebras de regressão, falhas de concorrência ou comportamentos ind
   2. Utilize sempre `EnsureMdiChildMaximizedAndFocused(hWnd)` para inspecionar o contêiner `MDIClient` via `WM_MDIGETACTIVE` (`0x0229`). Se a aba estiver desmaximizada (`!IsZoomed`), dispare nativamente `WM_MDIMAXIMIZE` (`0x0225`) e `SW_MAXIMIZE`.
   3. Execute o `EnsureMdiChildMaximizedAndFocused` antes e 100ms após o envio de qualquer comando simulado de teclado, garantindo que o operador nunca precise de mouse para remaximizar a tela.
   4. Emita eventos de `KEYUP` para teclas modificadoras (`Alt`, `Ctrl`, `Shift`) apenas se `(GetAsyncKeyState(key) & 0x8000) != 0`.
+ 
+### 3.15. Rastreabilidade de Peça no QIF e Desacoplamento da Comunicação PLC/Webhook (v1.3.4)
+- **O Problema**: A rotina de inspeção do MeasurLink (`result.Product`) identifica apenas o programa de peça (ex: `MANPESADO` ou `D-1001`), mas não o número de série da peça física inspecionada. Por outro lado, sistemas legados de automação (CLPs Siemens S7 e Webhooks) esperam estritamente o código da rotina e quebrariam se uma string concatenada fosse enviada na DB do PLC.
+- **A Regra**:
+  1. O `QifParser` correlaciona a medição mais recente com seu `<ActualComponent>` para capturar `<SerialNumber>`. Se ausente, opera fallback resiliente para o último componente disponível ou retorna string vazia.
+  2. A camada visual do HUD formata a notificação como `<ROTINA> / <SERIALNUMBER>` se o serial existir, ou `<ROTINA>` se ausente, sem o prefixo "Peça:".
+  3. A comunicação com o PLC Siemens S7 (`_plcDriver.WriteStringAsync`) e com os Webhooks REST consome **estritamente e exclusivamente** `result.Product`, sem alterações de payload.
+
+### 3.16. Faixa Estrita de Hit-Testing de Borda (8px) no HUD (v1.3.4)
+- **O Problema**: Em bordas espessas (ex: 20 a 60px), se o hit-testing cobrir toda a área da borda, o operador não consegue clicar nos cantos superiores de janelas subjacentes do Windows ou sofre acionamento acidental do cursor de redimensionamento (`SizeNS`/`SizeWE`).
+- **A Regra**: O método `UpdateBorderResizeStrips()` deve confinar as tiras de captura de arraste (`BorderResizeTop`, `BorderResizeBottom`, `BorderResizeLeft`, `BorderResizeRight`) a uma espessura física fixa de exatamente 8px, centralizada na aresta interna da borda (`Margin = Math.Max(0, _borderThickness - 4)`). Clicar no miolo da borda ou fora da faixa de 8px não deve interceptar o cursor do mouse.
+
+### 3.17. Desacoplamento de Escala dos Controles da Aba do HUD (v1.3.4)
+- **O Problema**: Quando o operador aumenta o tamanho da tipografia da aba para 30 ou 60pt (visibilidade a distância), se todos os controles aumentarem proporcionalmente, botões operacionais, ícones e separadores ficam hipertrofiados, ocupando espaço desnecessário e aglomerando o centro da aba.
+- **A Regra**:
+  1. Apenas `TxtOverlayStatus` (11 a 60pt) e `StateDot` (diâmetro de 65% da fonte) escalam livremente com `_fontSize`.
+  2. Os botões de ação (`BtnOverlaySettings`, `BtnRestoreMainWindow`), grips (`TabResizeGrip`, `GripHandle`) e separadores mantêm dimensões ergonômicas estáveis (~14px, 11pt para o texto "Abrir") para `_fontSize >= 14`, aplicando downscaling suave com clamp (mínimo 8-9px) apenas se `_fontSize < 14`.
+  3. O `TabResizeGrip` deve permanecer ancorado no canto inferior direito da aba (ou canto relevante no dock).
+
+### 3.18. Estado "PROCESSAMENTO INTERROMPIDO" e Sincronização de Ciclo (v1.3.4)
+- **O Problema**: Quando a aplicação era minimizada sem que o operador tivesse iniciado o serviço de monitoramento, o HUD exibia "AGUARDANDO MEDIÇÃO" em amarelo pulsante, dando a falsa impressão de que a esteira estava ativa e vigiando a pasta.
+- **A Regra**:
+  1. Se `_isRunning == false` no momento da minimização (`BtnMinimize_Click`), o HUD deve exibir solidamente `"PROCESSAMENTO INTERROMPIDO"` com as bordas e ponto em Cinza Sólido (`#64748B`), sem animação de pulso.
+  2. Ao acionar `StartService()`, o HUD deve comutar para `"AGUARDANDO MEDIÇÃO"` em amarelo pulsante.
+  3. Ao acionar `StopService()`, se a janela principal estiver oculta na bandeja, o HUD deve comutar imediatamente para o modo cinza interrompido.
 
