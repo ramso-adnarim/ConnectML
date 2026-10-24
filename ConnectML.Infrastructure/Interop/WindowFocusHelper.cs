@@ -17,11 +17,21 @@ namespace ConnectML.Infrastructure.Interop
     {
         private const int SW_RESTORE = 9;
         private const int SW_SHOW = 5;
+        private const int SW_MAXIMIZE = 3;
         private const uint KEYEVENTF_KEYUP = 0x0002;
         private const byte VK_MENU = 0x12; // Alt
         private const uint LSFW_UNLOCK = 2;
         private const uint GW_OWNER = 4;
         private const uint MAPVK_VK_TO_VSC = 0;
+
+        // Constantes Win32 MDI e Mensagens de Sistema
+        private const uint WM_MDIGETACTIVE = 0x0229;
+        private const uint WM_MDIMAXIMIZE = 0x0225;
+        private const uint WM_SYSCOMMAND = 0x0112;
+        private const int SC_MAXIMIZE = 0xF030;
+        private const int GWL_STYLE = -16;
+        private const uint WS_CHILD = 0x40000000;
+        private const uint WS_CAPTION = 0x00C00000;
 
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
@@ -84,6 +94,27 @@ namespace ConnectML.Infrastructure.Interop
 
         [DllImport("user32.dll")]
         private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr FindWindowEx(IntPtr hwndParent, IntPtr hwndChildAfter, string lpszClass, string? lpszWindow);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, out int lParam);
+
+        [DllImport("user32.dll")]
+        private static extern bool IsZoomed(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern short GetAsyncKeyState(int vKey);
+
+        [DllImport("user32.dll")]
+        private static extern bool EnumChildWindows(IntPtr hWndParent, EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 
         /// <summary>
         /// Localiza a janela do software alvo com algoritmo de pontuação e eliminação rigorosa
@@ -276,8 +307,9 @@ namespace ConnectML.Infrastructure.Interop
         }
 
         /// <summary>
-        /// Traz a janela especificada para o primeiro plano, restaurando-a se estiver minimizada
-        /// e garantindo a transferência de foco de teclado sem acionar indevidamente o menu do Windows.
+        /// Traz a janela especificada para o primeiro plano, restaurando-a se estiver minimizada,
+        /// garantindo a transferência de foco sem acionar indevidamente o menu do Windows e sem
+        /// desmaximizar sub-janelas MDI ativas.
         /// </summary>
         public static bool BringWindowToForeground(IntPtr hWnd)
         {
@@ -318,8 +350,11 @@ namespace ConnectML.Infrastructure.Interop
 
                 BringWindowToTop(hWnd);
                 bool result = SetForegroundWindow(hWnd);
-                SetActiveWindow(hWnd);
-                SetFocus(hWnd);
+
+                // NOTA CRÍTICA MDI: NÃO chamar SetActiveWindow(hWnd) nem SetFocus(hWnd) na janela mãe!
+                // Em aplicações MDI (como o MeasurLink), chamar SetFocus na janela mãe retira o foco da
+                // sub-janela (aba/rotina MDI) e faz com que o container MDI desmaximize/restaure a aba.
+                // O SetForegroundWindow nativo já direciona o foco para o filho MDI ativo.
 
                 if (attachedFore)
                 {
@@ -331,15 +366,94 @@ namespace ConnectML.Infrastructure.Interop
                     AttachThreadInput(currentThreadId, targetThreadId, false);
                 }
 
-                // Garante que a tecla Alt esteja liberada (sem estado de tecla preso)
-                byte scanAlt = (byte)MapVirtualKey(VK_MENU, MAPVK_VK_TO_VSC);
-                keybd_event(VK_MENU, scanAlt, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                // Libera a tecla Alt APENAS se estiver ativamente pressionada no hardware,
+                // evitando disparar um evento fantasma de KEYUP que abriria o menu do sistema e desmaximizaria abas
+                if ((GetAsyncKeyState(VK_MENU) & 0x8000) != 0)
+                {
+                    byte scanAlt = (byte)MapVirtualKey(VK_MENU, MAPVK_VK_TO_VSC);
+                    keybd_event(VK_MENU, scanAlt, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                }
+
+                // Garante que a aba MDI permaneça maximizada e com o foco de teclado
+                EnsureMdiChildMaximizedAndFocused(hWnd);
 
                 return result || GetForegroundWindow() == hWnd;
             }
             catch (Exception ex)
             {
                 Log.Warning(ex, "[Interop] Erro ao trazer janela para primeiro plano");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Localiza o contêiner MDIClient do MeasurLink e garante que a aba/rotina ativa esteja MAXIMIZADA
+        /// e com o foco de teclado direcionado para ela (e não para a janela mãe).
+        /// Se a aba tiver sido restaurada (desmaximizada) por troca de foco ou atalho mnemônico,
+        /// remaximiza automaticamente via WM_MDIMAXIMIZE / SW_MAXIMIZE.
+        /// </summary>
+        public static bool EnsureMdiChildMaximizedAndFocused(IntPtr hWndTopLevel)
+        {
+            if (hWndTopLevel == IntPtr.Zero || !IsWindow(hWndTopLevel))
+                return false;
+
+            try
+            {
+                // 1. Procura o container MDIClient padrão do Win32/MFC
+                IntPtr hMdiClient = FindWindowEx(hWndTopLevel, IntPtr.Zero, "MDIClient", null);
+                if (hMdiClient != IntPtr.Zero)
+                {
+                    // Consulta a sub-janela MDI ativa e se está maximizada (WM_MDIGETACTIVE)
+                    IntPtr hActiveChild = SendMessage(hMdiClient, WM_MDIGETACTIVE, IntPtr.Zero, out int isMaximized);
+                    if (hActiveChild != IntPtr.Zero && IsWindow(hActiveChild))
+                    {
+                        bool isZoomed = IsZoomed(hActiveChild) || isMaximized != 0;
+                        if (!isZoomed)
+                        {
+                            Log.Information("[Interop] Aba MDI do MeasurLink (HWND={Child:X8}) detectada em estado restaurado. Remaximizando automaticamente...", 
+                                hActiveChild.ToInt64());
+
+                            // Remaximiza via protocolo nativo Win32 MDI (WM_MDIMAXIMIZE)
+                            SendMessage(hMdiClient, WM_MDIMAXIMIZE, hActiveChild, IntPtr.Zero);
+
+                            // Reforço duplo para compatibilidade com MFC Feature Pack e tabs
+                            ShowWindow(hActiveChild, SW_MAXIMIZE);
+                            SendMessage(hActiveChild, WM_SYSCOMMAND, (IntPtr)SC_MAXIMIZE, IntPtr.Zero);
+                        }
+
+                        // Garante que o foco permaneça diretamente na aba ativa de medição
+                        SetFocus(hActiveChild);
+                        return true;
+                    }
+                }
+                else
+                {
+                    // 2. Fallback: Se o MeasurLink utilizar container customizado sem MDIClient clássico,
+                    // inspeciona janelas filhas visíveis com estilo de janela de documento
+                    EnumChildWindows(hWndTopLevel, (hChild, lParam) =>
+                    {
+                        if (IsWindowVisible(hChild))
+                        {
+                            int style = GetWindowLong(hChild, GWL_STYLE);
+                            if ((style & WS_CHILD) != 0 && (style & WS_CAPTION) == WS_CAPTION)
+                            {
+                                if (!IsZoomed(hChild))
+                                {
+                                    Log.Information("[Interop] Sub-janela/aba do MeasurLink (HWND={Child:X8}) em estado restaurado. Remaximizando...", hChild.ToInt64());
+                                    ShowWindow(hChild, SW_MAXIMIZE);
+                                    SendMessage(hChild, WM_SYSCOMMAND, (IntPtr)SC_MAXIMIZE, IntPtr.Zero);
+                                }
+                            }
+                        }
+                        return true;
+                    }, IntPtr.Zero);
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "[Interop] Falha ao verificar/remaximizar aba MDI do MeasurLink");
                 return false;
             }
         }
@@ -359,8 +473,8 @@ namespace ConnectML.Infrastructure.Interop
             bool focused = BringWindowToForeground(hWnd);
             if (focused)
             {
-                // Se a janela estava minimizada, aguarda tempo adicional para animação de restauração
-                int delay = wasIconic ? Math.Max(preDelayMs, 180) : Math.Max(preDelayMs, 80);
+                // Se a janela estava minimizada ou se for primeira ativação, aguarda estabilização de renderização
+                int delay = wasIconic ? Math.Max(preDelayMs, 200) : Math.Max(preDelayMs, 100);
                 await Task.Delay(delay);
             }
 
