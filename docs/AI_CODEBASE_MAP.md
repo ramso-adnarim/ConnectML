@@ -1,4 +1,4 @@
-# AI Codebase Map: ConnectML (Versão 1.3.2)
+# AI Codebase Map: ConnectML (Versão 1.3.3)
 
 Este documento serve como um mapa de arquitetura e glossário de domínio projetado especificamente para agentes de IA que farão manutenção, refatoração ou extensão do **ConnectML**. O objetivo é prover contexto imediato sobre as regras de negócio essenciais, convenções de engenharia e as armadilhas (gotchas) arquiteturais da base de código.
 
@@ -15,7 +15,7 @@ Este documento serve como um mapa de arquitetura e glossário de domínio projet
   - **Webhook (JSON)**: Despacho assíncrono via HTTP POST para endpoints configurados, com suporte a templates Liquid.
 - **Barcode Serial Monitor (`BarcodeSerialMonitorService`)**: Serviço concorrente que monitora a porta serial de entrada do leitor de código de barras e transporta leituras em tempo real para a porta virtual do MeasurLink (`com0com`), interceptando palavras-chave cadastradas.
 - **Automação MeasurLink / Simulador de Teclas (`MeasurLinkKeyboardCommandHandler`)**: Executor Win32 que localiza e foca a janela do MeasurLink para disparar atalhos físicos de teclado, como `Alt + F + O` (Desfazer medição).
-- **WindowFocusHelper**: Utilitário P/Invoke para localização de janelas por correspondência de título, restauração de minimizado e concessão segura de foco de teclado via `AttachThreadInput`.
+- **WindowFocusHelper**: Utilitário P/Invoke para localização de janelas por correspondência de título, restauração de minimizado, concessão segura de foco de teclado via `AttachThreadInput` e autocura de abas MDI (`EnsureMdiChildMaximizedAndFocused`).
 - **HUD / Overlay (`OverlayWidgetWindow`)**: Janela de sobreposição translúcida com borda periférica e aba informativa de alta visibilidade, operando em modo não-intrusivo para monitoramento no chão de fábrica.
 - **Dwell Timer**: Temporizador de retenção visual (0.5s) conjugado ao HUD, que sustenta o veredito de aprovação/reprovação na tela antes de retomar o modo amarela de prontidão.
 - **Snapping Magnético**: Mecanismo de encaixe da aba de status nas 4 extremidades da tela (`TOP`, `BOTTOM`, `LEFT`, `RIGHT`) calculado contra a `SystemParameters.WorkArea`.
@@ -119,4 +119,12 @@ Para evitar quebras de regressão, falhas de concorrência ou comportamentos ind
 ### 3.13. Inicialização Assíncrona e Ativação Universal do HUD no Startup
 - **O Problema**: No startup automático do Windows, a chamada de inicialização do serviço (`StartService`) é assíncrona devido ao handshake de rede TCP com o CLP (`await _plcDriver.ConnectAsync`). Se a minimização para a bandeja verificar `if (_isRunning)`, a flag ainda estará como `false` no exato instante do minimize, fazendo com que o HUD não apareça na tela.
 - **A Regra**: O método `BtnMinimize_Click` deve invocar `_overlayWindow.Show()` **sempre** que a janela principal for ocultada para a bandeja, sem travas de estado de execução. Adicionalmente, o reinício automático em `Window_Loaded` exige mandatoriamente que a checkbox `ChkAutoStart.IsChecked == true` esteja marcada pelo usuário; a mera existência de `WasServiceRunning` jamais deve disparar a inicialização sem o consentimento da checkbox.
+
+### 3.14. Arquitetura MDI e Autocura de Abas de Medição (v1.3.3)
+- **O Problema**: O MeasurLink opera sobre arquitetura MFC MDI (*Multiple Document Interface*). Chamar `SetFocus` ou `SetActiveWindow` na janela-mãe externa (`HWND` do frame principal) retira o foco da sub-janela de medição ativa (`WM_KILLFOCUS`), disparando recálculos de área não-cliente que restauram (desmaximizam) a aba da rotina para o tamanho flutuante. Além disso, emitir cegamente `KEYUP` para `VK_MENU` (Alt) ativa a barra de menus do sistema operacional, fazendo com que teclas subsequentes atinjam o menu e disparem comandos indesejados (`SC_RESTORE`).
+- **A Regra**:
+  1. Nunca chame `SetFocus` ou `SetActiveWindow` na janela-mãe externa de uma aplicação MDI. Delegue a ativação para `SetForegroundWindow` e direcione o foco estritamente para a sub-janela filha ativa.
+  2. Utilize sempre `EnsureMdiChildMaximizedAndFocused(hWnd)` para inspecionar o contêiner `MDIClient` via `WM_MDIGETACTIVE` (`0x0229`). Se a aba estiver desmaximizada (`!IsZoomed`), dispare nativamente `WM_MDIMAXIMIZE` (`0x0225`) e `SW_MAXIMIZE`.
+  3. Execute o `EnsureMdiChildMaximizedAndFocused` antes e 100ms após o envio de qualquer comando simulado de teclado, garantindo que o operador nunca precise de mouse para remaximizar a tela.
+  4. Emita eventos de `KEYUP` para teclas modificadoras (`Alt`, `Ctrl`, `Shift`) apenas se `(GetAsyncKeyState(key) & 0x8000) != 0`.
 

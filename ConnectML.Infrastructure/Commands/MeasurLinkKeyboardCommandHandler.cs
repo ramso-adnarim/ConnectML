@@ -37,6 +37,9 @@ namespace ConnectML.Infrastructure.Commands
         [DllImport("user32.dll")]
         private static extern uint MapVirtualKey(uint uCode, uint uMapType);
 
+        [DllImport("user32.dll")]
+        private static extern short GetAsyncKeyState(int vKey);
+
         private readonly object _lock = new object();
         private readonly List<BarcodeCommandDefinition> _commands = new List<BarcodeCommandDefinition>();
 
@@ -95,17 +98,34 @@ namespace ConnectML.Infrastructure.Commands
 
             // 1. Busca e foca a janela-alvo do MeasurLink
             int preDelay = cmd.PreDelayMs > 0 ? cmd.PreDelayMs : 150;
-            bool windowFocused = await WindowFocusHelper.FindAndFocusWindowAsync(cmd.TargetWindowTitle, preDelay);
-            if (!windowFocused)
+            IntPtr hWndTarget = WindowFocusHelper.FindTargetWindow(cmd.TargetWindowTitle);
+            if (hWndTarget == IntPtr.Zero)
             {
                 Log.Warning("[Leitor] Palavra-chave '{Keyword}' interceptada -> Falha: Janela contendo '{Target}' não encontrada.", keyword, cmd.TargetWindowTitle);
                 return false;
             }
 
-            // 2. Simula as teclas físicas na janela focada
+            bool windowFocused = await WindowFocusHelper.FindAndFocusWindowAsync(cmd.TargetWindowTitle, preDelay);
+            if (!windowFocused)
+            {
+                Log.Warning("[Leitor] Palavra-chave '{Keyword}' interceptada -> Falha ao posicionar janela '{Target}' em primeiro plano.", keyword, cmd.TargetWindowTitle);
+                return false;
+            }
+
+            // 2. Proteção prévia: Assegura que a aba do MeasurLink esteja maximizada e com foco na medição
+            WindowFocusHelper.EnsureMdiChildMaximizedAndFocused(hWndTarget);
+
+            // 3. Simula as teclas físicas na janela focada
             try
             {
                 await SimulateKeysAsync(cmd.KeySequence);
+
+                // 4. Rede de segurança pós-execução (Safety Net autônoma):
+                // Aguarda 100ms para estabilização da ação do menu/Ribbon e assegura que a aba permaneça maximizada.
+                // Se qualquer atalho tiver causado restauração acidental da aba, remaximiza imediatamente sem depender de mouse!
+                await Task.Delay(100);
+                WindowFocusHelper.EnsureMdiChildMaximizedAndFocused(hWndTarget);
+
                 Log.Information("[Leitor] Palavra-chave '{Keyword}' interceptada -> Comando '{Command}' ({Keys}) executado no MeasurLink [Sucesso]", 
                     keyword, cmd.Name, cmd.KeySequence);
                 return true;
@@ -254,10 +274,15 @@ namespace ConnectML.Infrastructure.Commands
             byte scanAlt = (byte)MapVirtualKey(VK_MENU, MAPVK_VK_TO_VSC);
             byte scanFirst = (byte)MapVirtualKey(firstKey, MAPVK_VK_TO_VSC);
 
-            // Garante liberação prévia de teclas modificadoras
-            keybd_event(VK_MENU, scanAlt, KEYEVENTF_KEYUP, UIntPtr.Zero);
-            keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-            keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+            // Garante liberação prévia de teclas modificadoras APENAS se estiverem ativamente pressionadas,
+            // prevenindo o envio de KEYUPs fantasmas que acionam a barra de menus e restauram abas MDI
+            if ((GetAsyncKeyState(VK_MENU) & 0x8000) != 0)
+                keybd_event(VK_MENU, scanAlt, KEYEVENTF_KEYUP, UIntPtr.Zero);
+            if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0)
+                keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+            if ((GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0)
+                keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+
             await Task.Delay(40);
 
             // 1. Pressiona Alt + Primeira Tecla (ex: Alt + Q)

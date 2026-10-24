@@ -1,6 +1,6 @@
 # ![ConnectML Logo](/ConnectML-logo-ico.ico) ConnectML
 
-[![Release](https://img.shields.io/github/v/release/ramso-adnarim/ConnectML?color=0078D4&label=Vers%C3%A3o%20Atual)](https://github.com/ramso-adnarim/ConnectML/releases/tag/1.3.2)
+[![Release](https://img.shields.io/github/v/release/ramso-adnarim/ConnectML?color=0078D4&label=Vers%C3%A3o%20Atual)](https://github.com/ramso-adnarim/ConnectML/releases/tag/1.3.3)
 [![Target](https://img.shields.io/badge/.NET-8.0%20LTS-purple.svg)](https://dotnet.microsoft.com/)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20x64-blue.svg)](https://microsoft.com/windows)
 [![Velopack](https://img.shields.io/badge/Updates-Velopack-success.svg)](https://velopack.io/)
@@ -11,24 +11,32 @@ O sistema monitora a geração de arquivos de inspeção **QIF (Quality Informat
 
 ---
 
-## 🌟 Novidades da Versão 1.3.2: HUD no Startup, Reinício Controlado e Blindagem de Configurações
+## 🌟 Novidades da Versão 1.3.3: Autocura MDI no MeasurLink, Foco Seguro e Refinamento do HUD
 
-A versão **1.3.2** consolida melhorias essenciais de estabilidade e usabilidade para o chão de fábrica:
+A versão **1.3.3** introduz blindagens operacionais críticas para garantir que a automação no chão de fábrica ocorra de forma transparente e 100% autônoma:
 
-* **Ativação Universal do HUD no Startup**: O HUD agora surge de forma imediata e transparente na tela sempre que a aplicação inicia minimizada para a bandeja do sistema (Startup do Windows), sincronizando com o estabelecimento assíncrono da conexão com o CLP.
-* **Controle Rigidamente Estrito do Reinício Automático**: A inicialização automática agora é um privilégio exclusivo da checkbox "Reinício automático". Se desmarcada pelo operador, o serviço **nunca** inicia sozinho, e qualquer alteração é gravada imediatamente em disco ao clique.
-* **Blindagem e Migração de Configurações no Velopack**: O algoritmo de persistência foi completamente blindado para garantir que templates padrão de novas versões nunca sobrescrevam configurações customizadas do operador em `%AppData%\ConnectML\appsettings.json`, além de restaurar automaticamente configurações de clientes que atualizaram a partir da v1.2.0.
-* **Atualizações Ultrarrápidas via Delta**: Pacote diferencial de apenas **272 KB** para atualização em segundos sem travar a produção.
+* **Autocura e Maximização Contínua de Abas do MeasurLink**: Previne e corrige autonomamente a desmaximização da aba de medição ao escanear o comando "Desfazer". O ConnectML inspeciona o contêiner `MDIClient` e remaximiza a aba via protocolo Win32 nativo (`WM_MDIMAXIMIZE`), garantindo que o operador nunca dependa de um mouse para remaximizar a tela.
+* **Transferência Segura de Foco Win32**: Elimina chamadas desestabilizadoras de `SetFocus` na janela-mãe externa do software de metrologia, direcionando o foco de teclado estritamente para a sub-janela de medição ativa.
+* **Supressão de Teclas Modificadoras Fantasmas**: Implementa checagem física de hardware via `GetAsyncKeyState`, disparando eventos de liberação (`KEYUP`) apenas se teclas como `Alt`, `Ctrl` ou `Shift` estiverem fisicamente pressionadas, evitando aberturas indesejadas do menu do sistema.
+* **Refinamento do HUD & Nova Splashscreen**: Status do HUD padronizado em caixa alta para visibilidade imediata à distância e novo banner de splashscreen integrado ao instalador Velopack.
 
 ---
 
-## 📥 Download da Versão Mais Recente (v1.3.2)
+## 📥 Download da Versão Mais Recente (v1.3.3)
 
-A versão **1.3.2** já está disponível com suporte a instalação limpa e atualizações automáticas silenciosas:
+A versão **1.3.3** já está disponível com suporte a instalação limpa e atualizações automáticas silenciosas:
 
-* 🚀 **[Baixar Instalador Windows (ConnectML-win-Setup.exe)](https://github.com/ramso-adnarim/ConnectML/releases/download/1.3.2/ConnectML-win-Setup.exe)** — *Instalação completa com atalhos no Desktop e Menu Iniciar*
-* 📦 **[Baixar Pacote Portátil (ConnectML-win-Portable.zip)](https://github.com/ramso-adnarim/ConnectML/releases/download/1.3.2/ConnectML-win-Portable.zip)** — *Execução direta sem necessidade de instalação*
-* 📋 **[Ver Notas da Release v1.3.2 no GitHub](https://github.com/ramso-adnarim/ConnectML/releases/tag/1.3.2)**
+* 🚀 **[Baixar Instalador Windows (ConnectML-win-Setup.exe)](https://github.com/ramso-adnarim/ConnectML/releases/download/1.3.3/ConnectML-win-Setup.exe)** — *Instalação completa com splashscreen e atalhos no Desktop e Menu Iniciar*
+* 📦 **[Baixar Pacote Portátil (ConnectML-win-Portable.zip)](https://github.com/ramso-adnarim/ConnectML/releases/download/1.3.3/ConnectML-win-Portable.zip)** — *Execução direta sem necessidade de instalação*
+* 📋 **[Ver Notas da Release v1.3.3 no GitHub](https://github.com/ramso-adnarim/ConnectML/releases/tag/1.3.3)**
+
+---
+
+## 🌟 Versão 1.3.2: HUD no Startup, Reinício Controlado e Blindagem de Configurações
+
+* **Ativação Universal do HUD no Startup**: O HUD agora surge de forma imediata e transparente na tela sempre que a aplicação inicia minimizada para a bandeja do sistema (Startup do Windows).
+* **Controle Rigidamente Estrito do Reinício Automático**: A inicialização automática agora é um privilégio exclusivo da checkbox "Reinício automático".
+* **Blindagem e Migração de Configurações no Velopack**: Garante que templates padrão de novas versões nunca sobrescrevam configurações customizadas do operador em `%AppData%\ConnectML\appsettings.json`.
 
 ---
 

@@ -1,11 +1,11 @@
-# ConnectML Architecture Documentation (Versão 1.3.2)
+# ConnectML Architecture Documentation (Versão 1.3.3)
 
 ## 1. Visão Geral do Projeto
 **ConnectML** é um middleware de integração industrial desenvolvido para conectar os softwares de metrologia (notavelmente o **MeasurLink / Mitutoyo**) aos sistemas de automação de manufatura (**CLPs Siemens S7**, barramentos industriais e endpoints **Webhook REST**).
 
 O sistema monitora diretórios locais ou de rede em busca de arquivos de exportação **QIF (Quality Information Framework)** em tempo real, analisa as características geométricas e dimensionais inspecionadas, extrai o veredito da peça (`PASS` ou `FAIL`) e despacha comandos de controle aos PLCs ou sistemas MES/SCADA.
 
-A partir da versão **1.3.0**, o ConnectML incorpora o subsistema **Widget Overlay HUD (Heads-Up Display)**, a partir da versão **1.3.1**, o subsistema de **Monitoramento e Transporte Serial do Leitor de Código de Barras**, e na versão **1.3.2**, aprimora a **ativação universal e confiável do HUD na bandeja/startup**, o **controle estrito do reinício automático** e a **blindagem de persistência de configurações no Velopack** contra sobrescrita indevida por templates de atualização.
+A partir da versão **1.3.0**, o ConnectML incorpora o subsistema **Widget Overlay HUD (Heads-Up Display)**, a partir da versão **1.3.1**, o subsistema de **Monitoramento e Transporte Serial do Leitor de Código de Barras**, na versão **1.3.2**, aprimora a **ativação universal e confiável do HUD na bandeja/startup**, o **controle estrito do reinício automático** e a **blindagem de persistência de configurações no Velopack**, e na versão **1.3.3**, introduz o mecanismo de **Autocura e Maximização Contínua de Abas MDI do MeasurLink**, **transferência segura de foco Win32** e **supressão de teclas modificadoras fantasmas**.
 
 ---
 
@@ -164,12 +164,15 @@ A partir da versão **1.3.1**, o ConnectML incorpora o subsistema de **Monitoram
 - A aplicação monitora a porta serial de entrada conectada ao leitor (físico ou virtual) de forma assíncrona.
 - Toda leitura ordinária de dados é transportada em tempo real para uma porta serial de saída virtual (par gerenciado pelo utilitário `com0com`), permitindo que o MeasurLink receba os dados sem latência perceptível.
 
-### 5.2. Intercepção e Automação de Teclado no MeasurLink
+### 5.2. Intercepção, Foco Seguro e Automação de Teclado no MeasurLink (v1.3.3)
 - Quando a string recebida coincide com uma "palavra-chave" cadastrada pelo usuário (ex: `"DESFAZER"`), o repasse pela porta COM de saída é suprimido.
 - O subsistema utiliza o helper de interop Win32 (`WindowFocusHelper`) com algoritmo de pontuação de processos:
   - Janelas pertencentes a processos legítimos do MeasurLink (`Mitutoyo.MeasurLink.WinConsole.exe`, `DataCollection.exe`) recebem pontuação máxima (+10.000 pontos).
   - Janelas do Windows Explorer (`explorer.exe`) ou consoles com nomes coincidentes de diretórios são desqualificadas para evitar falsos positivos.
   - A janela selecionada é restaurada se estiver minimizada (`ShowWindow SW_RESTORE`) e colocada em primeiro plano via concessão de privilégios (`AttachThreadInput` + `SetForegroundWindow`).
+  - **Foco Seguro MDI**: Chamadas diretas a `SetFocus` e `SetActiveWindow` na janela-mãe externa do MeasurLink foram eliminadas para não retirar o foco da sub-janela de medição filha.
+  - **Autocura de Abas MDI (`EnsureMdiChildMaximizedAndFocused`)**: O ConnectML consulta o container `MDIClient` do MeasurLink via mensagem nativa `WM_MDIGETACTIVE` (`0x0229`). Se a rotina de inspeção estiver restaurada (desmaximizada), dispara instantaneamente `WM_MDIMAXIMIZE` (`0x0225`) e `SW_MAXIMIZE` antes e 100ms após a simulação de teclas, remaximizando a aba de forma 100% autônoma sem requerer uso de mouse pelo operador.
+  - **Supressão de Teclas Fantasmas**: Teclas modificadoras como `Alt` só recebem eventos de liberação (`KEYUP`) se `GetAsyncKeyState` confirmar que estavam ativamente pressionadas no hardware, impedindo que a barra de menus do sistema seja acionada indevidamente.
 - Em seguida, o `MeasurLinkKeyboardCommandHandler` aguarda o tempo de estabilização pós-foco (`PreDelayMs`, padrão 150ms) e despacha a sequência de teclas configurada (ex: `Alt + F + O` para o comando **Desfazer**):
   - Injeta os códigos de varredura de hardware OEM (`MapVirtualKey` com `KEYEVENTF_SCANCODE`).
   - Implementa cadência estrita de mnemônicos do Windows: pressiona `Alt`, envia a tecla do menu (`F`), libera `Alt`, aguarda 180ms para abertura do submenu e envia a tecla da ação (`O`).
